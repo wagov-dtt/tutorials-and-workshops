@@ -4,9 +4,9 @@ metadata:
   name: web
 spec:
   ports:
-  - port: 3000
-    targetPort: 80
-    name: http
+    - port: 3000
+      targetPort: 80
+      name: http
   type: LoadBalancer
   selector:
     app: web
@@ -25,8 +25,15 @@ spec:
       labels:
         app: web
     spec:
+      # volumes:
+      #   - name: restored-storage
+      #     persistentVolumeClaim:
+      #       claimName: restored-storage-loki-0
       containers:
-      - name: web
-        image: nginx
-        ports:
-          - containerPort: 80
+        - name: web
+          image: nginx
+          ports:
+            - containerPort: 80
+          # volumeMounts:
+          #   - name: restored-storage
+          #     mountPath: /data  # Adjust this path as needed

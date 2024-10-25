@@ -13,6 +13,8 @@ Setup basics:
 - Follow [quickstart](https://skaffold.dev/docs/quickstart/)
 
 Enable a CSI storage driver and snapshots (to emulate prod storage)
+[minkube volume snapshots](https://minikube.sigs.k8s.io/docs/tutorials/volume_snapshots_and_csi/)
+
 ```bash
 # Assuming following skaffold tutorial with 'custom' profile
 
@@ -22,3 +24,4 @@ minikube addons disable storage-provisioner -p custom
 minikube addons disable default-storageclass -p custom
 kubectl patch storageclass csi-hostpath-sc -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
 ```
+
