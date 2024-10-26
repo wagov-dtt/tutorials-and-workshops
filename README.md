@@ -12,16 +12,52 @@ Setup basics:
 - Save brew installed stuff with `brew bundle dump` (can install in future all brew stuff with `brew bundle install`)
 - Follow [quickstart](https://skaffold.dev/docs/quickstart/)
 
+```bash
+# Below should work for most repos with a Brewfile
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+echo >> ~/.bashrc
+echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.bashrc
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+brew bundle install
+```
+
 Enable a CSI storage driver and snapshots (to emulate prod storage)
 [minkube volume snapshots](https://minikube.sigs.k8s.io/docs/tutorials/volume_snapshots_and_csi/)
 
 ```bash
-# Assuming following skaffold tutorial with 'custom' profile
-
-minikube addons enable volumesnapshots -p custom
-minikube addons enable csi-hostpath-driver -p custom
-minikube addons disable storage-provisioner -p custom
-minikube addons disable default-storageclass -p custom
+# Minikube inital setup with sensible addons
+minikube start --addons volumesnapshots --addons csi-hostpath-driver --cpus no-limit --memory no-limit
+minikube addons disable storage-provisioner
+minikube addons disable default-storageclass
 kubectl patch storageclass csi-hostpath-sc -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+kubectl apply -f https://projectcontour.io/quickstart/contour-gateway-provisioner.yaml
+kubectl apply -f - <<EOF
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: contour
+spec:
+  controllerName: projectcontour.io/gateway-controller
+EOF
+kubectl apply -f - <<EOF
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: contour
+  namespace: projectcontour
+spec:
+  gatewayClassName: contour
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+EOF
+kubectl apply -f https://raw.githubusercontent.com/projectcontour/contour/main/examples/example-workload/gatewayapi/kuard/kuard.yaml
+kubectl -n projectcontour port-forward service/envoy-contour 8888:80
+skaffold config set --global local-cluster true
+eval $(minikube docker-env)
 ```
 
