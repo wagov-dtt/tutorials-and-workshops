@@ -1,4 +1,6 @@
 tap "homebrew/bundle"
+brew "awscli"
 brew "k9s"
 brew "skaffold"
+brew "terraform"
 vscode "command is only available in wsl or inside a visual studio code terminal."
