@@ -1,5 +1,6 @@
-# skaffold-demo
-Demo of a few tools in a skaffold repo
+# tutorials-and-workshops
+
+Current focus is skaffold for devs, and talos k8s for operations.
 
 ## Notes
 
@@ -13,12 +14,8 @@ Setup basics:
 - Follow [quickstart](https://skaffold.dev/docs/quickstart/)
 
 ```bash
-# Below should work for most repos with a Brewfile
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-echo >> ~/.bashrc
-echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.bashrc
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-brew bundle install
+# Devcontainer config should already have done this.
+source install-tools.sh
 ```
 
 Enable a CSI storage driver and snapshots (to emulate prod storage)

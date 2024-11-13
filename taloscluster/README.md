@@ -11,8 +11,8 @@ terraform init
 terraform plan
 terraform apply
 mkdir ~/.kube ~/.talos
-terraform output kubeconfig > ~/.kube/config
-terraform output talosconfig > ~/.talos/config
+terraform output -raw kubeconfig > ~/.kube/config
+terraform output -raw talosconfig > ~/.talos/config
 # Fiddle with cluster, work on storage proxies etc later
 terraform destroy # This will clean up all the workshops resources
 ```
