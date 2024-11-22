@@ -6,7 +6,8 @@ control_plane = {
 
 worker_groups = [ {
   name = "wg0"
-  instance_type = "i4i.large"
+  num_instances = 3
+  instance_type = "i4i.xlarge"
 } ]
 
 extra_tags = {
