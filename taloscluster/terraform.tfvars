@@ -8,6 +8,7 @@ worker_groups = [ {
   name = "wg0"
   num_instances = 3
   instance_type = "i4i.xlarge"
+  config_patch_files = [ "openebs-i4i.yaml" ]
 } ]
 
 extra_tags = {
