@@ -2,25 +2,35 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
-  name: eks01
+  name: eks02
   region: ap-southeast-2
 iam:
   withOIDC: true
 
+vpc:
+  nat:
+    gateway: HighlyAvailable
+
+addons:
+  - name: aws-ebs-csi-driver
+    configurationValues: |-
+      defaultStorageClass:
+        enabled: true
+  - name: snapshot-controller
+
 managedNodeGroups:
-  - name: base-ng
+  - name: ondemand
     amiFamily: Bottlerocket
-    instanceType: m6a.4xlarge
-    spot: true
+    instanceType: m6a.2xlarge
     volumeSize: 200
     minSize: 0
     maxSize: 20
     desiredCapacity: 0
-  - name: spot-ng
+  - name: spot
     amiFamily: Bottlerocket
-    instanceType: m6a.4xlarge
+    instanceType: m6a.2xlarge
     spot: true
     volumeSize: 200
-    minSize: 2
-    maxSize: 20
-    desiredCapacity: 3
+    minSize: 1
+    maxSize: 40
+    desiredCapacity: 2

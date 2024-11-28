@@ -4,9 +4,10 @@ Follow [README.md](../README.md) instructions to setup brew and install the `aws
 
 ```bash
 # in taloscluster dir
-aws sso login
+aws sso configure
 export AWS_PROFILE=...
 export AWS_REGION=ap-southeast-2
+aws sso login
 terraform init
 terraform plan
 terraform apply
