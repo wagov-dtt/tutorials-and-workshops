@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: awscli
+spec:
+  serviceAccountName: s3access
+  containers:
+    - name: awscli
+      image: public.ecr.aws/aws-cli/aws-cli
+      command: ["sleep", "infinity"]
