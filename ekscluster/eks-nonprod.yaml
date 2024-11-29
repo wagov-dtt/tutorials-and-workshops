@@ -12,6 +12,12 @@ metadata:
 addonsConfig:
   autoApplyPodIdentityAssociations: true
 
+iam:
+  podIdentityAssociations:
+    - namespace: "backups"
+      serviceAccountName: "s3access"
+      createServiceAccount: true
+
 addons:
   - name: eks-pod-identity-agent
   - name: aws-ebs-csi-driver

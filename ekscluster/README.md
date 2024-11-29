@@ -19,3 +19,7 @@ Steps to take after creating basic cluster (i.e. once kubectl available)
 - Test storage management with juicefs cli in cluster and volume snapshots
 - Test destroying a cluster and restoring from S3
 - Test node failure and node replacement
+
+## Improvements
+
+Work out how to get a single terraform stack to deploy all of the above using [local-exec](https://developer.hashicorp.com/terraform/language/resources/provisioners/local-exec) to run the associated eksctl cmds as needed.
