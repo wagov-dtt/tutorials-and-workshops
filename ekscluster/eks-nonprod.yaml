@@ -28,7 +28,7 @@ addons:
   - name: aws-mountpoint-s3-csi-driver
 
 managedNodeGroups:
-  - name: workers
+  - name: ng01
     amiFamily: Bottlerocket
-    instanceType: m6a.xlarge
+    instanceTypes: [m6a.xlarge, m6i.xlarge, m7i.xlarge]
     spot: true
