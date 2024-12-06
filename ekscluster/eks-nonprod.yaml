@@ -9,17 +9,13 @@ metadata:
     Owner: Tutorials and Workshops
     Repository: https://github.com/wagov-dtt/tutorials-and-workshops
 
+autoModeConfig:
+  enabled: true
+
 addonsConfig:
   autoApplyPodIdentityAssociations: true
 
-iam:
-  podIdentityAssociations:
-    - namespace: "backups"
-      serviceAccountName: "s3access"
-      createServiceAccount: true
-
 addons:
-  - name: eks-pod-identity-agent
   - name: aws-ebs-csi-driver
     configurationValues: |-
       defaultStorageClass:
@@ -27,8 +23,3 @@ addons:
   - name: snapshot-controller
   - name: aws-mountpoint-s3-csi-driver
 
-managedNodeGroups:
-  - name: ng01
-    amiFamily: Bottlerocket
-    instanceTypes: [m6a.xlarge, m6i.xlarge, m7i.xlarge]
-    spot: true

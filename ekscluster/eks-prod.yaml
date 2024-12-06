@@ -9,9 +9,8 @@ metadata:
     Owner: Tutorials and Workshops
     Repository: https://github.com/wagov-dtt/tutorials-and-workshops
 
-vpc:
-  nat:
-    gateway: HighlyAvailable
+autoModeConfig:
+  enabled: true
 
 addonsConfig:
   autoApplyPodIdentityAssociations: true
@@ -24,9 +23,3 @@ addons:
         enabled: true
   - name: snapshot-controller
   - name: aws-mountpoint-s3-csi-driver
-
-managedNodeGroups:
-  - name: ng01
-    amiFamily: Bottlerocket
-    instanceTypes: [m6a.2xlarge, m6i.2xlarge, m7i.2xlarge]
-    desiredCapacity: 3
