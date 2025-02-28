@@ -8,8 +8,11 @@ Getting started - run below commands to setup your local devcontainer ready to i
 
 ```bash
 just prereqs
+just awslogin # Follow instructions to setup sso account
+just setup-eks # Create the training01 cluster in your AWS account
 ```
 
+Once configured can deploy the 2048 application as per [AWS quickstart](https://docs.aws.amazon.com/eks/latest/userguide/quickstart.html#_deploy_the_2048_game_sample_application) and test out cluster operations. Using [k9s](https://k9scli.io) to explore the cluster is another great way to learn k8s basics.
 
 ## Notes
 
