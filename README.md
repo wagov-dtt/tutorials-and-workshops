@@ -2,6 +2,15 @@
 
 Current focus is skaffold for devs, and talos k8s for operations.
 
+## Feb workshop on infrastructure as code
+
+Getting started - run below commands to setup your local devcontainer ready to interact with AWS.
+
+```bash
+just prereqs
+```
+
+
 ## Notes
 
 Use minikube dev container to start

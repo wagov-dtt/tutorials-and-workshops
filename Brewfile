@@ -1,4 +1,5 @@
 tap "homebrew/bundle"
+brew "fzf"
 brew "awscli"
 brew "k9s"
 brew "skaffold"
