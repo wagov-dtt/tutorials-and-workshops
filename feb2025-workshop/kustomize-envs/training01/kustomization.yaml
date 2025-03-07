@@ -1,0 +1,8 @@
+resources:
+- ingressclass.yaml
+- storageclass.yaml
+- https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.8.0/docs/examples/2048/2048_full.yaml
+- pvc.yaml
+
+patches:
+- path: persistent2048.yaml

@@ -19,7 +19,11 @@ setup-eks CLUSTER="training01": awslogin
   aws kms describe-key --key-id alias/eks/secrets > /dev/null || aws kms create-alias --alias-name alias/eks/secrets --target-key-id $(aws kms create-key --query 'KeyMetadata.KeyId' --output text)
   eksctl utils enable-secrets-encryption --cluster {{CLUSTER}} --key-arn $(aws kms describe-key --key-id alias/eks/secrets --query 'KeyMetadata.Arn' --output text) --region $AWS_REGION # enable kms secrets
   eksctl utils write-kubeconfig --cluster {{CLUSTER}}
-  kubectl apply -f feb2025-workshop/eksauto-class-manifests.yaml # default storage/alb classes
+
+# Setup the 2048 game using customize as per the feb workshop
+feb2025-workshop:
+  kubectl get nodes || just setup-eks
+  kubectl apply -k feb2025-workshop/kustomize-envs/training01
 
 template-secret SECRETID: awslogin
   cat feb2025-workshop/secrets-template.yaml | \
