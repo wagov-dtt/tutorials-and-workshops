@@ -25,7 +25,21 @@ feb2025-workshop:
   kubectl get nodes || just setup-eks
   kubectl apply -k feb2025-workshop/kustomize-envs/training01
 
-template-secret SECRETID: awslogin
-  cat feb2025-workshop/secrets-template.yaml | \
-  SECRETS=$(aws secretsmanager get-secret-value --secret-id {{SECRETID}} --query SecretString --output text) \
-  envsubst
+minikube:
+  minikube config set memory no-limit
+  minikube config set cpus no-limit
+  # Setup minikube
+  which k9s || just prereqs
+  kubectl get nodes || minikube status || minikube start # if kube configured use that cluster, otherwise start minikube
+
+# Retreives a secret from AWS Secrets Manager as JSON and saves to kubernetes
+install-secret SECRETID $NAMESPACE $NAME: awslogin
+  kubectl get namespace $NAMESPACE || kubectl create namespace $NAMESPACE
+  cat duckdb-ui/secrets-template.yaml | \
+  SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id {{SECRETID}} --query SecretString --output text) \
+  envsubst | kubectl apply -f -
+
+# Creates requisite secrets from AWS and releases kustomize manifests to a cluster
+release-minikube:
+  just install-secret trainingsecret01 duckdbui secret01
+  kubectl apply -k duckdb-ui/overlays/minikube
