@@ -14,6 +14,14 @@ just setup-eks # Create the training01 cluster in your AWS account
 
 Once configured can deploy the 2048 application as per [AWS quickstart](https://docs.aws.amazon.com/eks/latest/userguide/quickstart.html#_deploy_the_2048_game_sample_application) and test out cluster operations. Using [k9s](https://k9scli.io) to explore the cluster is another great way to learn k8s basics.
 
+## 14 March continuation
+
+Looked at secrets and the below setup - configured a minikube release that pulled data from secrets manager as the interactive user of a justfile in a repo, without exposing secrets outside cluster.
+
+![alt text](image.png)
+
+Refer to [justfile](./justfile) for the below steps which setup a minikube cluster in your devcontainer/local vm and then deploys a secret and some resources to it from the duckdb-ui dir (actually using a traefik debug container coz of port fwding gotchas). Traefik [whoami](https://github.com/traefik/whoami) container has a very nice /api?env=true debug call that prints useful OS/env/HTTP header info that can be used to validate configs/secrets.
+
 ## Notes
 
 Use minikube dev container to start
