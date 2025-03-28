@@ -1,0 +1,126 @@
+---
+# Source: piko/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: piko01-piko
+  labels:
+    helm.sh/chart: piko-0.1.0
+    app.kubernetes.io/name: piko
+    app.kubernetes.io/instance: piko01
+    app.kubernetes.io/version: "v0.7.0"
+    app.kubernetes.io/managed-by: Helm
+automountServiceAccountToken:
+---
+# Source: piko/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: piko01-piko
+  labels:
+    helm.sh/chart: piko-0.1.0
+    app.kubernetes.io/name: piko
+    app.kubernetes.io/instance: piko01
+    app.kubernetes.io/version: "v0.7.0"
+    app.kubernetes.io/managed-by: Helm
+data:
+  server.yaml: |
+    cluster:
+      node_id_prefix: ${POD_NAME}-
+      join:
+        - piko01-piko
+---
+# Source: piko/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: piko01-piko
+  labels:
+    helm.sh/chart: piko-0.1.0
+    app.kubernetes.io/name: piko
+    app.kubernetes.io/instance: piko01
+    app.kubernetes.io/version: "v0.7.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  ports:
+  - port: 8000
+    name: proxy
+    protocol: TCP
+  - port: 8001
+    name: upstream
+    protocol: TCP
+  - port: 8002
+    name: admin
+    protocol: TCP
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: piko
+    app.kubernetes.io/instance: piko01
+---
+# Source: piko/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: piko01-piko
+  labels:
+    helm.sh/chart: piko-0.1.0
+    app.kubernetes.io/name: piko
+    app.kubernetes.io/instance: piko01
+    app.kubernetes.io/version: "v0.7.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: piko
+      app.kubernetes.io/instance: piko01
+  serviceName: piko01-piko
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: piko-0.1.0
+        app.kubernetes.io/name: piko
+        app.kubernetes.io/instance: piko01
+        app.kubernetes.io/version: "v0.7.0"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: piko01-piko
+      terminationGracePeriodSeconds: 60
+      containers:
+      - name: piko
+        image: "ghcr.io/andydunstall/piko:v0.7.0"
+        imagePullPolicy: "IfNotPresent"
+        ports:
+          - containerPort: 8000
+            name: proxy
+          - containerPort: 8001
+            name: upstream
+          - containerPort: 8002
+            name: admin
+          - containerPort: 8003
+            name: gossip
+        readinessProbe:
+            httpGet:
+              path: /ready
+              port: admin
+        args:
+          - server
+          - --config.path
+          - /config/server.yaml
+          - --config.expand-env
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        volumeMounts:
+          - name: config
+            mountPath: "/config"
+            readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: piko01-piko
+            items:
+            - key: "server.yaml"
+              path: "server.yaml"

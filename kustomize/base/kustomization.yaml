@@ -1,6 +1,7 @@
 # kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: duckdbui
+namespace: tutorials-and-workshops
 resources:
-- statefulset-duckdb.yaml
+- piko-helm.yaml
+- piko-ingress.yaml
