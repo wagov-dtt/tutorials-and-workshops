@@ -23,6 +23,8 @@ setup-eks CLUSTER="training01": awslogin
 # Install manifests for a given cluster, create the cluster if one is not connected.
 deploy CLUSTER:
   eksctl utils write-kubeconfig --cluster {{CLUSTER}} || just setup-eks {{CLUSTER}}
+  kubectl get namespace traefik || kubectl create namespace traefik
+  helm status traefik --namespace traefik || helm upgrade --namespace traefik --install traefik traefik/traefik -f kustomize/helm-values/traefik.yaml 
   kubectl get namespace tutorials-and-workshops || kubectl create namespace tutorials-and-workshops
   kubectl apply -k kustomize/overlays/{{CLUSTER}}
 
