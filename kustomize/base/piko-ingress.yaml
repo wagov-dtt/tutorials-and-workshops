@@ -26,6 +26,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: piko01-piko
+                name: whoami-service
                 port:
-                  name: upstream
+                  number: 80

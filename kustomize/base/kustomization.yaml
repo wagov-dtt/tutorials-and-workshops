@@ -5,3 +5,4 @@ namespace: tutorials-and-workshops
 resources:
 - piko-helm.yaml
 - piko-ingress.yaml
+- whoami-debug.yaml
