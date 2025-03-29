@@ -28,6 +28,11 @@ deploy CLUSTER:
   kubectl get namespace tutorials-and-workshops || kubectl create namespace tutorials-and-workshops
   kubectl apply -k kustomize/overlays/{{CLUSTER}}
 
+# Force upgrade traefik including reapply of helm-values/traefik.yaml
+upgrade-traefik CLUSTER:
+  eksctl utils write-kubeconfig --cluster {{CLUSTER}} || just setup-eks {{CLUSTER}}
+  helm upgrade --namespace traefik --install traefik traefik/traefik -f kustomize/helm-values/traefik.yaml
+
 minikube:
   minikube config set memory no-limit
   minikube config set cpus no-limit
@@ -49,3 +54,8 @@ install-secret SECRETID $NAMESPACE $NAME: awslogin
 release-minikube:
   just install-secret trainingsecret01 duckdbui secret01
   kubectl apply -k duckdb-ui/overlays/minikube
+
+# Load test a site with vegeta
+vegeta URL:
+  which vegeta || brew install vegeta
+  echo "GET {{URL}}" | vegeta attack -duration=10s -rate=50000 | vegeta report -type=text
