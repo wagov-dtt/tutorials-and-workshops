@@ -1,5 +1,6 @@
 set dotenv-load
 
+AWS_ACCOUNT := `aws sts get-caller-identity --query Account --output text`
 # Choose a task to run
 default:
   just --choose
@@ -32,6 +33,12 @@ deploy CLUSTER:
 upgrade-traefik CLUSTER:
   eksctl utils write-kubeconfig --cluster {{CLUSTER}} || just setup-eks {{CLUSTER}}
   helm upgrade --namespace traefik --install traefik traefik/traefik -f kustomize/helm-values/traefik.yaml
+
+mount-s3 BUCKET=("training01-" + AWS_ACCOUNT): awslogin
+  aws s3api head-bucket --bucket {{BUCKET}} || aws s3 mb s3://{{BUCKET}} --region $AWS_REGION
+  mkdir -p .mnt/{{BUCKET}}
+  umount .mnt/{{BUCKET}} || echo "mountpoint clean"
+  $(aws configure export-credentials --format env) && mount-s3  --allow-delete --allow-overwrite {{BUCKET}} .mnt/{{BUCKET}}
 
 minikube:
   minikube config set memory no-limit
