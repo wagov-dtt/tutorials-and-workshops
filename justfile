@@ -1,6 +1,5 @@
 set dotenv-load
 
-AWS_ACCOUNT := `aws sts get-caller-identity --query Account --output text`
 # Choose a task to run
 default:
   just --choose
@@ -8,11 +7,16 @@ default:
 # Install project tools
 prereqs:
   brew bundle install
+  wget "https://s3.amazonaws.com/mountpoint-s3-release/latest/{{arch()}}/mount-s3.deb"
+  sudo apt-get -y update && sudo apt-get install -y ./mount-s3.deb
+  rm mount-s3.deb
 
 # Login to aws using SSO
-awslogin:
-  which aws || just prereqs
-  aws sts get-caller-identity > /dev/null || aws sso login --use-device-code || echo please run '"aws configure sso --use-device-code"' and add AWS_PROFILE/AWS_REGION to your .env file # make sure aws logged in
+@awslogin:
+  which aws > /dev/null || just prereqs
+  # make sure aws logged in
+  aws sts get-caller-identity > /dev/null || aws sso login --use-device-code || \
+  (echo please run '"aws configure sso --use-device-code"' and add AWS_PROFILE/AWS_REGION to your .env file && exit 1)
 
 # Create an eks cluster for testing (reference https://docs.aws.amazon.com/eks/latest/userguide/quickstart.html)
 setup-eks CLUSTER="training01": awslogin
@@ -21,11 +25,25 @@ setup-eks CLUSTER="training01": awslogin
   eksctl utils enable-secrets-encryption --cluster {{CLUSTER}} --key-arn $(aws kms describe-key --key-id alias/eks/secrets --query 'KeyMetadata.Arn' --output text) --region $AWS_REGION # enable kms secrets
   eksctl utils write-kubeconfig --cluster {{CLUSTER}}
 
-# Install manifests for a given cluster, create the cluster if one is not connected.
-deploy CLUSTER:
-  eksctl utils write-kubeconfig --cluster {{CLUSTER}} || just setup-eks {{CLUSTER}}
+# Use helm to install traefik
+setup-traefik:
   kubectl get namespace traefik || kubectl create namespace traefik
-  helm status traefik --namespace traefik || helm upgrade --namespace traefik --install traefik traefik/traefik -f kustomize/helm-values/traefik.yaml 
+  helm repo add traefik https://traefik.github.io/charts
+  helm upgrade --namespace traefik --install traefik traefik/traefik -f kustomize/helm-values/traefik.yaml
+
+# Use helm to install percona everest
+setup-everest:
+  kubectl get namespace everest-system || kubectl create namespace everest-system
+  helm repo add percona https://percona.github.io/percona-helm-charts/
+  helm upgrade --namespace everest-system --install everest-core percona/everest -f kustomize/helm-values/everest.yaml
+
+# Install manifests for a given cluster, create the cluster if one is not connected.
+deploy CLUSTER="training01":
+  eksctl utils write-kubeconfig --cluster {{CLUSTER}} || just setup-eks {{CLUSTER}}
+  helm status traefik --namespace traefik > /dev/null || just setup-traefik
+  helm status everest-core --namespace everest-system > /dev/null || just setup-everest
+  # Setup databases
+  kubectl apply -k kustomize/everest
   kubectl get namespace tutorials-and-workshops || kubectl create namespace tutorials-and-workshops
   kubectl apply -k kustomize/overlays/{{CLUSTER}}
 
@@ -34,12 +52,18 @@ upgrade-traefik CLUSTER:
   eksctl utils write-kubeconfig --cluster {{CLUSTER}} || just setup-eks {{CLUSTER}}
   helm upgrade --namespace traefik --install traefik traefik/traefik -f kustomize/helm-values/traefik.yaml
 
-mount-s3 BUCKET=("training01-" + AWS_ACCOUNT): awslogin
-  aws s3api head-bucket --bucket {{BUCKET}} || aws s3 mb s3://{{BUCKET}} --region $AWS_REGION
-  mkdir -p .mnt/{{BUCKET}}
-  umount .mnt/{{BUCKET}} || echo "mountpoint clean"
+# Mount an s3 bucket locally
+@mount-s3-bucket BUCKET PATH:
+  aws s3api head-bucket --bucket {{BUCKET}} > /dev/null || aws s3 mb s3://{{BUCKET}} --region $AWS_REGION
+  mkdir -p .mnt/{{BUCKET}}/{{PATH}}
+  umount .mnt/{{BUCKET}}/{{PATH}} || echo "mountpoint clean"
   # export-credentials workaround for https://github.com/awslabs/mountpoint-s3/issues/433
-  $(aws configure export-credentials --format env) && mount-s3  --allow-delete --allow-overwrite {{BUCKET}} .mnt/{{BUCKET}}
+  $(aws configure export-credentials --format env) && mount-s3  --allow-delete --allow-overwrite {{BUCKET}} --prefix {{PATH}}/ .mnt/{{BUCKET}}/{{PATH}}/
+
+# Mount an s3 bucket from a prefix/path convenient wrapper
+@mount-s3 PREFIX="training01" PATH="volume01": awslogin
+  which mount-s3 > /dev/null || just prereqs
+  just mount-s3-bucket "{{PREFIX}}-$(aws sts get-caller-identity --query Account --output text)" "{{PATH}}"
 
 minikube:
   minikube config set memory no-limit

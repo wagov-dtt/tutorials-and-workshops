@@ -1,4 +1,4 @@
-## File values.yaml ##
+## Refer to https://github.com/traefik/traefik-helm-chart/blob/master/traefik/values.yaml
 # Use a few replicas to enable rolling updates without outages
 deployment:
   replicas: 3
