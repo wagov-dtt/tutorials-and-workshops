@@ -38,6 +38,7 @@ mount-s3 BUCKET=("training01-" + AWS_ACCOUNT): awslogin
   aws s3api head-bucket --bucket {{BUCKET}} || aws s3 mb s3://{{BUCKET}} --region $AWS_REGION
   mkdir -p .mnt/{{BUCKET}}
   umount .mnt/{{BUCKET}} || echo "mountpoint clean"
+  # export-credentials workaround for https://github.com/awslabs/mountpoint-s3/issues/433
   $(aws configure export-credentials --format env) && mount-s3  --allow-delete --allow-overwrite {{BUCKET}} .mnt/{{BUCKET}}
 
 minikube:
