@@ -21,6 +21,7 @@ prereqs:
 # Create an eks cluster for testing (reference https://docs.aws.amazon.com/eks/latest/userguide/quickstart.html)
 setup-eks CLUSTER="training01": awslogin
   eksctl get cluster --name {{CLUSTER}} > /dev/null || eksctl create cluster -f eksauto/eks-training01-cluster.yaml
+  eksctl update addon -f eksauto/eks-training01-cluster.yaml 
   aws kms describe-key --key-id alias/eks/secrets > /dev/null || aws kms create-alias --alias-name alias/eks/secrets --target-key-id $(aws kms create-key --query 'KeyMetadata.KeyId' --output text)
   eksctl utils enable-secrets-encryption --cluster {{CLUSTER}} --key-arn $(aws kms describe-key --key-id alias/eks/secrets --query 'KeyMetadata.Arn' --output text) --region $AWS_REGION # enable kms secrets
   eksctl utils write-kubeconfig --cluster {{CLUSTER}}
@@ -37,14 +38,20 @@ setup-everest:
   helm repo add percona https://percona.github.io/percona-helm-charts/
   helm upgrade --namespace everest-system --install everest-core percona/everest -f kustomize/helm-values/everest.yaml
 
+# Convenience shell cmds
+eks-securitygroups := "eksctl get cluster --name $1 -o json | jq '.[0].ResourcesVpcConfig.SecurityGroupIds + [.[0].ResourcesVpcConfig.ClusterSecu
+rityGroupId] | join(\",\")'"
+eks-subnets := "eksctl get cluster --name $1 -o json | jq '.[0].ResourcesVpcConfig.SubnetIds | join (\",\")'"
+
 # Install manifests for a given cluster, create the cluster if one is not connected.
 deploy CLUSTER="training01":
   eksctl utils write-kubeconfig --cluster {{CLUSTER}} || just setup-eks {{CLUSTER}}
   helm status traefik --namespace traefik > /dev/null || just setup-traefik
   helm status everest-core --namespace everest-system > /dev/null || just setup-everest
   # Setup databases
-  kubectl apply -k kustomize/everest
   kubectl get namespace tutorials-and-workshops || kubectl create namespace tutorials-and-workshops
+  # Create s3 persistent volume for everest backups
+  just create-s3vol "{{CLUSTER}}-$(aws sts get-caller-identity --query Account --output text)" minio-data everest
   kubectl apply -k kustomize/overlays/{{CLUSTER}}
 
 # Force upgrade traefik including reapply of helm-values/traefik.yaml
@@ -64,6 +71,10 @@ upgrade-traefik CLUSTER:
 @mount-s3 PREFIX="training01" PATH="volume01": awslogin
   which mount-s3 > /dev/null || just prereqs
   just mount-s3-bucket "{{PREFIX}}-$(aws sts get-caller-identity --query Account --output text)" "{{PATH}}"
+
+# Create a volume in kubernetes using mountpoint for s3 driver
+create-s3vol $BUCKET $VOLUME NAMESPACE:
+  cat kustomize/s3volume-template.yaml | envsubst | kubectl apply --namespace {{NAMESPACE}} -f -
 
 minikube:
   minikube config set memory no-limit

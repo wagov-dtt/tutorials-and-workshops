@@ -14,7 +14,15 @@ addonsConfig:
 
 addons:
 - name: snapshot-controller
+  version: latest
 - name: amazon-cloudwatch-observability
+  version: latest
+- name: aws-efs-csi-driver
+  version: latest
+- name: aws-mountpoint-s3-csi-driver
+  version: latest
+  attachPolicyARNs:
+  - arn:aws:iam::aws:policy/AmazonS3FullAccess
 
 cloudWatch:
   clusterLogging:
