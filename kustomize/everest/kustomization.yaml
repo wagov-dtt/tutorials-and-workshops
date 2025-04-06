@@ -6,4 +6,3 @@ resources:
 - postgres.yaml
 - mysql.yaml
 - mongodb.yaml
-- minio.yaml

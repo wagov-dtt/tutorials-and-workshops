@@ -26,12 +26,6 @@ setup-eks CLUSTER="training01": awslogin
   eksctl utils enable-secrets-encryption --cluster {{CLUSTER}} --key-arn $(aws kms describe-key --key-id alias/eks/secrets --query 'KeyMetadata.Arn' --output text) --region $AWS_REGION # enable kms secrets
   eksctl utils write-kubeconfig --cluster {{CLUSTER}}
 
-# Use helm to install traefik
-setup-traefik:
-  kubectl get namespace traefik || kubectl create namespace traefik
-  helm repo add traefik https://traefik.github.io/charts
-  helm upgrade --namespace traefik --install traefik traefik/traefik -f kustomize/helm-values/traefik.yaml
-
 # Use helm to install percona everest
 setup-everest:
   kubectl get namespace everest-system || kubectl create namespace everest-system
@@ -43,21 +37,32 @@ eks-securitygroups := "eksctl get cluster --name $1 -o json | jq '.[0].Resources
 rityGroupId] | join(\",\")'"
 eks-subnets := "eksctl get cluster --name $1 -o json | jq '.[0].ResourcesVpcConfig.SubnetIds | join (\",\")'"
 
+HELM_UPGRADE := "0"
+HELM_ACTION := if HELM_UPGRADE == "1" { "upgrade --install" } else { "install" }
+
+helm-install NAME NAMESPACE CHART REPO:
+  kubectl get namespace {{NAMESPACE}} || kubectl create namespace {{NAMESPACE}}
+  helm repo add {{parent_directory(CHART)}} {{REPO}}
+  helm {{HELM_ACTION}} {{NAME}} {{CHART}} --namespace {{NAMESPACE}} -f kustomize/helm-values/{{NAME}}.yaml
+
+# Structure: "NAME": "NAMESPACE CHART REPO"
+HELM_INSTALLS := '{
+  "traefik": "traefik traefik/traefik https://traefik.github.io/charts",
+  "everest-core": "everest-system percona/everest https://percona.github.io/percona-helm-charts",
+  "rook-ceph": "rook-ceph rook-release/rook-ceph https://charts.rook.io/release",
+  "elastic-operator": "elastic-system elastic/eck-operator https://helm.elastic.co"
+}'
+
+# Use helm to enable traefik (gateway), everest (dbs), rook-ceph (storage) and elastic (dbs) in a kubernetes cluster
+install-helm-charts +CHARTS="traefik everest-core rook-ceph elastic-operator":
+  @-for name in {{CHARTS}}; do just helm-install $name $(echo '{{HELM_INSTALLS}}' | jq -r ".\"$name\""); done
+
 # Install manifests for a given cluster, create the cluster if one is not connected.
 deploy CLUSTER="training01":
   eksctl utils write-kubeconfig --cluster {{CLUSTER}} || just setup-eks {{CLUSTER}}
-  helm status traefik --namespace traefik > /dev/null || just setup-traefik
-  helm status everest-core --namespace everest-system > /dev/null || just setup-everest
-  # Setup databases
+  just install-helm-charts
   kubectl get namespace tutorials-and-workshops || kubectl create namespace tutorials-and-workshops
-  # Create s3 persistent volume for everest backups
-  just create-s3vol "{{CLUSTER}}-$(aws sts get-caller-identity --query Account --output text)" minio-data everest
   kubectl apply -k kustomize/overlays/{{CLUSTER}}
-
-# Force upgrade traefik including reapply of helm-values/traefik.yaml
-upgrade-traefik CLUSTER:
-  eksctl utils write-kubeconfig --cluster {{CLUSTER}} || just setup-eks {{CLUSTER}}
-  helm upgrade --namespace traefik --install traefik traefik/traefik -f kustomize/helm-values/traefik.yaml
 
 # Mount an s3 bucket locally
 @mount-s3-bucket BUCKET PATH:
@@ -77,13 +82,22 @@ create-s3vol $BUCKET $VOLUME NAMESPACE:
   cat kustomize/s3volume-template.yaml | envsubst | kubectl apply --namespace {{NAMESPACE}} -f -
 
 minikube:
+  -sudo chown $(whoami) /var/run/docker.sock
   minikube config set memory no-limit
   minikube config set cpus no-limit
   # Setup minikube
   which k9s || just prereqs
-  minikube status || minikube start # if kube configured use that cluster, otherwise start minikube
+  minikube status || minikube start
+  minikube addons enable volumesnapshots
+  minikube addons enable csi-hostpath-driver
+  minikube addons disable storage-provisioner
+  minikube addons disable default-storageclass
+  kubectl patch storageclass csi-hostpath-sc -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+
 
 deploy-local: minikube
+  just install-helm-charts
+  kubectl get namespace tutorials-and-workshops || kubectl create namespace tutorials-and-workshops
   kubectl apply -k kustomize/overlays/minikube
 
 # Retreives a secret from AWS Secrets Manager as JSON and saves to kubernetes
