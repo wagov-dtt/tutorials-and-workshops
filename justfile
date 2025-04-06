@@ -49,12 +49,12 @@ helm-install NAME NAMESPACE CHART REPO:
 HELM_INSTALLS := '{
   "traefik": "traefik traefik/traefik https://traefik.github.io/charts",
   "everest-core": "everest-system percona/everest https://percona.github.io/percona-helm-charts",
-  "rook-ceph": "rook-ceph rook-release/rook-ceph https://charts.rook.io/release",
+  "minio-operator": "minio-operator minio/operator https://operator.min.io",
   "elastic-operator": "elastic-system elastic/eck-operator https://helm.elastic.co"
 }'
 
-# Use helm to enable traefik (gateway), everest (dbs), rook-ceph (storage) and elastic (dbs) in a kubernetes cluster
-install-helm-charts +CHARTS="traefik everest-core rook-ceph elastic-operator":
+# Use helm to enable traefik (gateway), everest (dbs), minio-operator (s3) and elastic (dbs) in a kubernetes cluster
+install-helm-charts +CHARTS="traefik everest-core minio-operator elastic-operator":
   @-for name in {{CHARTS}}; do just helm-install $name $(echo '{{HELM_INSTALLS}}' | jq -r ".\"$name\""); done
 
 # Install manifests for a given cluster, create the cluster if one is not connected.
@@ -92,10 +92,9 @@ minikube:
   minikube addons enable csi-hostpath-driver
   minikube addons disable storage-provisioner
   minikube addons disable default-storageclass
-  kubectl patch storageclass csi-hostpath-sc -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
 
-
-deploy-local: minikube
+deploy-local:
+  minikube status || just minikube
   just install-helm-charts
   kubectl get namespace tutorials-and-workshops || kubectl create namespace tutorials-and-workshops
   kubectl apply -k kustomize/overlays/minikube

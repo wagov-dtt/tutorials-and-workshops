@@ -5,6 +5,7 @@ resources:
   - storageclass.yaml
   - ../../base
   - ../../everest
+  - minio.yaml
 
 commonAnnotations:
   targetCluster: minikube
