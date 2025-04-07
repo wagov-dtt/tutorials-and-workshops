@@ -49,11 +49,13 @@ helm-install NAME NAMESPACE CHART REPO:
 HELM_INSTALLS := '{
   "traefik": "traefik traefik/traefik https://traefik.github.io/charts",
   "everest-core": "everest-system percona/everest https://percona.github.io/percona-helm-charts",
-  "elastic-operator": "elastic-system elastic/eck-operator https://helm.elastic.co"
+  "elastic-operator": "elastic-system elastic/eck-operator https://helm.elastic.co",
+  "k8up": "k8up k8up-io/k8up https://k8up-io.github.io/k8up"
 }'
 
 # Use helm to enable traefik (gateway), everest (dbs) and elastic (dbs) in a kubernetes cluster
-install-helm-charts +CHARTS="traefik everest-core elastic-operator":
+install-helm-charts +CHARTS="traefik everest-core elastic-operator k8up":
+  kubectl apply --server-side -f "https://github.com/k8up-io/k8up/releases/download/v2.12.0/k8up-crd.yaml"
   @-for name in {{CHARTS}}; do just helm-install $name $(echo '{{HELM_INSTALLS}}' | jq -r ".\"$name\""); done
 
 # Install manifests for a given cluster, create the cluster if one is not connected.
