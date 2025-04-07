@@ -14,3 +14,20 @@ just setup-eks # Create the training01 cluster in your AWS account
 ```
 
 Once configured can deploy the 2048 application as per [AWS quickstart](https://docs.aws.amazon.com/eks/latest/userguide/quickstart.html#_deploy_the_2048_game_sample_application) and test out cluster operations. Using [k9s](https://k9scli.io) to explore the cluster is another great way to learn k8s basics.
+
+TODO: Configure [Managed Identity](https://github.com/gaul/s3proxy/wiki/Storage-backend-examples#aws-s3---managed-identity) proxying of S3 via s3proxy to enable in cluster resources to access S3 without secrets.
+
+# Local development
+
+Similar to above, a close-to-production environment can be stood up locally with minikube.
+
+```bash
+just deploy-local
+```
+
+This configures dbs for [postgres](kustomize/everest/postgres.yaml), [mysql](kustomize/everest/mysql.yaml), [mongodb](kustomize/everest/mongodb.yaml) locally and an [S3Proxy](kustomize/everest/s3proxy.yaml) . The deployment can be tweaked for local use just by commenting out resources in the `kustomization.yaml` files, bit more work required to add below capabilities:
+
+- [Percona Everest](ps://docs.percona.com/everest/index.html) preconfigured to use [s3proxy](https://github.com/gaul/s3proxy) endpoint (currently need to create bucket manually at the internal http://s3proxy.everest.svc.cluster.local address)
+- [K8up](https://docs.k8up.io/k8up/2.12/how-tos/application-aware-backups.html) preconfigured with s3proxy to demonstrate app aware backups on e.g. a nightly schedule
+- Predefine a single node [Elastic](https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-deploy-elasticsearch.html) template for local testing of elastic workloads
+
