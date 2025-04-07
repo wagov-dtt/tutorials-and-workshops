@@ -4,12 +4,13 @@ metadata:
   name: $VOLUME
 spec:
   capacity:
-    storage: 1Gi
+    storage: 1Ti
   accessModes:
     - ReadWriteMany
   mountOptions:
     - allow-delete
     - allow-other
+    - allow-overwrite
     - prefix=$VOLUME/
   csi:
     driver: s3.csi.aws.com

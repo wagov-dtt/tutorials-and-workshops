@@ -4,5 +4,7 @@ kind: Kustomization
 resources:
   - ../../base
   - ../../everest
+patches:
+  - path: s3proxy.yaml
 commonAnnotations:
   targetCluster: training01

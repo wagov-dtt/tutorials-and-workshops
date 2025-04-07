@@ -49,12 +49,11 @@ helm-install NAME NAMESPACE CHART REPO:
 HELM_INSTALLS := '{
   "traefik": "traefik traefik/traefik https://traefik.github.io/charts",
   "everest-core": "everest-system percona/everest https://percona.github.io/percona-helm-charts",
-  "minio-operator": "minio-operator minio/operator https://operator.min.io",
   "elastic-operator": "elastic-system elastic/eck-operator https://helm.elastic.co"
 }'
 
-# Use helm to enable traefik (gateway), everest (dbs), minio-operator (s3) and elastic (dbs) in a kubernetes cluster
-install-helm-charts +CHARTS="traefik everest-core minio-operator elastic-operator":
+# Use helm to enable traefik (gateway), everest (dbs) and elastic (dbs) in a kubernetes cluster
+install-helm-charts +CHARTS="traefik everest-core elastic-operator":
   @-for name in {{CHARTS}}; do just helm-install $name $(echo '{{HELM_INSTALLS}}' | jq -r ".\"$name\""); done
 
 # Install manifests for a given cluster, create the cluster if one is not connected.
@@ -62,39 +61,48 @@ deploy CLUSTER="training01":
   eksctl utils write-kubeconfig --cluster {{CLUSTER}} || just setup-eks {{CLUSTER}}
   just install-helm-charts
   kubectl get namespace tutorials-and-workshops || kubectl create namespace tutorials-and-workshops
+  # Mount an s3 vol for s3proxy in cluster
+  just mount-s3 {{CLUSTER}} s3proxy-data everest
   kubectl apply -k kustomize/overlays/{{CLUSTER}}
 
+# Create a volume in kubernetes using mountpoint for s3 driver
+create-s3vol $BUCKET $VOLUME NAMESPACE:
+  kubectl get ns "{{NAMESPACE}}"
+  cat kustomize/s3volume-template.yaml | envsubst | kubectl apply --namespace {{NAMESPACE}} -f -
+
 # Mount an s3 bucket locally
-@mount-s3-bucket BUCKET PATH:
+@mount-s3-bucket BUCKET PATH NAMESPACE:
   aws s3api head-bucket --bucket {{BUCKET}} > /dev/null || aws s3 mb s3://{{BUCKET}} --region $AWS_REGION
   mkdir -p .mnt/{{BUCKET}}/{{PATH}}
   umount .mnt/{{BUCKET}}/{{PATH}} || echo "mountpoint clean"
   # export-credentials workaround for https://github.com/awslabs/mountpoint-s3/issues/433
   $(aws configure export-credentials --format env) && mount-s3  --allow-delete --allow-overwrite {{BUCKET}} --prefix {{PATH}}/ .mnt/{{BUCKET}}/{{PATH}}/
+  just create-s3vol {{BUCKET}} {{PATH}} {{NAMESPACE}}
 
-# Mount an s3 bucket from a prefix/path convenient wrapper
-@mount-s3 PREFIX="training01" PATH="volume01": awslogin
+
+# Mount an s3 bucket from a prefix/path convenient wrapper, if namespace specified create vol in k8s
+@mount-s3 PREFIX="training01" PATH="volume01" NAMESPACE="": awslogin
   which mount-s3 > /dev/null || just prereqs
-  just mount-s3-bucket "{{PREFIX}}-$(aws sts get-caller-identity --query Account --output text)" "{{PATH}}"
+  just mount-s3-bucket "{{PREFIX}}-$(aws sts get-caller-identity --query Account --output text)" "{{PATH}}" "{{NAMESPACE}}"
 
-# Create a volume in kubernetes using mountpoint for s3 driver
-create-s3vol $BUCKET $VOLUME NAMESPACE:
-  cat kustomize/s3volume-template.yaml | envsubst | kubectl apply --namespace {{NAMESPACE}} -f -
 
-minikube:
-  -sudo chown $(whoami) /var/run/docker.sock
+# Enable full use of parent container, snapshots, block volumes
+# on base minikube setup
+setup-minikube: prereqs
   minikube config set memory no-limit
   minikube config set cpus no-limit
   # Setup minikube
-  which k9s || just prereqs
-  minikube status || minikube start
+  minikube start
   minikube addons enable volumesnapshots
   minikube addons enable csi-hostpath-driver
   minikube addons disable storage-provisioner
   minikube addons disable default-storageclass
 
-deploy-local:
-  minikube status || just minikube
+minikube:
+  sudo chown $(whoami) /var/run/docker.sock
+  minikube status || just setup-minikube
+
+deploy-local: minikube
   just install-helm-charts
   kubectl get namespace tutorials-and-workshops || kubectl create namespace tutorials-and-workshops
   kubectl apply -k kustomize/overlays/minikube
