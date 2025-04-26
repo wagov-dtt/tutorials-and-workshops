@@ -1,0 +1,40 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: traefik 
+spec:
+  chart: traefik
+  repo: https://traefik.github.io/charts
+  createNamespace: true
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: everest-core
+spec:
+  chart: everest
+  repo: https://percona.github.io/percona-helm-charts
+  createNamespace: true
+  targetNamespace: "everest-system"
+  set:
+    server.initialAdminPassword: "everest"
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: k8up
+spec:
+  chart: k8up
+  createNamespace: true
+  repo: https://k8up-io.github.io/k8up
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: elastic-operator
+spec:
+  chart: eck-operator
+  createNamespace: true
+  repo: https://helm.elastic.co
+
+

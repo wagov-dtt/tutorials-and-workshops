@@ -19,6 +19,7 @@ prereqs:
   (echo please run '"aws configure sso --use-device-code"' and add AWS_PROFILE/AWS_REGION to your .env file && exit 1)
 
 # Create an eks cluster for testing (reference https://docs.aws.amazon.com/eks/latest/userguide/quickstart.html)
+# Should use terraform/opentofu in future
 setup-eks CLUSTER="training01": awslogin
   eksctl get cluster --name {{CLUSTER}} > /dev/null || eksctl create cluster -f eksauto/eks-training01-cluster.yaml
   eksctl update addon -f eksauto/eks-training01-cluster.yaml 
@@ -26,37 +27,6 @@ setup-eks CLUSTER="training01": awslogin
   eksctl utils enable-secrets-encryption --cluster {{CLUSTER}} --key-arn $(aws kms describe-key --key-id alias/eks/secrets --query 'KeyMetadata.Arn' --output text) --region $AWS_REGION # enable kms secrets
   eksctl utils write-kubeconfig --cluster {{CLUSTER}}
 
-# Use helm to install percona everest
-setup-everest:
-  kubectl get namespace everest-system || kubectl create namespace everest-system
-  helm repo add percona https://percona.github.io/percona-helm-charts/
-  helm upgrade --namespace everest-system --install everest-core percona/everest -f kustomize/helm-values/everest.yaml
-
-# Convenience shell cmds
-eks-securitygroups := "eksctl get cluster --name $1 -o json | jq '.[0].ResourcesVpcConfig.SecurityGroupIds + [.[0].ResourcesVpcConfig.ClusterSecu
-rityGroupId] | join(\",\")'"
-eks-subnets := "eksctl get cluster --name $1 -o json | jq '.[0].ResourcesVpcConfig.SubnetIds | join (\",\")'"
-
-HELM_UPGRADE := "0"
-HELM_ACTION := if HELM_UPGRADE == "1" { "upgrade --install" } else { "install" }
-
-helm-install NAME NAMESPACE CHART REPO:
-  kubectl get namespace {{NAMESPACE}} || kubectl create namespace {{NAMESPACE}}
-  helm repo add {{parent_directory(CHART)}} {{REPO}}
-  helm {{HELM_ACTION}} {{NAME}} {{CHART}} --namespace {{NAMESPACE}} -f kustomize/helm-values/{{NAME}}.yaml
-
-# Structure: "NAME": "NAMESPACE CHART REPO"
-HELM_INSTALLS := '{
-  "traefik": "traefik traefik/traefik https://traefik.github.io/charts",
-  "everest-core": "everest-system percona/everest https://percona.github.io/percona-helm-charts",
-  "elastic-operator": "elastic-system elastic/eck-operator https://helm.elastic.co",
-  "k8up": "k8up k8up-io/k8up https://k8up-io.github.io/k8up"
-}'
-
-# Use helm to enable traefik (gateway), everest (dbs) and elastic (dbs) in a kubernetes cluster
-install-helm-charts +CHARTS="traefik everest-core elastic-operator k8up":
-  kubectl apply --server-side -f "https://github.com/k8up-io/k8up/releases/download/v2.12.0/k8up-crd.yaml"
-  @-for name in {{CHARTS}}; do just helm-install $name $(echo '{{HELM_INSTALLS}}' | jq -r ".\"$name\""); done
 
 # Install manifests for a given cluster, create the cluster if one is not connected.
 deploy CLUSTER="training01":
@@ -87,27 +57,14 @@ create-s3vol $BUCKET $VOLUME NAMESPACE:
   which mount-s3 > /dev/null || just prereqs
   just mount-s3-bucket "{{PREFIX}}-$(aws sts get-caller-identity --query Account --output text)" "{{PATH}}" "{{NAMESPACE}}"
 
+# Simplest docker hosted k8s cluster
+k3d:
+  @which k3d > /dev/null || just prereqs
+  k3d cluster create --k3s-arg="--disable-helm-controller@all" --k3s-arg="--disable=traefik@all" || k3d cluster start
 
-# Enable full use of parent container, snapshots, block volumes
-# on base minikube setup
-setup-minikube: prereqs
-  minikube config set memory no-limit
-  minikube config set cpus no-limit
-  # Setup minikube
-  minikube start
-  minikube addons enable volumesnapshots
-  minikube addons enable csi-hostpath-driver
-  minikube addons disable storage-provisioner
-  minikube addons disable default-storageclass
-
-minikube:
-  sudo chown $(whoami) /var/run/docker.sock
-  minikube status || just setup-minikube
-
-deploy-local: minikube
-  just install-helm-charts
-  kubectl get namespace tutorials-and-workshops || kubectl create namespace tutorials-and-workshops
-  kubectl apply -k kustomize/overlays/minikube
+# deploys local kustomize dir with 3 retries to handle CRD timing
+deploy-local +ARGS="--v=3": k3d
+  for i in $(seq 4); do kubectl apply -k kustomize/overlays/local --server-side {{ARGS}} && break || sleep 20; done
 
 # Retreives a secret from AWS Secrets Manager as JSON and saves to kubernetes
 install-secret SECRETID $NAMESPACE $NAME: awslogin
@@ -115,11 +72,6 @@ install-secret SECRETID $NAMESPACE $NAME: awslogin
   cat kustomize/secrets-template.yaml | \
   SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id {{SECRETID}} --query SecretString --output text) \
   envsubst | kubectl apply -f -
-
-# Creates requisite secrets from AWS and releases kustomize manifests to a cluster
-release-minikube:
-  just install-secret trainingsecret01 duckdbui secret01
-  kubectl apply -k duckdb-ui/overlays/minikube
 
 # Load test a site with vegeta
 vegeta URL:

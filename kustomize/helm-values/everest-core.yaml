@@ -1,3 +1,0 @@
-# Refer to https://github.com/percona/percona-helm-charts/blob/main/charts/everest/values.yaml
-server:
-  initialAdminPassword: "everest"
