@@ -19,7 +19,7 @@ TODO: Configure [Managed Identity](https://github.com/gaul/s3proxy/wiki/Storage-
 
 # Local development
 
-Similar to above, a close-to-production environment can be stood up locally with minikube.
+Similar to above, a close-to-production environment can be stood up locally with [k3d](https://k3d.io/stable/#quick-start) (we use this over minikube as it has better loadbalancer/storage defaults). This configuration also uses the [k3s helm-controller](https://github.com/k3s-io/helm-controller) to enable kustomize to directly deploy [HelmCharts](https://docs.k3s.io/helm#using-the-helm-controller) from [helm-charts.yaml](kustomize/kube-system/helm-charts.yaml) and is much more lightweight than a full argocd or flux config.
 
 ```bash
 just deploy-local
