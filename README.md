@@ -31,3 +31,21 @@ This configures dbs for [postgres](kustomize/everest/postgres.yaml), [mysql](kus
 - [K8up](https://docs.k8up.io/k8up/2.12/how-tos/application-aware-backups.html) preconfigured with s3proxy to demonstrate app aware backups on e.g. a nightly schedule
 - Predefine a single node [Elastic](https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-deploy-elasticsearch.html) template for local testing of elastic workloads
 
+# macOS tips
+
+To get working `x86_64` devcontainers locally on macOS below is a quickstart on Apple Silicon with [homebrew](https://brew.sh/) installed.
+
+```bash
+# Setup devpod & colima for docker support
+brew install colima docker docker-buildx devpod
+mkdir -p ~/.docker/cli-plugins
+ln -s $(which docker-buildx) ~/.docker/cli-plugins/docker-buildx
+# Create a suitably sized vm for dev activities (k3d clusters with local dbs will use 2-3GB of memory)
+colima start --cpu 4 --memory 12 -a x86_64 --vz-rosetta
+devpod provider add docker
+
+# Launch devcontainer with default ide
+cd ~/GitHub
+gh repo clone wagov-dtt/tutorials-and-workshops
+devpod up tutorials-and-workshops
+```
