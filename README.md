@@ -41,11 +41,12 @@ brew install colima docker docker-buildx devpod
 mkdir -p ~/.docker/cli-plugins
 ln -s $(which docker-buildx) ~/.docker/cli-plugins/docker-buildx
 # Create a suitably sized vm for dev activities (k3d clusters with local dbs will use 2-3GB of memory)
-colima start --cpu 4 --memory 12 -a x86_64 --vz-rosetta
+softwareupdate --install-rosetta --agree-to-license
+colima start --cpu 4 --memory 12 --vz-rosetta
 devpod provider add docker
 
 # Launch devcontainer with default ide
 cd ~/GitHub
 gh repo clone wagov-dtt/tutorials-and-workshops
-devpod up tutorials-and-workshops
+DOCKER_DEFAULT_PLATFORM=linux/amd64 devpod up tutorials-and-workshops
 ```
