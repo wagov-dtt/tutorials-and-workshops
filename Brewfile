@@ -1,3 +1,4 @@
+brew "fzf"
 brew "k3d"
 brew "k9s"
 brew "kubectl"
