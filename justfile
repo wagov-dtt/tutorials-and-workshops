@@ -77,3 +77,14 @@ install-secret SECRETID $NAMESPACE $NAME: awslogin
 vegeta URL:
   which vegeta || brew install vegeta
   echo "GET {{URL}}" | vegeta attack -duration=10s -rate=50000 | vegeta report -type=text
+
+# Run semgrep/CodeQL (SAST) analysis locally and output results to CSV
+[working-directory: '.codeql']
+codeql: prereqs
+    gh extensions install github/gh-codeql
+    -semgrep scan --sarif --output semgrep_results.sarif ..
+    gh codeql database create --db-cluster --language=go,python,javascript-typescript --threads=0 --source-root=.. --overwrite codeql-db
+    gh codeql database analyze --download --format=sarif-latest --threads=0 --output=go_results.sarif codeql-db/go codeql/go-queries
+    gh codeql database analyze --download --format=sarif-latest --threads=0 --output=python_results.sarif codeql-db/python codeql/python-queries
+    gh codeql database analyze --download --format=sarif-latest --threads=0 --output=javascript_results.sarif codeql-db/javascript codeql/javascript-queries
+    uvx --from sarif-tools sarif csv
