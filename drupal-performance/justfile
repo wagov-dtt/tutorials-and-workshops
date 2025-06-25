@@ -4,8 +4,10 @@ prereqs:
   -sudo apt-get -y update && sudo apt-get install -y ./mount-s3.deb
   -rm mount-s3.deb
 
-ddev-webserver-prod HTML="/mnt/fsx/html":
-    sudo docker run --env-file .ddev-env -p 8080:80 -v "{{absolute_path('.ddev')}}:/mnt/ddev_config" -v "{{HTML}}:/var/www/html" ddev/ddev-webserver-prod:v1.24.6
+ddev:
+    brew install ddev/ddev/ddev
+    ddev config global --use-hardened-images --performance-mode=none --omit-containers=ddev-ssh-agent,ddev-router
+    ddev debug rebuild --service web
 
 # Load test a local server using a specific Host header (bypasses LB)
 # Usage: just vegeta-host HOST=myapp.example.com URL="http://127.0.0.1:8080/path"
