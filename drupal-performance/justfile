@@ -5,7 +5,7 @@ prereqs:
   -rm mount-s3.deb
 
 ddev:
-    brew install ddev/ddev/ddev
+    which ddev || curl -fsSL https://ddev.com/install.sh | bash
     ddev config global --use-hardened-images --performance-mode=none --omit-containers=ddev-ssh-agent,ddev-router
     ddev debug rebuild --service web
 
