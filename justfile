@@ -77,7 +77,7 @@ install-secret SECRETID $NAMESPACE $NAME: awslogin
 # Load test a site with vegeta
 vegeta URL:
   which vegeta || brew install vegeta
-  echo "GET {{URL}}" | vegeta attack -duration=10s -rate=50000 | vegeta report -type=text
+  echo "GET {{URL}}" | vegeta attack -duration=10s -rate=1000 | vegeta report -type=text
 
 # Run semgrep/CodeQL (SAST) analysis locally and output results to CSV
 [working-directory: '.codeql']
