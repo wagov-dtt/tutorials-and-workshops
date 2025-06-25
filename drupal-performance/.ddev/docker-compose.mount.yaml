@@ -1,0 +1,9 @@
+services:
+  web:
+    volumes:
+      - source: /var/www/html
+        target: /var/www/html
+        type: bind
+      - source: /var/www/files
+        target: /var/www/files
+        type: bind
