@@ -4,6 +4,4 @@ kind: Kustomization
 namespace: everest
 resources:
 - postgres.yaml
-- mysql.yaml
-- mongodb.yaml
 - s3proxy.yaml

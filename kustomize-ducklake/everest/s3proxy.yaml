@@ -7,10 +7,11 @@ metadata:
 spec:
   ports:
   - port: 80
+    nodePort: 30080
     name: s3
-  clusterIP: None
   selector:
     app: s3proxy
+  type: NodePort
 ---
 apiVersion: apps/v1
 kind: StatefulSet
