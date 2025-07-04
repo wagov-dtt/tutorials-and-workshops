@@ -1,0 +1,17 @@
+apiVersion: everest.percona.com/v1alpha1
+kind: DatabaseCluster
+metadata:
+  name: postgres01
+spec:
+  monitoring: {}
+  engine:
+    type: postgresql
+    replicas: 1
+    storage:
+      size: 4G
+    resources:
+      cpu: "1"
+      memory: 1G
+  proxy:
+    type: pgbouncer
+    replicas: 1

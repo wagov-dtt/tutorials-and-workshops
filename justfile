@@ -67,6 +67,10 @@ k3d:
 deploy-local +ARGS="--v=3": k3d
   for i in $(seq 4); do kubectl apply -k kustomize/overlays/local --server-side {{ARGS}} && break || sleep 20; done
 
+# deploys local kustomize dir with 3 retries to handle CRD timing
+deploy-ducklake +ARGS="--v=3": k3d
+  for i in $(seq 4); do kubectl apply -k kustomize-ducklake/overlays/local --server-side {{ARGS}} && break || sleep 20; done
+
 # Retreives a secret from AWS Secrets Manager as JSON and saves to kubernetes
 install-secret SECRETID $NAMESPACE $NAME: awslogin
   kubectl get namespace $NAMESPACE || kubectl create namespace $NAMESPACE
