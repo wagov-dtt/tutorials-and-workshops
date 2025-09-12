@@ -1,0 +1,50 @@
+# Drupal CMS Performance Testing
+
+default:
+    @just --list
+
+# Setup Drupal CMS with search and news
+setup:
+    ddev start
+    ddev composer install
+    ddev drush site:install --account-name=admin --account-pass=admin -y
+    ddev drush recipe ../recipes/drupal_cms_starter
+    ddev drush recipe ../recipes/drupal_cms_search
+    ddev drush recipe ../recipes/drupal_cms_news
+
+# Basic DDEV commands
+start:
+    ddev start
+
+stop:
+    ddev stop
+
+login:
+    ddev drush user:login
+
+status:
+    ddev describe
+
+# Generate test content
+generate:
+    ddev drush php:script scripts/generate_news_content.php
+    ddev drush search-api:rebuild-tracker content
+    ddev drush search-api:index
+
+# Run performance tests
+test:
+    ddev drush php:script scripts/search_performance_test.php
+
+# Clear test content
+clear:
+    ddev drush sql:query "DELETE FROM node WHERE type='news'"
+    ddev drush search-api:clear
+
+# Full workflow
+full-test:
+    just generate
+    just test
+
+# Reset everything
+reset:
+    ddev delete -O -y || true
