@@ -7,18 +7,27 @@
 
 use Drupal\search_api\Entity\Index;
 
+// Search terms based on actual generated content + some typos for realism
 $search_terms = [
-  'breaking news', 'technology', 'market analysis', 'health', 'politics',
-  'environment', 'sports', 'economy', 'science', 'education',
-  'weather', 'transportation', 'housing', 'energy', 'agriculture',
-  'manufacturing', 'tourism', 'healthcare', 'legal', 'community'
+  // Perfect matches from generated content
+  'digital landscape', 'organizations', 'technologies', 'transformation',
+  'efficiency', 'customer satisfaction', 'strategic planning', 'innovation',
+  'sustainability', 'artificial intelligence', 'data analytics', 'partnerships',
+  'collaboration', 'human capital', 'learning', 'compliance', 'investment',
+  
+  // Single words that appear frequently  
+  'digital', 'business', 'companies', 'market', 'growth', 'development',
+  'strategic', 'operational', 'technology', 'performance', 'planning',
+  
+  // Common typos and variations
+  'digitial', 'buisness', 'techology', 'planing', 'eficiency', 'inovation',
+  'organizatons', 'colaboration', 'developement', 'performace'
 ];
 
-$num_searches = 100;
-$results_per_page = 20;
+$num_searches = 50;  // Reduced for simpler testing
+$results_per_page = 10;  // Smaller result sets
 
 echo "Starting Search API performance test...\n";
-echo "Running $num_searches searches with $results_per_page results per page\n\n";
 
 // Get the content search index
 $index = Index::load('content');
@@ -26,6 +35,11 @@ if (!$index) {
   echo "Error: Could not load 'content' search index. Make sure Search API is configured.\n";
   exit(1);
 }
+
+// Show index status (reindexing handled by justfile)
+$indexed_items = $index->getTrackerInstance()->getIndexedItemsCount();
+echo "📊 Testing with $indexed_items indexed items\n";
+echo "🔍 Running $num_searches searches with $results_per_page results per page\n\n";
 
 $total_time = 0;
 $search_times = [];

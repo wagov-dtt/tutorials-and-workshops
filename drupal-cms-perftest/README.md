@@ -7,7 +7,7 @@ Performance testing environment for Drupal CMS with focus on content generation 
 1. **Setup**: `just setup` - Install Drupal CMS with search and news recipes
 2. **Restart**: `ddev restart` - Apply performance configurations  
 3. **Generate**: `just generate` - Create 100,000 test news articles (resumes if partial)  
-4. **Test**: `just test` - Run search performance benchmarks
+4. **Test**: `just test` - Reindex content and run search performance benchmarks
 5. **Clear**: `just clear` - Remove test content
 
 **Note**: Performance configurations are included and committed to the repository.
@@ -26,8 +26,8 @@ just status     # Show DDEV project status
 just reset      # Delete and recreate DDEV project
 
 # Content generation and testing
-just generate   # Create test content and index for search
-just test       # Run search performance tests
+just generate   # Create test content 
+just test       # Reindex and run search performance tests
 just clear      # Delete test content
 just full-test  # Complete workflow: generate + test
 ```
@@ -36,7 +36,7 @@ just full-test  # Complete workflow: generate + test
 
 Edit `scripts/generate_news_content.php` to change:
 - `$total_articles` - Target number of total articles (default: 100,000)
-- `$batch_size` - Processing batch size (default: 100)
+- `$batch_size` - Processing batch size (default: 500)
 
 **Smart Resume**: Script automatically counts existing articles and only generates the remainder to reach the target. Run multiple times safely - it won't create duplicates.
 
@@ -110,7 +110,7 @@ Based on testing with 100,000 articles:
 ddev drush search-api:status
 
 # Rebuild and reindex
-just generate
+just test
 ```
 
 ### Content Generation Fails

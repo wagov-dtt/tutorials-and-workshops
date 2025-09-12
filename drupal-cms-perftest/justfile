@@ -28,11 +28,11 @@ status:
 # Generate test content
 generate:
     ddev drush php:script scripts/generate_news_content.php
-    ddev drush search-api:rebuild-tracker content
-    ddev drush search-api:index
 
-# Run performance tests
+# Run performance tests (includes reindexing)
 test:
+    ddev drush search-api:rebuild-tracker content
+    ddev drush search-api:index --batch-size=1000
     ddev drush php:script scripts/search_performance_test.php
 
 # Clear test content

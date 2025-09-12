@@ -9,7 +9,7 @@ use Drupal\node\Entity\Node;
 
 // Configuration
 $total_articles = 100000;
-$batch_size = 100;
+$batch_size = 500;  // Increased for better performance with 2GB memory
 
 // Check existing content count
 try {
