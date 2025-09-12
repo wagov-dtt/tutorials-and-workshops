@@ -5,9 +5,12 @@ Performance testing environment for Drupal CMS with focus on content generation 
 ## Quick Start
 
 1. **Setup**: `just setup` - Install Drupal CMS with search and news recipes
-2. **Generate**: `just generate` - Create 1000 test news articles  
-3. **Test**: `just test` - Run search performance benchmarks
-4. **Clear**: `just clear` - Remove test content
+2. **Restart**: `ddev restart` - Apply performance configurations  
+3. **Generate**: `just generate` - Create 100,000 test news articles (resumes if partial)  
+4. **Test**: `just test` - Run search performance benchmarks
+5. **Clear**: `just clear` - Remove test content
+
+**Note**: Performance configurations are included and committed to the repository.
 
 ## Available Commands
 
@@ -32,10 +35,29 @@ just full-test  # Complete workflow: generate + test
 ## Configuration
 
 Edit `scripts/generate_news_content.php` to change:
-- `$total_articles` - Number of articles to generate (default: 1000)
+- `$total_articles` - Target number of total articles (default: 100,000)
 - `$batch_size` - Processing batch size (default: 100)
 
-For large-scale testing, increase to 10,000+ articles.
+**Smart Resume**: Script automatically counts existing articles and only generates the remainder to reach the target. Run multiple times safely - it won't create duplicates.
+
+Each article contains 1-2 pages of realistic content for comprehensive performance testing.
+
+## Performance Optimizations
+
+**Pre-configured for 100K+ articles** - Run `ddev restart` after setup to apply optimizations.
+
+### PHP Configuration
+- **Memory limit**: 2GB for large content operations  
+- **OPcache**: 512MB cache with 20,000 max files
+- **Execution time**: 10 minutes for bulk generation
+- **File**: [`.ddev/php/performance.ini`](file:///home/adonm/tutorials-and-workshops/drupal-cms-perftest/.ddev/php/performance.ini) *(committed to repo)*
+
+### MariaDB Configuration  
+- **Buffer pool**: 1GB InnoDB buffer for caching
+- **Query cache**: 128MB for repeated searches
+- **Connections**: 200 max concurrent connections
+- **Timeouts**: Extended for bulk operations
+- **File**: [`.ddev/mysql/performance.cnf`](file:///home/adonm/tutorials-and-workshops/drupal-cms-perftest/.ddev/mysql/performance.cnf) *(committed to repo)*
 
 ## Research & Findings
 
@@ -55,10 +77,10 @@ For large-scale testing, increase to 10,000+ articles.
 
 ### Performance Characteristics
 
-Based on testing with 1000 articles:
-- **Generation**: ~10-20 articles/second depending on field complexity
+Based on testing with 100,000 articles:
+- **Generation**: ~10-20 articles/second depending on field complexity  
 - **Indexing**: Search API can index ~50-100 items/second
-- **Search**: Sub-50ms average search times on database backend
+- **Search**: Performance varies with content size and search complexity
 
 ## Useful Resources
 
