@@ -1,12 +1,12 @@
-// For format details, see https://aka.ms/devcontainer.json.
 {
-	"name": "Debian 12 (bookworm)",
-	"image": "mcr.microsoft.com/devcontainers/base:bookworm",
-	"hostRequirements": {
-		"memory": "32gb"
-	},
-	"features": {
-		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
-	},
-	"onCreateCommand": ".devcontainer/onCreateCommand.sh"
+	"name": "wagov-dtt devcontainer-base",
+	"image": "ghcr.io/wagov-dtt/devcontainer-base",
+	"privileged": true,
+	"runArgs": [
+		"--cgroupns=host"
+	],
+	"mounts": [
+		"source=dind-var-lib-docker,target=/var/lib/docker,type=volume"
+	],
+	"remoteUser": "vscode"
 }
