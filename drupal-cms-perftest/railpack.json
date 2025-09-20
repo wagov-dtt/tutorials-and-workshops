@@ -1,5 +1,8 @@
 {
   "$schema": "https://schema.railpack.com",
+  "deploy": {
+    "startCommand": "ln -sf /app /var/www/html && /start-container.sh"
+  },
   "steps": {
     "install:composer": {
       "commands": [
