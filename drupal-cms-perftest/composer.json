@@ -16,6 +16,7 @@
         }
     },
     "require": {
+        "ext-gd": "*",
         "composer/composer": "^2.8",
         "composer/installers": "^2.3",
         "drupal/add_content_by_bundle": "^1.2.2",

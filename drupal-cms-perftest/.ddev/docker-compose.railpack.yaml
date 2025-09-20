@@ -1,0 +1,13 @@
+services:
+  dummy-service:
+    container_name: "ddev-${DDEV_SITENAME}-railpack"
+    image: ${DDEV_SITENAME}
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: ${DDEV_APPROOT}
+    expose:
+      - "80"
+    environment:
+      - VIRTUAL_HOST=$DDEV_HOSTNAME
+      - HTTP_EXPOSE=8080:80
+      - HTTPS_EXPOSE=8443:80

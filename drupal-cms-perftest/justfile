@@ -12,6 +12,13 @@ setup:
     ddev drush recipe ../recipes/drupal_cms_search
     ddev drush recipe ../recipes/drupal_cms_news
 
+# Railpack build
+build:
+    -docker run --rm --privileged -d --name buildkit moby/buildkit
+    BUILDKIT_HOST='docker-container://buildkit' \
+    railpack build -e RAILPACK_PHP_ROOT_DIR=/app/web .
+    ddev restart
+
 # Basic DDEV commands
 start:
     ddev start

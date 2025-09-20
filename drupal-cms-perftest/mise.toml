@@ -1,0 +1,3 @@
+[tools]
+"ubi:ddev/ddev" = "latest"
+"ubi:railwayapp/railpack" = "latest"

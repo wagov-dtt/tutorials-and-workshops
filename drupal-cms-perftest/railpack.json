@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "steps": {
+    "install:composer": {
+      "commands": [
+        // Override detected composer until .dockerignore supported
+        {
+          "dest": "/usr/bin/composer",
+          "image": "composer:latest",
+          "src": "/usr/bin/composer"
+        },
+        {
+          "dest": "composer.json",
+          "src": "composer.json"
+        },
+        {
+          "cmd": "composer install --optimize-autoloader --no-scripts --no-interaction"
+        }
+      ]
+    }
+  }
+}
