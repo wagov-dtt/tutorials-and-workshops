@@ -19,6 +19,9 @@ build:
     railpack build -e RAILPACK_PHP_ROOT_DIR=/app/web .
     ddev restart
 
+vegeta:
+  echo "GET http://localhost:8080/search?text=strategic" | vegeta attack -duration=10s -max-workers=20 -rate=0 | vegeta report
+
 # Basic DDEV commands
 start:
     ddev start
