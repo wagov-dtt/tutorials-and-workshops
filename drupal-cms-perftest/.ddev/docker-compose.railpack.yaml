@@ -9,6 +9,4 @@ services:
     expose:
       - "80"
     environment:
-      VIRTUAL_HOST: $DDEV_HOSTNAME
-      HTTPS_EXPOSE: "8443:80"
       IS_DDEV_PROJECT: "true"
