@@ -12,6 +12,9 @@ services:
       VIRTUAL_HOST: $DDEV_HOSTNAME
       HTTPS_EXPOSE: "8443:80"
       IS_DDEV_PROJECT: "true"
+      CADDY_GLOBAL_OPTIONS: |-
+        order php_server before file_server
+        order php before file_server
       CADDY_SERVER_EXTRA_DIRECTIVES: |-
         @hiddenPhpFilesRegexp path_regexp \..*/.*\.php$
         error @hiddenPhpFilesRegexp 403
