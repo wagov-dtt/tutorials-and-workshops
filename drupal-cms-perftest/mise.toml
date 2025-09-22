@@ -1,3 +1,4 @@
 [tools]
+caddy = "latest"
 "ubi:ddev/ddev" = "latest"
 "ubi:railwayapp/railpack" = "latest"

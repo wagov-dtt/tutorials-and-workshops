@@ -1,23 +1,29 @@
 {
   "$schema": "https://schema.railpack.com",
-  "deploy": {
-    "startCommand": "ln -sf /app /var/www/html && /start-container.sh"
-  },
   "steps": {
     "install:composer": {
       "commands": [
-        // Override detected composer until .dockerignore supported
         {
-          "dest": "/usr/bin/composer",
           "image": "composer:latest",
-          "src": "/usr/bin/composer"
+          "src": "/usr/bin/composer",
+          "dest": "/usr/bin/composer"
         },
         {
-          "dest": "composer.json",
-          "src": "composer.json"
+          "src": "composer.json",
+          "dest": "composer.json"
         },
         {
           "cmd": "composer install --optimize-autoloader --no-scripts --no-interaction"
+        }
+      ]
+    },
+    "build": {
+      "commands": [
+        "...",
+        "ln -sf /app /var/www/html",
+        {
+          "src": "Caddyfile",
+          "dest": "/Caddyfile"
         }
       ]
     }

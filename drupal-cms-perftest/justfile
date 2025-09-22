@@ -16,7 +16,7 @@ setup:
 build:
     -docker run --rm --privileged -d --name buildkit moby/buildkit
     BUILDKIT_HOST='docker-container://buildkit' \
-    railpack build -e RAILPACK_PHP_ROOT_DIR=/app/web .
+    railpack build .
     ddev restart
 
 vegeta:
