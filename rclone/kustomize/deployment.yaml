@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tutorials-and-workshops
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rclone-serve
+spec:
+  serviceName: rclone-serve
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: rclone
+        image: rclone/rclone:latest
+        ports:
+        - {containerPort: 8080, name: s3}
+        volumeMounts:
+        - {name: data, mountPath: /data}
+        # Added --vfs-cache-mode writes so it works with emptyDir
+        command: ["rclone", "serve", "s3", "/data", "--addr=0.0.0.0:8080", "--vfs-cache-mode", "writes"]
+      volumes:
+      - {name: data, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rclone-serve
+spec:
+  clusterIP: None
+  ports:
+  - {port: 8080, targetPort: 8080, name: s3}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rclone-copyparty
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: rclone
+        image: rclone/rclone:latest
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: rclone-fuse-mount
+          mountPath: /w
+          mountPropagation: Bidirectional # REQUIRED: Exports mount to pod
+        - {name: config, mountPath: /root/.config/rclone, readOnly: true}
+        command: [rclone, mount, s3local:, /w, --allow-other, --allow-non-empty, --vfs-cache-mode, full]
+      - name: copyparty
+        image: copyparty/ac:latest
+        ports:
+        - {containerPort: 3923, name: http}
+        volumeMounts:
+        - name: rclone-fuse-mount
+          mountPath: /w
+          mountPropagation: HostToContainer # REQUIRED: Imports mount from rclone
+        args: [-v, ".::rw"]
+      volumes:
+      - {name: rclone-fuse-mount, emptyDir: {sizeLimit: 10Gi}}
+      - {name: config, configMap: {name: rclone-config}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: copyparty
+spec:
+  type: ClusterIP
+  ports:
+  - {port: 80, targetPort: 3923, name: http}
