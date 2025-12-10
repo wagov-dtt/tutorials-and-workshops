@@ -1,0 +1,29 @@
+
+# S3 Storage Class
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rclone-csi
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  remote: "s3local"
+  remotePath: "my-bucket/${pvc.metadata.name}"
+  configData: |
+    [s3local]
+    type = s3
+    provider = Rclone
+    endpoint = http://rclone-serve:8080
+    use_multipart_uploads = false
+---
+# Example PVC using S3 storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-vol1
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: rclone-s3local

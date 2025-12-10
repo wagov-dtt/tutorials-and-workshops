@@ -1,16 +1,16 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: tutorials-and-workshops
----
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: rclone-serve
 spec:
-  serviceName: rclone-serve
+  selector:
+    matchLabels:
+      app: serves3
   replicas: 1
   template:
+    metadata:
+      labels:
+        app: serves3
     spec:
       containers:
       - name: rclone
@@ -19,8 +19,7 @@ spec:
         - {containerPort: 8080, name: s3}
         volumeMounts:
         - {name: data, mountPath: /data}
-        # Added --vfs-cache-mode writes so it works with emptyDir
-        command: ["rclone", "serve", "s3", "/data", "--addr=0.0.0.0:8080", "--vfs-cache-mode", "writes"]
+        command: ["rclone", "serve", "s3", "/data", "--addr=0.0.0.0:8080"]
       volumes:
       - {name: data, emptyDir: {}}
 ---
@@ -29,47 +28,74 @@ kind: Service
 metadata:
   name: rclone-serve
 spec:
+  selector:
+    app: serves3
   clusterIP: None
   ports:
   - {port: 8080, targetPort: 8080, name: s3}
 ---
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: rclone-copyparty
-spec:
-  replicas: 1
-  template:
-    spec:
-      containers:
-      - name: rclone
-        image: rclone/rclone:latest
-        securityContext:
-          privileged: true
-        volumeMounts:
-        - name: rclone-fuse-mount
-          mountPath: /w
-          mountPropagation: Bidirectional # REQUIRED: Exports mount to pod
-        - {name: config, mountPath: /root/.config/rclone, readOnly: true}
-        command: [rclone, mount, s3local:, /w, --allow-other, --allow-non-empty, --vfs-cache-mode, full]
-      - name: copyparty
-        image: copyparty/ac:latest
-        ports:
-        - {containerPort: 3923, name: http}
-        volumeMounts:
-        - name: rclone-fuse-mount
-          mountPath: /w
-          mountPropagation: HostToContainer # REQUIRED: Imports mount from rclone
-        args: [-v, ".::rw"]
-      volumes:
-      - {name: rclone-fuse-mount, emptyDir: {sizeLimit: 10Gi}}
-      - {name: config, configMap: {name: rclone-config}}
----
 apiVersion: v1
 kind: Service
 metadata:
-  name: copyparty
+  name: filebrowser
 spec:
-  type: ClusterIP
+  selector:
+    app: filebrowser
   ports:
-  - {port: 80, targetPort: 3923, name: http}
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: filebrowser
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: filebrowser
+  template:
+    metadata:
+      labels:
+        app: filebrowser
+    spec:
+      containers:
+      - name: filebrowser
+        image: filebrowser/filebrowser:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: s3-data
+          mountPath: /srv
+      volumes:
+        - name: s3-data
+          csi:
+            driver: rclone.csi.veloxpack.io
+            volumeAttributes:
+              remote: "s3local"
+              remotePath: "mybucket"
+              # VFS caching for better performance
+              vfs-cache-mode: "full"
+              vfs-cache-max-size: "10G"
+              vfs-cache-max-age: "1s"
+              dir-cache-time: "1s"
+              # Mount options
+              allow-other: "true"
+            nodePublishSecretRef:
+              name: rclone-s3local
+---
+# Secret containing Minio S3 credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rclone-s3local
+type: Opaque
+stringData:
+  configData: |
+    [s3local]
+    type = s3
+    provider = Rclone
+    endpoint = http://rclone-serve.default:8080
+    use_multipart_uploads = false

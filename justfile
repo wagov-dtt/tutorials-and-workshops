@@ -75,6 +75,9 @@ deploy-ducklake +ARGS="--v=3": k3d
 ducklake-test: deploy-ducklake
   uv run ducklake_test.py
 
+rclone-lab +ARGS="--v=3": k3d
+  for i in $(seq 4); do kubectl apply -k rclone/kustomize --server-side {{ARGS}} && break || sleep 20; done
+
 # Retreives a secret from AWS Secrets Manager as JSON and saves to kubernetes
 install-secret SECRETID $NAMESPACE $NAME: awslogin
   kubectl get namespace $NAMESPACE || kubectl create namespace $NAMESPACE
