@@ -1,0 +1,83 @@
+@import url(https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css);
+:root {
+  --pico-border-radius: 0.25rem;
+  --pico-form-element-spacing-vertical: 0.75rem;
+  --pico-form-element-spacing-horizontal: 1rem;
+  --wa-ochre-main: #d14210;
+  --wa-ochre-main-rgb: 209,66,16;
+  --wa-ochre-dark: #b0350b;
+  --wa-ochre-light: #e65c2e;
+  --wa-ochre-light-rgb: 230,92,46;
+  --wa-ochre-lighter: #ff7a4d;
+  --wa-slate-main: #586976;
+  --wa-slate-main-rgb: 88,105,118;
+  --wa-slate-dark: #3b4b56;
+  --wa-slate-light: #a0aeba;
+  --wa-slate-light-rgb: 160,174,186
+}
+:host:not([data-theme=dark]),
+:root:not([data-theme=dark]),
+[data-theme=light] {
+  --pico-primary: var(--wa-ochre-main);
+  --pico-primary-background: var(--wa-ochre-main);
+  --pico-primary-underline: rgba(var(--wa-ochre-main-rgb), 0.5);
+  --pico-primary-hover: var(--wa-ochre-dark);
+  --pico-primary-hover-background: var(--wa-ochre-dark);
+  --pico-primary-focus: rgba(var(--wa-ochre-main-rgb), 0.35);
+  --pico-text-selection-color: rgba(var(--wa-ochre-main-rgb), 0.25);
+  --pico-primary-inverse: #fff;
+  --pico-secondary: var(--wa-slate-main);
+  --pico-secondary-background: var(--wa-slate-main);
+  --pico-secondary-underline: rgba(var(--wa-slate-main-rgb), 0.5);
+  --pico-secondary-hover: var(--wa-slate-dark);
+  --pico-secondary-hover-background: var(--wa-slate-dark);
+  --pico-secondary-focus: rgba(var(--wa-slate-main-rgb), 0.25);
+  --pico-secondary-inverse: #fff
+}
+:root:not([data-theme=light]),
+[data-theme=dark] {
+  --pico-primary: var(--wa-ochre-light);
+  --pico-primary-background: var(--wa-ochre-main);
+  --pico-primary-underline: rgba(var(--wa-ochre-light-rgb), 0.5);
+  --pico-primary-hover: var(--wa-ochre-lighter);
+  --pico-primary-hover-background: var(--wa-ochre-light);
+  --pico-primary-focus: rgba(var(--wa-ochre-light-rgb), 0.35);
+  --pico-text-selection-color: rgba(var(--wa-ochre-light-rgb), 0.25);
+  --pico-primary-inverse: #fff;
+  --pico-secondary: var(--wa-slate-light);
+  --pico-secondary-background: var(--wa-slate-main);
+  --pico-secondary-underline: rgba(var(--wa-slate-light-rgb), 0.5);
+  --pico-secondary-hover: var(--wa-slate-light);
+  --pico-secondary-hover-background: var(--wa-slate-dark);
+  --pico-secondary-focus: rgba(var(--wa-slate-light-rgb), 0.25);
+  --pico-secondary-inverse: #fff
+}
+@media only screen and (prefers-color-scheme:dark) {
+   :host:not([data-theme]),
+   :root:not([data-theme]) {
+     --pico-primary: var(--wa-ochre-light);
+     --pico-primary-background: var(--wa-ochre-main);
+     --pico-primary-underline: rgba(var(--wa-ochre-light-rgb), 0.5);
+     --pico-primary-hover: var(--wa-ochre-lighter);
+     --pico-primary-hover-background: var(--wa-ochre-light);
+     --pico-primary-focus: rgba(var(--wa-ochre-light-rgb), 0.35);
+     --pico-text-selection-color: rgba(var(--wa-ochre-light-rgb), 0.25);
+     --pico-primary-inverse: #fff;
+     --pico-secondary: var(--wa-slate-light);
+     --pico-secondary-background: var(--wa-slate-main);
+     --pico-secondary-underline: rgba(var(--wa-slate-light-rgb), 0.5);
+     --pico-secondary-hover: #fff;
+     --pico-secondary-hover-background: var(--wa-slate-light);
+     --pico-secondary-focus: rgba(var(--wa-slate-light-rgb), 0.25);
+     --pico-secondary-inverse: #fff
+   }
+}
+.badge {
+  display: inline-block;
+  background: var(--pico-primary-background);
+  color: var(--pico-primary-inverse);
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.25rem;
+  font-size: 0.75em;
+  font-weight: 600;
+}
