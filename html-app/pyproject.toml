@@ -1,0 +1,9 @@
+[project]
+name = "html-app"
+version = "0.1.0"
+description = "Tiny, easy-to-learn HTML app template with Alpine.js, PicoCSS, HTMX, and FastAPI"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.124.4"
+]

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>UV App</title>
+
+    <link rel="stylesheet" href="https://esm.sh/@picocss/pico@2.1.1/css/pico.min.css" integrity="sha384-L1dWfspMTHU/ApYnFiMz2QID/PlP1xCW9visvBdbEkOLkSSWsP6ZJWhPw6apiXxU" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://esm.sh/remixicon@4.7.0/fonts/remixicon.css" integrity="sha384-gSJzCOtDZjCJLnLHBld7v4xJStn/Zm1tlIRbF7KfFAnCCqT4wrc6CpihUEUbG/ab" crossorigin="anonymous">
+    
+    <script type="importmap">
+	{
+	  "imports": {
+	    "alpinejs": "https://esm.sh/alpinejs@3.15.2",
+	    "htmx": "https://esm.sh/htmx.org@4.0.0-alpha5"
+	  },
+	  "integrity": {
+	    "https://esm.sh/alpinejs@3.15.2": "sha384-L3PQcIh1GsiWGcQyVSElfGxZMs83MlB23sNsHjSsoY/THbrHuHpBhEg/ouCYgFS6",
+	    "https://esm.sh/htmx.org@4.0.0-alpha5": "sha384-i+IvS152aZVEcb9OeDpCuExQa7LsVc2Gr1nu3SaRIp5/rLh2kNVTaGqraIjcdxS5"
+	  }
+	}
+    </script>
+
+    <script type="module" blocking="render">
+        import Alpine from 'alpinejs';
+        import htmx from 'htmx';
+        Alpine.start();
+    </script>
+</head>
+<body>
+
+    <main class="container">
+        
+        <article>
+            <header>
+                <strong>My Alpine App</strong>
+            </header>
+
+            <div x-data="{ count: 0 }">
+                <p>
+                    Current count: <strong x-text="count"></strong>
+                </p>
+
+                <div class="grid">
+                    <button @click="count--" class="secondary">Decrement</button>
+                    <button @click="count++">Increment</button>
+                </div>
+            </div>
+
+            <footer>
+                <small>Built with PicoCSS and Alpine</small>
+            </footer>
+        </article>
+
+    </main>
+
+</body>
+</html>

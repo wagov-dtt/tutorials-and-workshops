@@ -1,6 +1,8 @@
+__PYCACHE__
 .aws_config
 .terraform
 *.tfstate*
 .env
 .mnt
 .codeql/
+.aider*

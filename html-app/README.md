@@ -1,38 +1,20 @@
-# PicoChat - HTMX 4.0 App
+# HTML App
 
-A modern messaging app UI built with HTMX 4.0 and Pico CSS, featuring dynamic fragment loading.
+Minimal HTML app template with Alpine.js, PicoCSS, and FastAPI. No build tools, no complex abstractions.
 
-## Running the App
+## Stack
 
-Use Python's built-in HTTP server:
+- **Frontend**: Alpine.js, PicoCSS, RemixIcon
+- **Backend**: FastAPI with SRI-verified ES module import maps
+
+## Quick Start
 
 ```bash
-cd html-app
-python3 -m http.server 8000
+uv run fastapi dev
 ```
 
-Then open `http://localhost:8000` in your browser.
+## Notes
 
-## Architecture
+- Uses [esm.sh](https://esm.sh) for ES module CDN by default (drop-in replacements for npm packages with excellent tree-shaking and compression)
+- Import map is generated on startup with subresource integrity hashes for security
 
-- **index.html**: Main page with HTMX attributes for dynamic fragment loading
-- **fragments/**: Separate HTML files for each section
-  - `dashboard.html` - User profile and recent messages
-  - `messages.html` - Message list
-  - `contacts.html` - Contact cards
-  - `files.html` - File management
-  - `settings.html` - Preferences and account settings
-
-## How It Works
-
-Navigation links use HTMX to load fragments dynamically:
-
-```html
-<a hx-get="/fragments/dashboard" hx-target="#content">Dashboard</a>
-```
-
-When clicked, HTMX requests the fragment and replaces the content section without a full page reload.
-
-## Styling
-
-Built with [Pico CSS](https://picocss.com/) for minimal, semantic styling.
