@@ -1,57 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <title>UV App</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRUD App</title>
 
-    <link rel="stylesheet" href="https://esm.sh/@picocss/pico@2.1.1/css/pico.min.css" integrity="sha384-L1dWfspMTHU/ApYnFiMz2QID/PlP1xCW9visvBdbEkOLkSSWsP6ZJWhPw6apiXxU" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://esm.sh/remixicon@4.7.0/fonts/remixicon.css" integrity="sha384-gSJzCOtDZjCJLnLHBld7v4xJStn/Zm1tlIRbF7KfFAnCCqT4wrc6CpihUEUbG/ab" crossorigin="anonymous">
-    
-    <script type="importmap">
-	{
-	  "imports": {
-	    "alpinejs": "https://esm.sh/alpinejs@3.15.2",
-	    "htmx": "https://esm.sh/htmx.org@4.0.0-alpha5"
-	  },
-	  "integrity": {
-	    "https://esm.sh/alpinejs@3.15.2": "sha384-L3PQcIh1GsiWGcQyVSElfGxZMs83MlB23sNsHjSsoY/THbrHuHpBhEg/ouCYgFS6",
-	    "https://esm.sh/htmx.org@4.0.0-alpha5": "sha384-i+IvS152aZVEcb9OeDpCuExQa7LsVc2Gr1nu3SaRIp5/rLh2kNVTaGqraIjcdxS5"
-	  }
-	}
-    </script>
+  <link rel="stylesheet" href="https://esm.sh/@picocss/pico@2.1.1/css/pico.min.css"
+    integrity="sha384-L1dWfspMTHU/ApYnFiMz2QID/PlP1xCW9visvBdbEkOLkSSWsP6ZJWhPw6apiXxU" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://esm.sh/remixicon@4.7.0/fonts/remixicon.css"
+    integrity="sha384-gSJzCOtDZjCJLnLHBld7v4xJStn/Zm1tlIRbF7KfFAnCCqT4wrc6CpihUEUbG/ab" crossorigin="anonymous">
 
-    <script type="module" blocking="render">
-        import Alpine from 'alpinejs';
-        import htmx from 'htmx';
-        Alpine.start();
-    </script>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    aside {
+      width: 200px;
+      border-right: 1px solid var(--border-color);
+      padding: 1rem;
+      overflow-y: auto;
+    }
+
+    aside ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    aside a {
+      display: block;
+      padding: 0.5rem;
+      cursor: pointer;
+    }
+
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+    }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "alpinejs": "https://esm.sh/alpinejs@3.15.2",
+      "arquero": "https://esm.sh/arquero@8.0.3",
+      "main": "./main.js"
+    },
+    "integrity": {
+      "https://esm.sh/alpinejs@3.15.2": "sha384-L3PQcIh1GsiWGcQyVSElfGxZMs83MlB23sNsHjSsoY/THbrHuHpBhEg/ouCYgFS6",
+      "https://esm.sh/arquero@8.0.3": "sha384-MVeuHosyg1JgEOTCPNgLSlaSkuJhRPGue/WUwflCQSdHbhu0SO0h+pvIw0EmyWzg"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import {app} from 'main';
+    window.app = app;
+    app.start();
+  </script>
 </head>
+
 <body>
+  <nav>
+    <strong>CRUD App</strong>
+  </nav>
 
-    <main class="container">
-        
+  <div class="layout" x-data="crud()">
+    <aside>
+      <ul>
+        <li><a @click="view = 'list'"><i class="ri-list-line"></i> List</a></li>
+        <li><a @click="view = 'create'"><i class="ri-add-line"></i> Create</a></li>
+        <li><a @click="view = 'settings'"><i class="ri-settings-3-line"></i> Settings</a></li>
+      </ul>
+    </aside>
+
+    <main>
+      <template x-if="view === 'list'">
         <article>
-            <header>
-                <strong>My Alpine App</strong>
-            </header>
-
-            <div x-data="{ count: 0 }">
-                <p>
-                    Current count: <strong x-text="count"></strong>
-                </p>
-
-                <div class="grid">
-                    <button @click="count--" class="secondary">Decrement</button>
-                    <button @click="count++">Increment</button>
-                </div>
-            </div>
-
-            <footer>
-                <small>Built with PicoCSS and Alpine</small>
-            </footer>
+          <h2>Items</h2>
+          <div x-html="tableHTML"></div>
         </article>
+      </template>
 
+      <template x-if="view === 'create'">
+        <article>
+          <h2>Create Item</h2>
+          <form @submit.prevent="saveItem">
+            <input type="text" x-model="form.name" placeholder="Name" required>
+            <button type="submit">Create</button>
+          </form>
+        </article>
+      </template>
+
+      <template x-if="view === 'settings'">
+        <article>
+          <h2>Settings</h2>
+          <p>Total items: <strong x-text="dt.numRows()"></strong></p>
+          <div class="grid">
+            <button class="secondary" @click="clearAll">Clear All</button>
+            <button @click="testLoad">Load 100k Items</button>
+          </div>
+        </article>
+      </template>
     </main>
-
+  </div>
 </body>
+
 </html>
