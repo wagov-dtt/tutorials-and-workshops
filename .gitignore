@@ -1,4 +1,8 @@
 __PYCACHE__
+__pycache__/
+.venv/
+*.pyc
+.python-version
 .aws_config
 .terraform
 *.tfstate*
