@@ -33,58 +33,53 @@
 </head>
 
 <body x-data="crud()">
-  <header>
+  <header class="container">
     <nav>
       <ul>
-        <li><strong>CRUD App</strong></li>
+        <li><strong>HTML App</strong></li>
       </ul>
       <ul>
-        <li><a @click="view = 'settings'"><i class="ri-settings-3-line"></i> Settings</a></li>
+        <li>
+          <div role="group">
+            <button @click="view = 'Items'" :aria-current="view === 'Items'"><i class="ri-table-2"></i> Items</button>
+            <button @click="view = 'Create'" :aria-current="view === 'Create'"><i class="ri-add-line"></i> Create</button>
+            <button @click="view = 'Settings'" :aria-current="view === 'Settings'"><i class="ri-settings-3-line"></i> Settings</button>
+          </div>
+        </li>
       </ul>
     </nav>
   </header>
 
-  <main>
-    <div class="container">
-      <aside>
-        <nav>
-          <ul>
-            <li><a @click="view = 'list'"><i class="ri-table-2"></i> Items</a></li>
-            <li><a @click="view = 'create'"><i class="ri-add-line"></i> Create</a></li>
-          </ul>
-        </nav>
-      </aside>
+  <main class="container">
+    <template x-if="view === 'Items'">
+      <article>
+        <h2>Items</h2>
+        <div x-html="tableHTML"></div>
+      </article>
+    </template>
 
-      <template x-if="view === 'list'">
-        <article>
-          <h2>Items</h2>
-          <div x-html="tableHTML"></div>
-        </article>
-      </template>
+    <template x-if="view === 'Create'">
+      <article>
+        <h2>Create Item</h2>
+        <form @submit.prevent="saveItem">
+          <input type="text" x-model="form.name" placeholder="Name" required>
+          <button type="submit">Create</button>
+        </form>
+      </article>
+    </template>
 
-      <template x-if="view === 'create'">
-        <article>
-          <h2>Create Item</h2>
-          <form @submit.prevent="saveItem">
-            <input type="text" x-model="form.name" placeholder="Name" required>
-            <button type="submit">Create</button>
-          </form>
-        </article>
-      </template>
-
-      <template x-if="view === 'settings'">
-        <article>
-          <h2>Settings</h2>
-          <p>Total items: <strong x-text="dt.numRows()"></strong></p>
-          <div class="grid">
-            <input type="number" x-model.number="form.testLoadCount" placeholder="Items to load" min="1">
-            <button @click="testLoad">Load Items</button>
-          </div>
-          <hr>
-          <button class="secondary" @click="clearAll">Clear All</button>
-        </article>
-      </template>
-    </div>
+    <template x-if="view === 'Settings'">
+      <article>
+        <h2>Settings</h2>
+        <p>Total items: <strong x-text="dt.numRows()"></strong></p>
+        <div class="grid">
+          <input type="number" x-model.number="form.testLoadCount" placeholder="Items to load" min="1">
+          <button @click="testLoad">Load Items</button>
+        </div>
+        <hr>
+        <button class="secondary" @click="clearAll">Clear All</button>
+      </article>
+    </template>
   </main>
 </body>
 

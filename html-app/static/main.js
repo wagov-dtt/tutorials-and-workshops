@@ -5,7 +5,7 @@ export const app = {
   start() {
     document.addEventListener('alpine:init', () => {
       Alpine.data('crud', () => ({
-        view: 'list',
+        view: 'Items',
         dt: table({ id: [0, 1, 2], name: ['Item 0', 'Item 1', 'Item 2'] }),
         form: { name: '', testLoadCount: 10000 },
 
@@ -23,7 +23,7 @@ export const app = {
           rows.push({ id: this.nextId, name: this.form.name });
           this.dt = table({ id: rows.map(r => r.id), name: rows.map(r => r.name) });
           this.form.name = '';
-          this.view = 'list';
+          this.view = 'Items';
         },
 
         clearAll() {
