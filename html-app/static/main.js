@@ -7,10 +7,10 @@ export const app = {
       Alpine.data('crud', () => ({
         view: 'list',
         dt: table({ id: [0, 1, 2], name: ['Item 0', 'Item 1', 'Item 2'] }),
-        form: { name: '' },
+        form: { name: '', testLoadCount: 10000 },
 
         get tableHTML() {
-          return this.dt.toHTML();
+          return this.dt.toHTML({ limit: 10000000 });
         },
 
         get nextId() {
@@ -31,10 +31,14 @@ export const app = {
         },
 
         testLoad() {
-          const n = 100000;
-          const ids = Array.from({ length: n }, (_, i) => i);
-          const names = ids.map(i => `Item ${i}`);
-          this.dt = table({ id: ids, name: names });
+          const rows = this.dt.objects();
+          const startId = rows.length ? Math.max(...rows.map(r => r.id)) + 1 : 0;
+          const count = Math.max(1, parseInt(this.form.testLoadCount) || 10000);
+          const newIds = Array.from({ length: count }, (_, i) => startId + i);
+          const newNames = newIds.map(i => `Item ${i}`);
+          const allIds = [...rows.map(r => r.id), ...newIds];
+          const allNames = [...rows.map(r => r.name), ...newNames];
+          this.dt = table({ id: allIds, name: allNames });
         }
       }));
     });

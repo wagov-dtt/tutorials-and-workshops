@@ -11,46 +11,6 @@
   <link rel="stylesheet" href="https://esm.sh/remixicon@4.7.0/fonts/remixicon.css"
     integrity="sha384-gSJzCOtDZjCJLnLHBld7v4xJStn/Zm1tlIRbF7KfFAnCCqT4wrc6CpihUEUbG/ab" crossorigin="anonymous">
 
-  <style>
-    body {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      margin: 0;
-    }
-
-    .layout {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    aside {
-      width: 200px;
-      border-right: 1px solid var(--border-color);
-      padding: 1rem;
-      overflow-y: auto;
-    }
-
-    aside ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    aside a {
-      display: block;
-      padding: 0.5rem;
-      cursor: pointer;
-    }
-
-    main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 1.5rem;
-    }
-  </style>
-
   <script type="importmap">
   {
     "imports": {
@@ -72,21 +32,29 @@
   </script>
 </head>
 
-<body>
-  <nav>
-    <strong>CRUD App</strong>
-  </nav>
-
-  <div class="layout" x-data="crud()">
-    <aside>
+<body x-data="crud()">
+  <header>
+    <nav>
       <ul>
-        <li><a @click="view = 'list'"><i class="ri-list-line"></i> List</a></li>
-        <li><a @click="view = 'create'"><i class="ri-add-line"></i> Create</a></li>
+        <li><strong>CRUD App</strong></li>
+      </ul>
+      <ul>
         <li><a @click="view = 'settings'"><i class="ri-settings-3-line"></i> Settings</a></li>
       </ul>
-    </aside>
+    </nav>
+  </header>
 
-    <main>
+  <main>
+    <div class="container">
+      <aside>
+        <nav>
+          <ul>
+            <li><a @click="view = 'list'"><i class="ri-table-2"></i> Items</a></li>
+            <li><a @click="view = 'create'"><i class="ri-add-line"></i> Create</a></li>
+          </ul>
+        </nav>
+      </aside>
+
       <template x-if="view === 'list'">
         <article>
           <h2>Items</h2>
@@ -109,13 +77,15 @@
           <h2>Settings</h2>
           <p>Total items: <strong x-text="dt.numRows()"></strong></p>
           <div class="grid">
-            <button class="secondary" @click="clearAll">Clear All</button>
-            <button @click="testLoad">Load 100k Items</button>
+            <input type="number" x-model.number="form.testLoadCount" placeholder="Items to load" min="1">
+            <button @click="testLoad">Load Items</button>
           </div>
+          <hr>
+          <button class="secondary" @click="clearAll">Clear All</button>
         </article>
       </template>
-    </main>
-  </div>
+    </div>
+  </main>
 </body>
 
 </html>
