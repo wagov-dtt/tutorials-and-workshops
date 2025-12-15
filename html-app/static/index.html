@@ -1,86 +1,185 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HTML App</title>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CRUD App</title>
+    <link
+      rel="stylesheet"
+      href="https://esm.sh/@picocss/pico@2.1.1/css/pico.min.css"
+      integrity="sha384-L1dWfspMTHU/ApYnFiMz2QID/PlP1xCW9visvBdbEkOLkSSWsP6ZJWhPw6apiXxU"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://esm.sh/remixicon@4.7.0/fonts/remixicon.css"
+      integrity="sha384-gSJzCOtDZjCJLnLHBld7v4xJStn/Zm1tlIRbF7KfFAnCCqT4wrc6CpihUEUbG/ab"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="./style.css" />
 
-  <link rel="stylesheet" href="https://esm.sh/@picocss/pico@2.1.1/css/pico.min.css"
-    integrity="sha384-L1dWfspMTHU/ApYnFiMz2QID/PlP1xCW9visvBdbEkOLkSSWsP6ZJWhPw6apiXxU" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://esm.sh/remixicon@4.7.0/fonts/remixicon.css"
-    integrity="sha384-gSJzCOtDZjCJLnLHBld7v4xJStn/Zm1tlIRbF7KfFAnCCqT4wrc6CpihUEUbG/ab" crossorigin="anonymous">
+    <script type="importmap">
+      {
+        "imports": {
+          "alpinejs": "https://esm.sh/alpinejs@3.15.2",
+          "arquero": "https://esm.sh/arquero@8.0.3",
+          "main": "./main.js"
+        },
+        "integrity": {
+          "https://esm.sh/alpinejs@3.15.2": "sha384-L3PQcIh1GsiWGcQyVSElfGxZMs83MlB23sNsHjSsoY/THbrHuHpBhEg/ouCYgFS6",
+          "https://esm.sh/arquero@8.0.3": "sha384-MVeuHosyg1JgEOTCPNgLSlaSkuJhRPGue/WUwflCQSdHbhu0SO0h+pvIw0EmyWzg"
+        }
+      }
+    </script>
 
-  <script type="importmap">
-  {
-    "imports": {
-      "alpinejs": "https://esm.sh/alpinejs@3.15.2",
-      "arquero": "https://esm.sh/arquero@8.0.3",
-      "main": "./main.js"
-    },
-    "integrity": {
-      "https://esm.sh/alpinejs@3.15.2": "sha384-L3PQcIh1GsiWGcQyVSElfGxZMs83MlB23sNsHjSsoY/THbrHuHpBhEg/ouCYgFS6",
-      "https://esm.sh/arquero@8.0.3": "sha384-MVeuHosyg1JgEOTCPNgLSlaSkuJhRPGue/WUwflCQSdHbhu0SO0h+pvIw0EmyWzg"
-    }
-  }
-  </script>
+    <script type="module">
+      import { app } from "main";
+      window.app = app;
+      app.start();
+    </script>
+  </head>
 
-  <script type="module">
-    import {app} from 'main';
-    window.app = app;
-    app.start();
-  </script>
-</head>
+  <body x-data="crud()">
+    <aside>
+      <nav>
+        <strong>HTML App</strong>
+        <ul>
+          <li>
+            <a
+              href="#"
+              @click.prevent="view = 'Items'"
+              :aria-current="view === 'Items'"
+              ><i class="ri-table-2"></i> <span>Items</span></a
+            >
+          </li>
+          <li>
+            <a
+              href="#"
+              @click.prevent="view = 'Create'"
+              :aria-current="view === 'Create'"
+              ><i class="ri-add-line"></i> <span>Create</span></a
+            >
+          </li>
+          <li>
+            <a
+              href="#"
+              @click.prevent="view = 'Settings'"
+              :aria-current="view === 'Settings'"
+              ><i class="ri-settings-3-line"></i> <span>Settings</span></a
+            >
+          </li>
+        </ul>
+      </nav>
+    </aside>
 
-<body x-data="crud()">
-  <header class="container">
-    <nav>
-      <ul>
-        <li><strong>HTML App</strong></li>
-      </ul>
-      <ul>
-        <li>
-          <div role="group">
-            <button @click="view = 'Items'" :aria-current="view === 'Items'"><i class="ri-table-2"></i> Items</button>
-            <button @click="view = 'Create'" :aria-current="view === 'Create'"><i class="ri-add-line"></i> Create</button>
-            <button @click="view = 'Settings'" :aria-current="view === 'Settings'"><i class="ri-settings-3-line"></i> Settings</button>
-          </div>
-        </li>
-      </ul>
-    </nav>
-  </header>
-
-  <main class="container">
-    <template x-if="view === 'Items'">
-      <article>
+    <main>
+      <article x-show="view === 'Items'">
         <h2>Items</h2>
-        <div x-html="tableHTML"></div>
-      </article>
-    </template>
+        <div role="group">
+          <button
+            @click="itemsView = 'list'"
+            :aria-current="itemsView === 'list'"
+          >
+            <i class="ri-list-check"></i> List
+          </button>
+          <button
+            @click="itemsView = 'tiles'"
+            :aria-current="itemsView === 'tiles'"
+          >
+            <i class="ri-layout-grid-fill"></i> Tiles
+          </button>
+        </div>
+        <input
+          type="search"
+          x-model.debounce="search"
+          placeholder="Search items..."
+        />
 
-    <template x-if="view === 'Create'">
-      <article>
+        <div x-show="itemsView === 'list'" class="overflow-auto">
+          <p x-show="filteredItems.length === 0">No items found.</p>
+          <table x-show="filteredItems.length > 0">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="item in filteredItems" :key="item.id">
+                <tr>
+                  <td x-text="item.id"></td>
+                  <td x-text="item.name"></td>
+                  <td x-html="item.description"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <div x-show="itemsView === 'tiles'" class="items-grid">
+          <template x-for="item in filteredItems" :key="item.id">
+            <div class="item-tile">
+              <h3 x-text="item.name"></h3>
+              <p x-html="item.description"></p>
+            </div>
+          </template>
+        </div>
+      </article>
+
+      <article x-show="view === 'Create'">
         <h2>Create Item</h2>
         <form @submit.prevent="saveItem">
-          <input type="text" x-model="form.name" placeholder="Name" required>
+          <label>
+            Name
+            <input
+              type="text"
+              x-model="form.name"
+              placeholder="Name"
+              required
+            />
+          </label>
+          <label>
+            Description
+            <textarea
+              x-model="form.description"
+              placeholder="Description (optional)"
+            ></textarea>
+          </label>
           <button type="submit">Create</button>
         </form>
       </article>
-    </template>
 
-    <template x-if="view === 'Settings'">
-      <article>
+      <article x-show="view === 'Settings'">
         <h2>Settings</h2>
-        <p>Total items: <strong x-text="dt.numRows()"></strong></p>
-        <div class="grid">
-          <input type="number" x-model.number="form.testLoadCount" placeholder="Items to load" min="1">
-          <button @click="testLoad">Load Items</button>
-        </div>
-        <hr>
-        <button class="secondary" @click="clearAll">Clear All</button>
+        <table>
+          <tbody>
+            <tr>
+              <td>Total items</td>
+              <td><strong x-text="dt.numRows()"></strong></td>
+              <td>
+                <button class="secondary" @click="clearAll">Clear All</button>
+              </td>
+            </tr>
+            <tr>
+              <td><label for="testLoadCount">Load Count</label></td>
+              <td>
+                <input
+                  id="testLoadCount"
+                  type="number"
+                  x-model.number="form.testLoadCount"
+                  placeholder="Items to load"
+                  min="1"
+                />
+              </td>
+              <td>
+                <button @click="testLoad">Load Items</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </article>
-    </template>
-  </main>
-</body>
-
+    </main>
+  </body>
 </html>
