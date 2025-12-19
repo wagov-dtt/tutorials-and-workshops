@@ -1,0 +1,48 @@
+# Backup MySQL to S3 using MySQL Shell + rclone
+# Run: kubectl apply -f backup-job.yaml (after MySQL is ready)
+#
+# Pattern: initContainer dumps, main container uploads
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: backup-to-s3
+  namespace: s3-test
+spec:
+  template:
+    spec:
+      serviceAccountName: s3-access
+      restartPolicy: Never
+      initContainers:
+      - name: mysqlsh-dump
+        image: container-registry.oracle.com/mysql/community-operator:9.2.0-2.2.3
+        command: ["sh", "-c"]
+        args:
+        - |
+          mysqlsh --js --uri root:testpass@mysql -e "util.dumpInstance('/backup', {threads: 2, compression: 'zstd'})"
+          echo "Backup complete: $(du -sh /backup)"
+        volumeMounts:
+        - name: backup
+          mountPath: /backup
+      containers:
+      - name: rclone
+        image: rclone/rclone:latest
+        command: ["sh", "-c"]
+        args:
+        - |
+          BUCKET=$(cat /etc/s3-config/bucket)
+          rclone copy /backup/ s3:$BUCKET/backup1/ -v
+          echo "Uploaded to s3://$BUCKET/backup1/"
+        envFrom:
+        - configMapRef:
+            name: rclone-env
+        volumeMounts:
+        - name: backup
+          mountPath: /backup
+        - name: s3-config
+          mountPath: /etc/s3-config
+      volumes:
+      - name: backup
+        emptyDir: {}
+      - name: s3-config
+        configMap:
+          name: s3-config

@@ -1,6 +1,9 @@
-# kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: kube-system
+
+# Base resources - applied first via envsubst
 resources:
 - namespace.yaml
+- rclone.yaml
+- mysql.yaml
+- debug.yaml

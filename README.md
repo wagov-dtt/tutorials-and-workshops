@@ -15,21 +15,40 @@ just setup-eks # Create the training01 cluster in your AWS account
 
 Once configured can deploy the 2048 application as per [AWS quickstart](https://docs.aws.amazon.com/eks/latest/userguide/quickstart.html#_deploy_the_2048_game_sample_application) and test out cluster operations. Using [k9s](https://k9scli.io) to explore the cluster is another great way to learn k8s basics.
 
-TODO: Configure [Managed Identity](https://github.com/gaul/s3proxy/wiki/Storage-backend-examples#aws-s3---managed-identity) proxying of S3 via s3proxy to enable in cluster resources to access S3 without secrets.
+## S3 Pod Identity Example
+
+Demo of [EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html) - MySQL backup to S3 with rclone, no credentials in cluster. See [kustomize-s3-pod-identity/](kustomize-s3-pod-identity/) for full details.
+
+```bash
+just s3-pod-identity-test    # Full demo: sysbench data → mysqlsh dump → S3 → rclone copy → restore
+just s3-pod-identity-cleanup # Removes resources
+```
+
+Flow: `MySQL → sysbench test data → mysqlsh dump → S3 backup1/ → rclone server-side copy → S3 backup2/ → mysqlsh restore`
+
+## Justfile Conventions
+
+This repo uses [just](https://github.com/casey/just) as task runner with these patterns:
+
+- `set dotenv-load` + `set export` - `.env` vars available everywhere
+- Derived vars at top: `ACCOUNT := \`aws sts ...\`` then use `{{ACCOUNT}}` in recipes
+- `-` prefix ignores errors, `@` prefix hides command echo
+- `envsubst` for templating K8s manifests with `${VAR}` placeholders
+- Private recipes prefixed with `_`
 
 # Local development
 
-Similar to above, a close-to-production environment can be stood up locally with [k3d](https://k3d.io/stable/#quick-start) (we use this over minikube as it has better loadbalancer/storage defaults). This configuration also uses the [k3s helm-controller](https://github.com/k3s-io/helm-controller) to enable kustomize to directly deploy [HelmCharts](https://docs.k3s.io/helm#using-the-helm-controller) from [helm-charts.yaml](kustomize/kube-system/helm-charts.yaml) and is much more lightweight than a full argocd or flux config.
+Similar to above, a close-to-production environment can be stood up locally with [k3d](https://k3d.io/stable/#quick-start) (we use this over minikube as it has better loadbalancer/storage defaults).
 
 ```bash
 just deploy-local
 ```
 
-This configures dbs for [postgres](kustomize/everest/postgres.yaml), [mysql](kustomize/everest/mysql.yaml), [mongodb](kustomize/everest/mongodb.yaml) locally and an [S3Proxy](kustomize/everest/s3proxy.yaml) . The deployment can be tweaked for local use just by commenting out resources in the `kustomization.yaml` files, bit more work required to add below capabilities:
-
-- [Percona Everest](ps://docs.percona.com/everest/index.html) preconfigured to use [s3proxy](https://github.com/gaul/s3proxy) endpoint (currently need to create bucket manually at the internal http://s3proxy.everest.svc.cluster.local address)
-- [K8up](https://docs.k8up.io/k8up/2.12/how-tos/application-aware-backups.html) preconfigured with s3proxy to demonstrate app aware backups on e.g. a nightly schedule
-- Predefine a single node [Elastic](https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-deploy-elasticsearch.html) template for local testing of elastic workloads
+This configures simple single-node databases for local testing:
+- [PostgreSQL](kustomize/databases/postgres.yaml) (official postgres:16)
+- [MySQL](kustomize/databases/mysql.yaml) (percona:8.0)
+- [MongoDB](kustomize/databases/mongodb.yaml) (official mongo:7)
+- [Elasticsearch](kustomize/databases/elasticsearch.yaml) (single-node dev mode, no operator)
 
 # macOS tips
 

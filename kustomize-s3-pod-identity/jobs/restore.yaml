@@ -1,0 +1,55 @@
+# Restore MySQL backup to different database name
+# Run: kubectl apply -f restore-job.yaml (after rclone-copy completes)
+#
+# Restores from backup2/ (the rclone-copied version) to verify full chain
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: restore-from-s3
+  namespace: s3-test
+spec:
+  template:
+    spec:
+      serviceAccountName: s3-access
+      restartPolicy: Never
+      initContainers:
+      - name: rclone-download
+        image: rclone/rclone:latest
+        command: ["sh", "-c"]
+        args:
+        - |
+          BUCKET=$(cat /etc/s3-config/bucket)
+          echo "Downloading from s3://$BUCKET/backup2/"
+          rclone copy s3:$BUCKET/backup2/ /backup/ -v
+          ls -la /backup/
+        envFrom:
+        - configMapRef:
+            name: rclone-env
+        volumeMounts:
+        - name: backup
+          mountPath: /backup
+        - name: s3-config
+          mountPath: /etc/s3-config
+      containers:
+      - name: mysqlsh-restore
+        image: container-registry.oracle.com/mysql/community-operator:9.2.0-2.2.3
+        command: ["sh", "-c"]
+        args:
+        - |
+          echo "Creating target database sbtest_restored..."
+          mysqlsh --uri root:testpass@mysql --sql -e "CREATE DATABASE IF NOT EXISTS sbtest_restored;"
+          
+          echo "Restoring dump to sbtest_restored..."
+          mysqlsh --js --uri root:testpass@mysql -e "util.loadDump('/backup', {schema: 'sbtest_restored', ignoreExistingObjects: true, threads: 2})"
+          
+          echo "Verifying restore..."
+          mysqlsh --uri root:testpass@mysql --sql -e "SHOW TABLES FROM sbtest_restored; SELECT COUNT(*) AS row_count FROM sbtest_restored.sbtest1;"
+        volumeMounts:
+        - name: backup
+          mountPath: /backup
+      volumes:
+      - name: backup
+        emptyDir: {}
+      - name: s3-config
+        configMap:
+          name: s3-config

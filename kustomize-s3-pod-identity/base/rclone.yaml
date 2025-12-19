@@ -1,0 +1,45 @@
+# Shared rclone configuration
+# - rclone-env: env vars for jobs (envFrom)
+# - rclone-s3-secret: CSI driver config for mounting S3
+# - rclone-s3 StorageClass: provisions PVCs backed by S3
+#
+# ${BUCKET} and ${AWS_REGION} substituted via envsubst
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rclone-env
+  namespace: s3-test
+data:
+  RCLONE_CONFIG_S3_TYPE: "s3"
+  RCLONE_CONFIG_S3_PROVIDER: "AWS"
+  RCLONE_CONFIG_S3_ENV_AUTH: "true"
+  RCLONE_CONFIG_S3_REGION: "${AWS_REGION}"
+  RCLONE_CONFIG_S3_NO_CHECK_BUCKET: "true"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rclone-s3-secret
+  namespace: s3-test
+type: Opaque
+stringData:
+  remote: "s3"
+  remotePath: "${BUCKET}"
+  configData: |
+    [s3]
+    type = s3
+    provider = AWS
+    env_auth = true
+    region = ${AWS_REGION}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rclone-s3
+provisioner: rclone.csi.veloxpack.io
+parameters:
+  csi.storage.k8s.io/node-publish-secret-name: "rclone-s3-secret"
+  csi.storage.k8s.io/node-publish-secret-namespace: "s3-test"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate

@@ -1,4 +1,9 @@
 set dotenv-load
+set export
+
+# Derived variables from environment
+ACCOUNT := `aws sts get-caller-identity --query Account --output text 2>/dev/null || echo ""`
+BUCKET := "test-" + ACCOUNT
 
 # Choose a task to run
 default:
@@ -16,48 +21,23 @@ prereqs:
   (echo please run '"aws configure sso --use-device-code"' and add AWS_PROFILE/AWS_REGION to your .env file && exit 1)
 
 # Create an eks cluster for testing (reference https://docs.aws.amazon.com/eks/latest/userguide/quickstart.html)
-# Should use terraform/opentofu in future
+# EKS Auto Mode includes envelope encryption by default using AWS KMS
+# Pod Identity Agent is built-in to Auto Mode - no addon needed
 setup-eks CLUSTER="training01": awslogin
   eksctl get cluster --name {{CLUSTER}} > /dev/null || eksctl create cluster -f eksauto/eks-training01-cluster.yaml
-  eksctl update addon -f eksauto/eks-training01-cluster.yaml 
-  aws kms describe-key --key-id alias/eks/secrets > /dev/null || aws kms create-alias --alias-name alias/eks/secrets --target-key-id $(aws kms create-key --query 'KeyMetadata.KeyId' --output text)
-  eksctl utils enable-secrets-encryption --cluster {{CLUSTER}} --key-arn $(aws kms describe-key --key-id alias/eks/secrets --query 'KeyMetadata.Arn' --output text) --region $AWS_REGION # enable kms secrets
+  eksctl update addon -f eksauto/eks-training01-cluster.yaml
   eksctl utils write-kubeconfig --cluster {{CLUSTER}}
 
 
 # Install manifests for a given cluster, create the cluster if one is not connected.
 deploy CLUSTER="training01":
   eksctl utils write-kubeconfig --cluster {{CLUSTER}} || just setup-eks {{CLUSTER}}
-  just install-helm-charts
-  kubectl get namespace tutorials-and-workshops || kubectl create namespace tutorials-and-workshops
-  # Mount an s3 vol for s3proxy in cluster
-  just mount-s3 {{CLUSTER}} s3proxy-data everest
   kubectl apply -k kustomize/overlays/{{CLUSTER}}
 
-# Create a volume in kubernetes using mountpoint for s3 driver
-create-s3vol $BUCKET $VOLUME NAMESPACE:
-  kubectl get ns "{{NAMESPACE}}"
-  cat kustomize/s3volume-template.yaml | envsubst | kubectl apply --namespace {{NAMESPACE}} -f -
-
-# Mount an s3 bucket locally
-@mount-s3-bucket BUCKET PATH NAMESPACE:
-  aws s3api head-bucket --bucket {{BUCKET}} > /dev/null || aws s3 mb s3://{{BUCKET}} --region $AWS_REGION
-  mkdir -p .mnt/{{BUCKET}}/{{PATH}}
-  umount .mnt/{{BUCKET}}/{{PATH}} || echo "mountpoint clean"
-  # export-credentials workaround for https://github.com/awslabs/mountpoint-s3/issues/433
-  $(aws configure export-credentials --format env) && mount-s3  --allow-delete --allow-overwrite {{BUCKET}} --prefix {{PATH}}/ .mnt/{{BUCKET}}/{{PATH}}/
-  just create-s3vol {{BUCKET}} {{PATH}} {{NAMESPACE}}
-
-
-# Mount an s3 bucket from a prefix/path convenient wrapper, if namespace specified create vol in k8s
-@mount-s3 PREFIX="training01" PATH="volume01" NAMESPACE="": awslogin
-  which mount-s3 > /dev/null || just prereqs
-  just mount-s3-bucket "{{PREFIX}}-$(aws sts get-caller-identity --query Account --output text)" "{{PATH}}" "{{NAMESPACE}}"
-
-# Simplest docker hosted k8s cluster
+# Simplest docker hosted k8s cluster (traefik included by default)
 k3d:
   @which k3d > /dev/null || just prereqs
-  k3d cluster create --k3s-arg="--disable-helm-controller@all" --k3s-arg="--disable=traefik@all" || k3d cluster start
+  k3d cluster create || k3d cluster start
 
 # deploys local kustomize dir with 3 retries to handle CRD timing
 deploy-local +ARGS="--v=3": k3d
@@ -73,6 +53,79 @@ ducklake-test: deploy-ducklake
 
 rclone-lab +ARGS="--v=3": k3d
   for i in $(seq 4); do kubectl apply -k rclone/kustomize --server-side {{ARGS}} && break || sleep 20; done
+
+# S3 Pod Identity demo: MySQL + sysbench + backup to S3 + rclone copy + CSI mount
+s3-pod-identity-test CLUSTER="training01": awslogin (_s3-clean) (_s3-infra CLUSTER) (_s3-deploy) (_s3-assoc CLUSTER) (_s3-backup) (_s3-copy) (_s3-debug)
+
+_s3-clean:
+  -@kubectl delete -k kustomize-s3-pod-identity/jobs 2>/dev/null
+  -@kubectl delete -k kustomize-s3-pod-identity 2>/dev/null
+
+# Create AWS infra (bucket, role, CSI driver) - runs before K8s resources
+_s3-infra CLUSTER:
+  @echo "=== Creating S3 bucket {{BUCKET}} and IAM role ==="
+  -aws s3 mb s3://{{BUCKET}} --region $AWS_REGION
+  -aws iam create-role --role-name eks-s3-test --assume-role-policy-document \
+    '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"pods.eks.amazonaws.com"},"Action":["sts:AssumeRole","sts:TagSession"]}]}'
+  -aws iam attach-role-policy --role-name eks-s3-test --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
+  @echo "=== Installing rclone CSI driver ==="
+  -helm upgrade --install csi-rclone oci://ghcr.io/veloxpack/charts/csi-driver-rclone --namespace veloxpack --create-namespace
+  @echo "=== Creating Pod Identity for CSI driver ==="
+  -eksctl create podidentityassociation --cluster {{CLUSTER}} --namespace veloxpack \
+    --service-account-name csi-rclone-node-sa --role-arn arn:aws:iam::{{ACCOUNT}}:role/eks-s3-test
+  @echo "=== Restarting CSI driver to pick up credentials ==="
+  kubectl rollout restart ds/csi-rclone-node -n veloxpack
+  kubectl rollout status ds/csi-rclone-node -n veloxpack --timeout=60s
+
+# Create Pod Identity association - runs after K8s namespace/SA exist
+_s3-assoc CLUSTER:
+  kubectl wait --for=jsonpath='{.metadata.name}'=s3-access sa/s3-access -n s3-test --timeout=30s
+  @echo "=== Creating Pod Identity association ==="
+  -eksctl create podidentityassociation --cluster {{CLUSTER}} --namespace s3-test \
+    --service-account-name s3-access --role-arn arn:aws:iam::{{ACCOUNT}}:role/eks-s3-test
+
+_s3-deploy:
+  @echo "Using bucket: {{BUCKET}}"
+  kubectl kustomize kustomize-s3-pod-identity | envsubst | kubectl apply -f -
+  kubectl create configmap s3-config -n s3-test --from-literal=bucket={{BUCKET}} --from-literal=region=$AWS_REGION --dry-run=client -o yaml | kubectl apply -f -
+  kubectl wait --for=condition=Available deploy/mysql -n s3-test --timeout=120s
+  @echo "=== Running sysbench ==="
+  -kubectl wait --for=condition=Complete job/sysbench-prepare -n s3-test --timeout=180s
+
+_s3-backup:
+  @echo "=== Backing up MySQL to S3 ==="
+  kubectl apply -f kustomize-s3-pod-identity/jobs/backup.yaml
+  kubectl wait --for=condition=Complete job/backup-to-s3 -n s3-test --timeout=300s
+  kubectl logs job/backup-to-s3 -n s3-test | tail -3
+
+_s3-copy:
+  @echo "=== Copying backup1 to backup2 ==="
+  kubectl apply -f kustomize-s3-pod-identity/jobs/copy.yaml
+  kubectl wait --for=condition=Complete job/rclone-copy -n s3-test --timeout=120s
+  kubectl logs job/rclone-copy -n s3-test
+
+# Restore backup to different database name (run after s3-pod-identity-test)
+s3-restore:
+  @echo "=== Restoring backup to sbtest_restored ==="
+  -kubectl delete job restore-from-s3 -n s3-test
+  kubectl apply -f kustomize-s3-pod-identity/jobs/restore.yaml
+  kubectl wait --for=condition=Complete job/restore-from-s3 -n s3-test --timeout=300s
+  kubectl logs job/restore-from-s3 -n s3-test -c mysqlsh-restore | tail -20
+
+_s3-debug:
+  @echo "=== Debug pod with S3 CSI mount ==="
+  -kubectl wait --for=condition=Ready pod/debug -n s3-test --timeout=120s
+  @echo "Run: kubectl exec -it debug -n s3-test -- sh"
+  @echo "Then: ls /mnt/s3"
+
+# Cleanup pod identity test resources
+s3-pod-identity-cleanup CLUSTER="training01": awslogin
+  -kubectl delete -k kustomize-s3-pod-identity/jobs
+  -kubectl delete -k kustomize-s3-pod-identity
+  -eksctl delete podidentityassociation --cluster {{CLUSTER}} --namespace s3-test --service-account-name s3-access
+  -eksctl delete podidentityassociation --cluster {{CLUSTER}} --namespace veloxpack --service-account-name csi-rclone-node-sa
+  -aws iam detach-role-policy --role-name eks-s3-test --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
+  -aws iam delete-role --role-name eks-s3-test
 
 # Retreives a secret from AWS Secrets Manager as JSON and saves to kubernetes
 install-secret SECRETID $NAMESPACE $NAME: awslogin

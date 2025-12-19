@@ -1,0 +1,32 @@
+# Debug pod with S3 mounted via rclone CSI
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: s3-mount
+  namespace: s3-test
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: rclone-s3
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug
+  namespace: s3-test
+spec:
+  serviceAccountName: s3-access
+  containers:
+  - name: debug
+    image: alpine:latest
+    command: ["sleep", "infinity"]
+    volumeMounts:
+    - name: s3-data
+      mountPath: /mnt/s3
+  volumes:
+  - name: s3-data
+    persistentVolumeClaim:
+      claimName: s3-mount

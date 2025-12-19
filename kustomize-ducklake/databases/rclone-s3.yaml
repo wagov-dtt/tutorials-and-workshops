@@ -1,39 +1,45 @@
+# rclone serve s3 - local S3-compatible storage for DuckLake data
 apiVersion: v1
 kind: Service
 metadata:
-  name: s3proxy
+  name: rclone-s3
   labels:
-    app: s3proxy
+    app: rclone-s3
 spec:
   ports:
   - port: 80
+    targetPort: 8080
+    nodePort: 30080
     name: s3
-  clusterIP: None
   selector:
-    app: s3proxy
+    app: rclone-s3
+  type: NodePort
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: s3proxy
+  name: rclone-s3
 spec:
   selector:
     matchLabels:
-      app: s3proxy # has to match .spec.template.metadata.labels
-  serviceName: "s3proxy"
+      app: rclone-s3
+  serviceName: "rclone-s3"
   template:
     metadata:
       labels:
-        app: s3proxy # has to match .spec.selector.matchLabels
+        app: rclone-s3
     spec:
       containers:
-      - name: s3proxy
-        image: andrewgaul/s3proxy
-        env:
-          - name: S3PROXY_AUTHORIZATION
-            value: none
+      - name: rclone
+        image: rclone/rclone:latest
+        args:
+          - serve
+          - s3
+          - /data
+          - --addr=:8080
+          - --auth-key=,
         ports:
-        - containerPort: 80
+        - containerPort: 8080
           name: s3
         volumeMounts:
         - name: s3local

@@ -1,0 +1,32 @@
+# Copy between S3 prefixes using rclone
+# Run: kubectl apply -f copy-job.yaml (after backup-to-s3 completes)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rclone-copy
+  namespace: s3-test
+spec:
+  template:
+    spec:
+      serviceAccountName: s3-access
+      restartPolicy: Never
+      containers:
+      - name: rclone
+        image: rclone/rclone:latest
+        command: ["sh", "-c"]
+        args:
+        - |
+          BUCKET=$(cat /etc/s3-config/bucket)
+          rclone copy s3:$BUCKET/backup1/ s3:$BUCKET/backup2/ -v
+          echo "Contents of backup2:"
+          rclone ls s3:$BUCKET/backup2/
+        envFrom:
+        - configMapRef:
+            name: rclone-env
+        volumeMounts:
+        - name: s3-config
+          mountPath: /etc/s3-config
+      volumes:
+      - name: s3-config
+        configMap:
+          name: s3-config

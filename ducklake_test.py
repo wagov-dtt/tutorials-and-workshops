@@ -7,33 +7,31 @@
 # ///
 import duckdb
 import subprocess
-import base64
-import json
 import requests
 import atexit
 import time
 
 def wait_for_postgres():
     while True:
-        # Below needs better targeting
-        result = subprocess.run(['kubectl', 'get', 'pods', '-n', 'everest', '-l', 'app.kubernetes.io/name=postgres01', '-o', 'jsonpath={.items[0].status.phase}'], capture_output=True, text=True)
+        result = subprocess.run(['kubectl', 'get', 'pods', '-n', 'databases', '-l', 'app=postgres', '-o', 'jsonpath={.items[0].status.phase}'], capture_output=True, text=True)
         if result.stdout.strip() == 'Running':
             break
-        time.sleep(30)
+        time.sleep(10)
 
 def setup_port_forwards():
-    # TODO: wait_for_postgres()
     """Setup kubectl port forwards and return process objects"""
+    print("Waiting for postgres...")
+    wait_for_postgres()
     print("Setting up port forwards...")
 
-    # Port forward for s3proxy
+    # Port forward for rclone-s3
     s3_proc = subprocess.Popen([
-        'kubectl', 'port-forward', 'service/s3proxy', '30080:80', '-n', 'everest'
+        'kubectl', 'port-forward', 'service/rclone-s3', '30080:80', '-n', 'databases'
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # Port forward for postgres
     pg_proc = subprocess.Popen([
-        'kubectl', 'port-forward', 'service/postgres01-pgbouncer', '30432:5432', '-n', 'everest'
+        'kubectl', 'port-forward', 'service/postgres', '30432:5432', '-n', 'databases'
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # Wait for port forwards to be ready
@@ -53,13 +51,6 @@ def setup_port_forwards():
 def create_s3_bucket(bucket_name="data", s3_endpoint="localhost:30080"):
     requests.put(f"http://{s3_endpoint}/{bucket_name}")
 
-def get_attach(secret="everest-secrets-postgres01", ns="everest"):
-    result = subprocess.run(['kubectl', 'get', 'secret', secret, '-n', ns, '-o', 'json'], capture_output=True, text=True, check=True)
-    secret_data = json.loads(result.stdout)['data']
-    user = base64.b64decode(secret_data['user']).decode('utf-8')
-    password = base64.b64decode(secret_data['password']).decode('utf-8')
-    return f"ATTACH 'ducklake:postgres:dbname=postgres host=localhost port=30432 user={user} password={password}' AS my_ducklake (DATA_PATH 's3://data/');"
-
 def main() -> None:
     setup_port_forwards()
     create_s3_bucket()
@@ -68,10 +59,11 @@ def main() -> None:
     con.execute("INSTALL ducklake; INSTALL postgres; INSTALL httpfs; LOAD ducklake; LOAD postgres; LOAD httpfs;")
     con.execute("SET s3_endpoint='localhost:30080'; SET s3_use_ssl=false; SET s3_url_style='path'; SET s3_access_key_id=''; SET s3_secret_access_key='';")
 
-    con.execute(get_attach())
+    # Simple postgres connection - user/password from secret
+    con.execute("ATTACH 'ducklake:postgres:dbname=ducklake host=localhost port=30432 user=postgres password=changeme' AS my_ducklake (DATA_PATH 's3://data/');")
     con.execute("USE my_ducklake;")
 
-    print("Loading all NY Taxi data...")
+    print("Loading NY Taxi sample data...")
     con.execute("""
         CREATE TABLE IF NOT EXISTS ny_taxi AS 
         SELECT * FROM read_parquet('https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-01.parquet');
