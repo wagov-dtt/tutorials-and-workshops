@@ -14,7 +14,7 @@ spec:
       restartPolicy: Never
       initContainers:
       - name: mysqlsh-dump
-        image: container-registry.oracle.com/mysql/community-operator:9.2.0-2.2.3
+        image: container-registry.oracle.com/mysql/community-operator:9.5
         command: ["sh", "-c"]
         args:
         - |
@@ -25,7 +25,7 @@ spec:
           mountPath: /backup
       containers:
       - name: rclone
-        image: rclone/rclone:latest
+        image: rclone/rclone:1.72
         command: ["sh", "-c"]
         args:
         - |

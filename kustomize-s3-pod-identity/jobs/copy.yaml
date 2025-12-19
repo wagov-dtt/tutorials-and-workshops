@@ -12,7 +12,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: rclone
-        image: rclone/rclone:latest
+        image: rclone/rclone:1.72
         command: ["sh", "-c"]
         args:
         - |

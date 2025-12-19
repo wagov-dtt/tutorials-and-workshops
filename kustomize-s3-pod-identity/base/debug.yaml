@@ -21,7 +21,7 @@ spec:
   serviceAccountName: s3-access
   containers:
   - name: debug
-    image: alpine:latest
+    image: alpine:3.21
     command: ["sleep", "infinity"]
     volumeMounts:
     - name: s3-data

@@ -14,7 +14,7 @@ spec:
       restartPolicy: Never
       initContainers:
       - name: rclone-download
-        image: rclone/rclone:latest
+        image: rclone/rclone:1.72
         command: ["sh", "-c"]
         args:
         - |
@@ -32,7 +32,7 @@ spec:
           mountPath: /etc/s3-config
       containers:
       - name: mysqlsh-restore
-        image: container-registry.oracle.com/mysql/community-operator:9.2.0-2.2.3
+        image: container-registry.oracle.com/mysql/community-operator:9.5
         command: ["sh", "-c"]
         args:
         - |
