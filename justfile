@@ -6,10 +6,6 @@ default:
 
 # Install project tools
 prereqs:
-  brew bundle install
-  -wget "https://s3.amazonaws.com/mountpoint-s3-release/latest/{{arch()}}/mount-s3.deb"
-  -sudo apt-get -y update && sudo apt-get install -y ./mount-s3.deb
-  -rm mount-s3.deb
   mkdir -p .codeql
 
 # Login to aws using SSO

@@ -1,2 +1,12 @@
 [tools]
+awscli = { version = "latest", symlink_bins = "true" }
+eksctl = "latest"
+fzf = "latest"
+gh = "latest"
+k3d = "latest"
+k9s = "latest"
+kubectl = "latest"
+semgrep = "latest"
+terraform = "latest"
 "ubi:railwayapp/railpack" = "latest"
+uv = "latest"
