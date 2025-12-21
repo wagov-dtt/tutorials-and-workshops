@@ -21,8 +21,8 @@ ESO keeps secrets out of git entirely. Secrets Manager handles encryption, rotat
 ## Quick Start
 
 ```bash
-just external-secrets-deploy   # Install ESO + create example secret
-just external-secrets-test     # Verify secret sync works
+just secrets-deploy   # Install ESO + create example secret
+just secrets-test     # Verify secret sync works
 ```
 
 ## Prerequisites

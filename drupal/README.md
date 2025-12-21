@@ -6,7 +6,7 @@ Performance testing environment for Drupal CMS with FrankenPHP. Keep it simple, 
 
 ```bash
 just drupal-setup     # Install Drupal CMS with FrankenPHP
-just drupal-loadtest  # Run load test (default: 100 req/s for 30s)
+just drupal-test      # Run search performance tests
 ```
 
 ## Why FrankenPHP?
@@ -92,21 +92,18 @@ just drupal-setup     # Full install: DDEV + Drupal CMS + recipes
 just drupal-start     # Start DDEV
 just drupal-stop      # Stop DDEV
 just drupal-login     # Get admin login link
-just drupal-loadtest  # Load test (configurable: just drupal-loadtest 200 15s)
+just vegeta URL       # Load test any URL (e.g., just vegeta http://drupal-cms-perftest.ddev.site/)
 just drupal-reset     # Delete everything, start fresh
 ```
 
 ## Load Testing
 
 ```bash
-# Default: 100 req/s for 30s
-just drupal-loadtest
+# 1000 req/s for 10s against Drupal homepage
+just vegeta http://drupal.ddev.site/
 
-# Custom: 200 req/s for 15s
-just drupal-loadtest 200 15s
-
-# Find saturation point
-just drupal-loadtest 300 10s
+# Or run vegeta directly for custom parameters
+echo "GET http://drupal.ddev.site/" | vegeta attack -duration=30s -rate=100 | vegeta report
 ```
 
 Uses [vegeta](https://github.com/tsenart/vegeta) for HTTP load testing.
@@ -152,7 +149,7 @@ ddev exec frankenphp validate --config /var/www/html/.ddev/Caddyfile.drupal
 This follows [grug-brained](https://grugbrain.dev) principles:
 
 1. **One config file** - PHP settings in Caddyfile, not scattered `.ini` files
-2. **Measure first** - `just drupal-loadtest` before and after changes
+2. **Measure first** - `just vegeta URL` before and after changes
 3. **Boring tech** - OPcache/JIT are battle-tested, no exotic extensions
 4. **WET > DRY** - DDEV and prod Caddyfiles are similar but separate (different ports, paths)
 

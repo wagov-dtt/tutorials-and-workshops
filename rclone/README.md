@@ -16,14 +16,13 @@ Rclone CSI driver examples for mounting S3-compatible storage as Kubernetes volu
 
 | Path | Purpose |
 |------|---------|
-| `kustomize/` | Full example: rclone-serve (S3 server) + filebrowser + CSI mounts |
-| `kustomize/helm/` | Rclone CSI driver helm chart reference |
+| `base/` | Full example: rclone-serve (S3 server) + filebrowser + CSI mounts |
 | `example-rclone.conf` | Sample rclone configuration |
 
 ## Quick Start
 
 ```bash
-just rclone-lab         # Deploy to k3d
+just rclone-test        # Deploy to k3d + verify CSI mount
 kubectl get pods        # Check filebrowser and rclone-serve pods
 ```
 
@@ -75,10 +74,10 @@ stringData:
 
 ## Files to Study
 
-- `kustomize/deployment.yaml` - Shows CSI volume mount pattern
-- `kustomize/volumes.yaml` - StorageClass for dynamic provisioning
+- `base/deployment.yaml` - Shows CSI volume mount pattern
+- `base/volumes.yaml` - StorageClass for dynamic provisioning
 - `example-rclone.conf` - rclone configuration reference
 
 ## See Also
 
-- [kustomize-s3-pod-identity/](../kustomize-s3-pod-identity/) - CSI mounts with real AWS S3 + Pod Identity
+- [s3-pod-identity/](../s3-pod-identity/) - CSI mounts with real AWS S3 + Pod Identity

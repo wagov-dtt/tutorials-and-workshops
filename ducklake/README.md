@@ -23,8 +23,7 @@ DuckLake (DuckDB + S3-compatible storage) local development setup on k3d.
 ## Quick Start
 
 ```bash
-just deploy-ducklake    # Deploy Postgres + rclone-s3 to k3d
-just ducklake-test      # Run full test (loads NY Taxi data, runs queries)
+just ducklake-test      # Deploy + run full test (loads NY Taxi data, runs queries)
 ```
 
 The test script (`ducklake_test.py`) will:
@@ -54,7 +53,7 @@ The test script (`ducklake_test.py`) will:
 
 ## Exploring
 
-After `just deploy-ducklake`:
+After `just ducklake-test`:
 ```bash
 kubectl get pods -n databases
 kubectl port-forward svc/rclone-s3 8080:80 -n databases  # Access S3 API

@@ -55,9 +55,9 @@ flowchart TB
 ## Usage
 
 ```bash
-just s3-pod-identity-test    # Full demo: sysbench → backup → copy → debug pod
-just s3-restore              # Optional: restore backup to sbtest_restored database
-just s3-pod-identity-cleanup # Remove K8s resources and IAM role (S3 bucket kept)
+just s3-test      # Full demo: sysbench → backup → copy → debug pod
+just s3-restore   # Optional: restore backup to sbtest_restored database
+just s3-cleanup   # Remove K8s resources (S3 bucket kept)
 ```
 
 ## Learning Goals
@@ -97,5 +97,5 @@ Uses [veloxpack rclone CSI driver](https://github.com/veloxpack/csi-driver-rclon
 
 ## See Also
 
-- [rclone/](../rclone/) - rclone CSI examples on local k3d (S3-compatible)
+- [rclone/](../rclone/) - rclone CSI examples on local k3d
 - [eksauto/](../eksauto/) - EKS cluster configuration and cost info

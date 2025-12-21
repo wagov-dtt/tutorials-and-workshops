@@ -1,7 +1,7 @@
 # Drupal CMS with FrankenPHP (via ddev-frankenphp add-on)
 # Run: ddev add-on get ddev/ddev-frankenphp
 
-name: drupal-cms-perftest
+name: drupal
 type: drupal11
 docroot: web
 php_version: "8.4"

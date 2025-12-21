@@ -32,13 +32,13 @@ just destroy-eks    # Destroy when done
 | Directory | Purpose |
 |-----------|---------|
 | [kustomize/](kustomize/) | Base K8s manifests with overlays |
-| [kustomize-s3-pod-identity/](kustomize-s3-pod-identity/) | EKS Pod Identity: MySQL → S3 → rclone |
-| [kustomize-argocd/](kustomize-argocd/) | ArgoCD ApplicationSets |
-| [kustomize-external-secrets/](kustomize-external-secrets/) | External Secrets + AWS Secrets Manager |
-| [kustomize-ducklake/](kustomize-ducklake/) | DuckLake (DuckDB + S3) |
-| [eksauto/](eksauto/) | EKS Auto Mode via Terraform |
-| [drupal-cms-perftest/](drupal-cms-perftest/) | Drupal CMS with DDEV/FrankenPHP |
+| [s3-pod-identity/](s3-pod-identity/) | EKS Pod Identity: MySQL → S3 → rclone |
+| [argocd/](argocd/) | ArgoCD ApplicationSets |
+| [secrets/](secrets/) | External Secrets + AWS Secrets Manager |
+| [ducklake/](ducklake/) | DuckLake (DuckDB + S3) |
 | [rclone/](rclone/) | rclone CSI driver examples |
+| [eksauto/](eksauto/) | EKS Auto Mode via Terraform |
+| [drupal/](drupal/) | Drupal CMS with DDEV/FrankenPHP |
 
 ## ArgoCD (EKS Capability)
 

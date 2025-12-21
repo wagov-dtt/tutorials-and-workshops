@@ -15,12 +15,12 @@ deploy-local: _k3d
 
 # DuckLake demo (Postgres + DuckDB + S3)
 [group('local')]
-ducklake-test: _deploy-ducklake
+ducklake-test: _ducklake
   uv run ducklake_test.py
 
 # rclone CSI demo (S3 mount + filebrowser)
 [group('local')]
-rclone-test: _rclone-lab
+rclone-test: _rclone
   kubectl wait --for=condition=Ready pod -l app=filebrowser --timeout=120s
   kubectl exec deploy/filebrowser -- ls -la /srv
   @echo "rclone CSI working ✓"
@@ -70,15 +70,15 @@ s3-test: _awslogin _eks-kubeconfig _s3-clean _s3-infra _s3-deploy _s3-backup _s3
 [group('eks')]
 s3-restore: _eks-kubeconfig
   -kubectl delete job restore-from-s3 -n s3-test
-  kubectl apply -f kustomize-s3-pod-identity/jobs/restore.yaml
+  kubectl apply -f s3-pod-identity/jobs/restore.yaml
   kubectl wait --for=condition=Complete job/restore-from-s3 -n s3-test --timeout=300s
   kubectl logs job/restore-from-s3 -n s3-test -c mysqlsh-restore | tail -10
 
 # Cleanup S3 Pod Identity resources
 [group('eks')]
 s3-cleanup:
-  -kubectl delete -k kustomize-s3-pod-identity/jobs
-  -kubectl delete -k kustomize-s3-pod-identity
+  -kubectl delete -k s3-pod-identity/jobs
+  -kubectl delete -k s3-pod-identity
   -helm uninstall csi-rclone -n veloxpack
 
 # --- ARGOCD ---
@@ -106,7 +106,7 @@ argocd-delete CLUSTER="training01": _awslogin
 # Deploy ArgoCD ApplicationSet
 [group('argocd')]
 argocd-deploy CLUSTER="training01": _awslogin (_eks-kubeconfig CLUSTER)
-  kubectl apply -k kustomize-argocd
+  kubectl apply -k argocd
   @echo "ApplicationSet deployed ✓"
 
 # Get ArgoCD UI URL (auto-adds current user as admin)
@@ -131,7 +131,7 @@ argocd-ui CLUSTER="training01": _awslogin
 # Cleanup ArgoCD ApplicationSet
 [group('argocd')]
 argocd-cleanup:
-  -kubectl delete -k kustomize-argocd
+  -kubectl delete -k argocd
 
 # --- EXTERNAL SECRETS ---
 
@@ -143,7 +143,7 @@ secrets-deploy: _awslogin _eks-kubeconfig
   kubectl wait --for=condition=Available deploy/external-secrets -n external-secrets --timeout=180s
   kubectl rollout restart deploy -n external-secrets
   kubectl rollout status deploy/external-secrets -n external-secrets --timeout=60s
-  kubectl apply -k kustomize-external-secrets
+  kubectl apply -k secrets
   @echo "External Secrets deployed ✓"
 
 # Test External Secrets sync
@@ -155,7 +155,7 @@ secrets-test:
 # Cleanup External Secrets
 [group('secrets')]
 secrets-cleanup:
-  -kubectl delete -k kustomize-external-secrets
+  -kubectl delete -k secrets
   -helm uninstall external-secrets -n external-secrets
   -kubectl delete namespace external-secrets secrets-demo
 
@@ -163,7 +163,7 @@ secrets-cleanup:
 
 # Setup Drupal CMS with FrankenPHP
 [group('drupal')]
-[working-directory: 'drupal-cms-perftest']
+[working-directory: 'drupal']
 drupal-setup:
   ddev add-on get ddev/ddev-frankenphp
   ddev dotenv set .ddev/.env.web --frankenphp-custom-extensions="apcu opcache intl bcmath"
@@ -178,31 +178,31 @@ drupal-setup:
 
 # Start Drupal
 [group('drupal')]
-[working-directory: 'drupal-cms-perftest']
+[working-directory: 'drupal']
 drupal-start:
   ddev start
 
 # Stop Drupal
 [group('drupal')]
-[working-directory: 'drupal-cms-perftest']
+[working-directory: 'drupal']
 drupal-stop:
   ddev stop
 
 # Get Drupal login link
 [group('drupal')]
-[working-directory: 'drupal-cms-perftest']
+[working-directory: 'drupal']
 drupal-login:
   ddev drush user:login
 
 # Generate 100k test articles
 [group('drupal')]
-[working-directory: 'drupal-cms-perftest']
+[working-directory: 'drupal']
 drupal-generate:
   ddev drush php:script scripts/generate_news_content.php
 
 # Run search performance tests
 [group('drupal')]
-[working-directory: 'drupal-cms-perftest']
+[working-directory: 'drupal']
 drupal-test:
   ddev drush search-api:rebuild-tracker content
   ddev drush search-api:index --batch-size=1000
@@ -210,7 +210,7 @@ drupal-test:
 
 # Reset Drupal
 [group('drupal')]
-[working-directory: 'drupal-cms-perftest']
+[working-directory: 'drupal']
 drupal-reset:
   -ddev delete -O -y
 
@@ -291,12 +291,12 @@ _k3d:
   @which k3d > /dev/null || just prereqs
   k3d cluster create tutorials || k3d cluster start tutorials
 
-_deploy-ducklake: _k3d
-  kubectl apply -k kustomize-ducklake/overlays/local --server-side
+_ducklake: _k3d
+  kubectl apply -k ducklake/overlays/local --server-side
 
-_rclone-lab: _k3d
+_rclone: _k3d
   helm upgrade --install csi-rclone oci://ghcr.io/veloxpack/charts/csi-driver-rclone --set feature.enableInlineVolume=true
-  kubectl apply -f rclone/kustomize/deployment.yaml --server-side
+  kubectl apply -f rclone/base/deployment.yaml --server-side
 
 _awslogin:
   @which aws > /dev/null || just prereqs
@@ -322,12 +322,12 @@ _lint-kustomize:
   @echo "Validating kustomize..."
   kubectl kustomize kustomize/overlays/local >/dev/null
   kubectl kustomize kustomize/overlays/training01 >/dev/null
-  kubectl kustomize kustomize-ducklake/overlays/local >/dev/null
-  kubectl kustomize kustomize-s3-pod-identity >/dev/null
-  kubectl kustomize kustomize-argocd >/dev/null
-  kubectl kustomize kustomize-external-secrets >/dev/null
-  kubectl kustomize rclone/kustomize >/dev/null
-  kubectl kustomize drupal-cms-perftest/kustomize >/dev/null
+  kubectl kustomize ducklake/overlays/local >/dev/null
+  kubectl kustomize s3-pod-identity >/dev/null
+  kubectl kustomize argocd >/dev/null
+  kubectl kustomize secrets >/dev/null
+  kubectl kustomize rclone/base >/dev/null
+  kubectl kustomize drupal/kustomize >/dev/null
   @echo "Kustomize valid ✓"
 
 [working-directory: 'eksauto/terraform']
@@ -338,23 +338,23 @@ _lint-terraform:
   @echo "Terraform valid ✓"
 
 _validate-ddev: drupal-setup
-  curl -sf http://drupal-cms-perftest.ddev.site/ -o /dev/null
-  just vegeta http://drupal-cms-perftest.ddev.site/
+  curl -sf http://drupal.ddev.site/ -o /dev/null
+  just vegeta http://drupal.ddev.site/
   @echo "DDEV working ✓"
 
-_validate-k3d: deploy-local rclone-test _drupal-csi-test
+_validate-k3d: deploy-local rclone-test _drupal-csi
   @echo "k3d validation passed ✓"
 
-_drupal-csi-test: _rclone-lab
-  kubectl apply -k drupal-cms-perftest/kustomize
+_drupal-csi: _rclone
+  kubectl apply -k drupal/kustomize
   kubectl wait --for=condition=Ready pod/drupal-s3-test -n drupal-perf --timeout=120s
   kubectl exec drupal-s3-test -n drupal-perf -- ls -la /srv
   @echo "Drupal CSI working ✓"
 
 # S3 test helpers
 _s3-clean:
-  -@kubectl delete -k kustomize-s3-pod-identity/jobs 2>/dev/null
-  -@kubectl delete -k kustomize-s3-pod-identity 2>/dev/null
+  -@kubectl delete -k s3-pod-identity/jobs 2>/dev/null
+  -@kubectl delete -k s3-pod-identity 2>/dev/null
 
 _s3-infra:
   helm upgrade --install csi-rclone oci://ghcr.io/veloxpack/charts/csi-driver-rclone --namespace veloxpack --create-namespace
@@ -366,17 +366,17 @@ _s3-deploy:
   set -euo pipefail
   BUCKET=$(just _bucket)
   echo "Using bucket: $BUCKET"
-  kubectl kustomize kustomize-s3-pod-identity | envsubst | kubectl apply -f -
+  kubectl kustomize s3-pod-identity | envsubst | kubectl apply -f -
   kubectl create configmap s3-config -n s3-test --from-literal=bucket=$BUCKET --from-literal=region=$AWS_REGION --dry-run=client -o yaml | kubectl apply -f -
   kubectl wait --for=condition=Available deploy/mysql -n s3-test --timeout=120s
   kubectl wait --for=condition=Complete job/sysbench-prepare -n s3-test --timeout=180s || true
 
 _s3-backup:
-  kubectl apply -f kustomize-s3-pod-identity/jobs/backup.yaml
+  kubectl apply -f s3-pod-identity/jobs/backup.yaml
   kubectl wait --for=condition=Complete job/backup-to-s3 -n s3-test --timeout=300s
   kubectl logs job/backup-to-s3 -n s3-test | tail -3
 
 _s3-copy:
-  kubectl apply -f kustomize-s3-pod-identity/jobs/copy.yaml
+  kubectl apply -f s3-pod-identity/jobs/copy.yaml
   kubectl wait --for=condition=Complete job/rclone-copy -n s3-test --timeout=120s
   kubectl logs job/rclone-copy -n s3-test

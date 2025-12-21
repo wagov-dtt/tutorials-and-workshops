@@ -37,7 +37,10 @@ This repo follows ["grug-brained"](https://grugbrain.dev) principles. The goal i
 - **Agent workflow**: Agent can run local recipes (k3d, DDEV, `just lint`, `just validate-local`) but should NOT run recipes that use credentials against remote targets (AWS, EKS, terraform apply)
 
 ## Structure
-- `kustomize-*/` - K8s examples with base/overlays pattern
+- `argocd/`, `ducklake/`, `rclone/`, `s3-pod-identity/`, `secrets/` - K8s examples
+- `kustomize/` - Shared base manifests
+- `eksauto/` - EKS Terraform
+- `drupal/` - Drupal DDEV example
 - `justfile` - All recipes, the entry point for everything
 
 ## Justfile Patterns
