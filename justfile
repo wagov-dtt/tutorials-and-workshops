@@ -2,352 +2,190 @@ set dotenv-load
 set export
 set shell := ["bash", "-lc"]
 
-# Derived variables from environment
-ACCOUNT := `aws sts get-caller-identity --query Account --output text 2>/dev/null || echo ""`
-BUCKET := "test-" + ACCOUNT
-
-# Choose a task to run
+# List all recipes
 default:
-  just --choose
+  @just --list
 
-# Show key workflows
-help:
-  @echo "=== Core Workflows ==="
-  @echo "  just deploy-local          # k3d + databases (Postgres, MySQL, MongoDB, ES)"
-  @echo "  just deploy                # EKS training01 + core kustomize"
-  @echo "  just setup-eks             # Create EKS cluster via Terraform (~$80-100/mo!)"
-  @echo "  just destroy-eks           # Destroy EKS cluster and all resources"
-  @echo ""
-  @echo "=== Examples ==="
-  @echo "  just s3-pod-identity-test  # EKS: MySQL backup → S3 → rclone → restore"
-  @echo "  just argocd-deploy         # EKS: ArgoCD ApplicationSet (enabled by default)"
-  @echo "  just external-secrets-deploy # EKS: External Secrets Operator + AWS SM"
-  @echo "  just ducklake-test         # k3d: DuckLake with NY Taxi data"
-  @echo "  just rclone-lab            # k3d: rclone CSI S3 mount + filebrowser"
-  @echo ""
-  @echo "=== Validation ==="
-  @echo "  just lint                  # Validate kustomize manifests"
-  @echo "  just validate-local        # Full local validation (DDEV + k3d)"
-  @echo "  just validate-aws          # AWS validation (creates EKS cluster!)"
-  @echo "  just prereqs               # Check required tools"
-  @echo ""
-  @echo "  just drupal-setup          # Install Drupal CMS with FrankenPHP"
-  @echo "  just drupal-generate       # Generate 100k test articles"
-  @echo "  just drupal-test           # Run search performance tests"
+# --- LOCAL (no AWS required) ---
 
-# Validate all kustomize manifests and terraform
-lint: _lint-kustomize _lint-terraform
-  @echo ""
-  @echo "All validations passed ✓"
-
-_lint-kustomize:
-  @echo "=== Validating kustomize manifests ==="
-  kubectl kustomize kustomize/overlays/local > /dev/null
-  kubectl kustomize kustomize/overlays/training01 > /dev/null
-  kubectl kustomize kustomize-ducklake/overlays/local > /dev/null
-  kubectl kustomize kustomize-s3-pod-identity > /dev/null
-  kubectl kustomize kustomize-argocd > /dev/null
-  kubectl kustomize kustomize-external-secrets > /dev/null
-  kubectl kustomize rclone/kustomize > /dev/null
-  kubectl kustomize drupal-cms-perftest/kustomize > /dev/null
-  @echo "Kustomize manifests valid ✓"
-
-[working-directory: 'eksauto/terraform']
-_lint-terraform:
-  @echo "=== Validating Terraform ==="
-  terraform fmt -check -recursive
-  terraform validate
-  @echo "Terraform valid ✓"
-
-# Local validation: DDEV + k3d tests (no AWS credentials needed)
-validate-local: lint _validate-ddev _validate-k3d
-  @echo ""
-  @echo "=== Local validations passed ✓ ==="
-
-_validate-ddev: drupal-setup
-  @echo ""
-  @echo "=== Load testing FrankenPHP (10s @ 100 req/s) ==="
-  echo "GET https://drupal-cms-perftest.ddev.site/" | vegeta attack -duration=10s -rate=100 -insecure | vegeta report
-  @echo "DDEV Drupal setup working ✓"
-
-_validate-k3d: deploy-local rclone-test ducklake-test drupal-csi-test
-  @echo ""
-  @echo "=== k3d validations passed ✓ ==="
-
-# AWS validation: EKS cluster + S3 Pod Identity tests (creates real resources!)
-validate-aws: awslogin _terraform-validate
-  @echo ""
-  @echo "=== Running full AWS validation (EKS + S3 Pod Identity) ==="
-  just setup-eks
-  just s3-pod-identity-test
-  just s3-restore
-  @echo ""
-  @echo "=== AWS tests passed, cleaning up ==="
-  just s3-pod-identity-cleanup
-  just destroy-eks
-  @echo "AWS validation passed ✓"
-
-# Check required tools are installed (via mise)
-prereqs:
-  mise install
-  @mkdir -p .codeql
-
-# Login to aws using SSO
-@awslogin:
-  which aws > /dev/null || just prereqs
-  # make sure aws logged in
-  aws sts get-caller-identity > /dev/null || aws sso login --use-device-code || \
-  (echo please run '"aws configure sso --use-device-code"' and add AWS_PROFILE/AWS_REGION to your .env file && exit 1)
-
-# Create an eks cluster for testing using Terraform
-# EKS Auto Mode includes envelope encryption by default using AWS KMS
-# Pod Identity associations are pre-created for s3-test and veloxpack namespaces
-[working-directory: 'eksauto/terraform']
-setup-eks: awslogin _terraform-init
-  #!/usr/bin/env bash
-  set -euo pipefail
-  # Try apply first, if it fails due to existing resources, destroy and retry
-  if ! terraform apply -auto-approve 2>&1; then
-    echo "=== Apply failed, attempting terraform destroy first ==="
-    terraform destroy -auto-approve || just _terraform-clean
-    terraform apply -auto-approve
-  fi
-  # Configure kubectl for the new cluster
-  echo "=== Configuring kubectl ==="
-  aws eks update-kubeconfig --name $(terraform output -raw cluster_name)
-  echo "=== Verifying cluster access ==="
-  kubectl get nodes || echo "Nodes may take a few minutes to appear (EKS Auto Mode)"
-
-# Validate terraform config
-[working-directory: 'eksauto/terraform']
-_terraform-validate: _terraform-init
-  @echo "=== Validating Terraform ==="
-  terraform validate
-
-# Initialize terraform with S3 backend (creates state bucket if missing)
-[working-directory: 'eksauto/terraform']
-_terraform-init:
-  #!/usr/bin/env bash
-  BUCKET="tfstate-{{ACCOUNT}}"
-  REGION="${AWS_REGION:-ap-southeast-2}"
-  # Create state bucket if missing (versioning enabled for state recovery)
-  if ! aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
-    echo "Creating state bucket: $BUCKET"
-    aws s3api create-bucket --bucket "$BUCKET" --region "$REGION" \
-      --create-bucket-configuration LocationConstraint="$REGION"
-    aws s3api put-bucket-versioning --bucket "$BUCKET" \
-      --versioning-configuration Status=Enabled
-  fi
-  terraform init -backend-config="bucket=$BUCKET" -backend-config="region=$REGION"
-
-# Clean up orphaned AWS resources before terraform apply (training repo - ok to nuke)
-_terraform-clean: awslogin
-  @echo "=== Cleaning orphaned resources ==="
-  -aws eks delete-cluster --name training01 2>/dev/null
-  -aws iam detach-role-policy --role-name eks-s3-test --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess 2>/dev/null
-  -aws iam delete-role --role-name eks-s3-test 2>/dev/null
-  -aws logs delete-log-group --log-group-name /aws/eks/training01/cluster 2>/dev/null
-  @echo "Waiting for EKS cluster deletion (if any)..."
-  -aws eks wait cluster-deleted --name training01 2>/dev/null || true
-
-# Destroy EKS cluster and all associated resources
-[working-directory: 'eksauto/terraform']
-destroy-eks: awslogin
-  terraform destroy -auto-approve
-
-# Ensure kubectl is configured for EKS cluster
-_eks-kubeconfig CLUSTER="training01":
-  @aws eks update-kubeconfig --name {{CLUSTER}}
-
-# Install manifests for a given cluster, create the cluster if one is not connected.
-deploy CLUSTER="training01": (_eks-kubeconfig CLUSTER)
-  kubectl apply -k kustomize/overlays/{{CLUSTER}}
-
-# Simplest docker hosted k8s cluster (traefik included by default)
-k3d:
-  @which k3d > /dev/null || just prereqs
-  k3d cluster create tutorials || k3d cluster start tutorials
-
-# Deploy databases + debug pod to local k3d cluster
-deploy-local: k3d
+# Deploy databases to local k3d cluster
+[group('local')]
+deploy-local: _k3d
   kubectl apply -k kustomize/overlays/local --server-side
 
-# Deploy DuckLake stack (Postgres + rclone-s3) to local k3d cluster
-deploy-ducklake: k3d
-  kubectl apply -k kustomize-ducklake/overlays/local --server-side
-
-# Runs through a basic test using local k3d hosted just dpostgres/s3
-ducklake-test: deploy-ducklake
+# DuckLake demo (Postgres + DuckDB + S3)
+[group('local')]
+ducklake-test: _deploy-ducklake
   uv run ducklake_test.py
 
-# rclone CSI demo (S3 server + filebrowser with CSI mount)
-rclone-lab: k3d
-  helm upgrade --install csi-rclone oci://ghcr.io/veloxpack/charts/csi-driver-rclone --set feature.enableInlineVolume=true
-  kubectl apply -f rclone/kustomize/deployment.yaml --server-side
-
-# Smoke test for rclone CSI - verify filebrowser can access S3 mount
-rclone-test: rclone-lab
-  @echo "=== Waiting for filebrowser pods ==="
+# rclone CSI demo (S3 mount + filebrowser)
+[group('local')]
+rclone-test: _rclone-lab
   kubectl wait --for=condition=Ready pod -l app=filebrowser --timeout=120s
-  @echo "=== Checking S3 mount in filebrowser pod ==="
   kubectl exec deploy/filebrowser -- ls -la /srv
-  @echo "=== rclone CSI mount working ✓ ==="
+  @echo "rclone CSI working ✓"
 
-# Smoke test for Drupal CSI mount (requires rclone-lab first)
-drupal-csi-test: rclone-lab
-  kubectl apply -k drupal-cms-perftest/kustomize
-  @echo "=== Waiting for drupal-s3-test pod ==="
-  kubectl wait --for=condition=Ready pod/drupal-s3-test -n drupal-perf --timeout=120s
-  @echo "=== Checking S3 mount in Drupal test pod ==="
-  kubectl exec drupal-s3-test -n drupal-perf -- ls -la /srv
-  @echo "=== Drupal CSI mount working ✓ ==="
+# Validate all local examples
+[group('local')]
+validate-local: lint _validate-ddev _validate-k3d
+  @echo "Local validation passed ✓"
 
-# S3 Pod Identity demo: MySQL + sysbench + backup to S3 + rclone copy + CSI mount
-# Pod Identity associations are pre-created by Terraform (s3-test + veloxpack namespaces)
-s3-pod-identity-test: awslogin _eks-kubeconfig (_s3-clean) (_s3-infra) (_s3-deploy) (_s3-backup) (_s3-copy) (_s3-debug)
+# --- EKS (requires AWS) ---
 
-_s3-clean:
-  -@kubectl delete -k kustomize-s3-pod-identity/jobs 2>/dev/null
-  -@kubectl delete -k kustomize-s3-pod-identity 2>/dev/null
+# Create EKS cluster via Terraform
+[group('eks')]
+[working-directory: 'eksauto/terraform']
+setup-eks: _awslogin _terraform-init
+  terraform apply -auto-approve || { terraform destroy -auto-approve; terraform apply -auto-approve; }
+  aws eks update-kubeconfig --name $(terraform output -raw cluster_name)
+  kubectl get nodes || echo "Nodes starting (EKS Auto Mode)"
 
-# Install rclone CSI driver (IAM role + S3 bucket created by Terraform)
-_s3-infra:
-  @echo "=== Installing rclone CSI driver ==="
-  helm upgrade --install csi-rclone oci://ghcr.io/veloxpack/charts/csi-driver-rclone --namespace veloxpack --create-namespace
-  @echo "=== Restarting CSI driver to pick up Pod Identity credentials ==="
-  kubectl rollout restart ds/csi-rclone-node -n veloxpack
-  kubectl rollout status ds/csi-rclone-node -n veloxpack --timeout=60s
+# Destroy EKS cluster
+[group('eks')]
+[working-directory: 'eksauto/terraform']
+destroy-eks: _awslogin
+  terraform destroy -auto-approve
 
-_s3-deploy:
-  @echo "Using bucket: {{BUCKET}}"
-  kubectl kustomize kustomize-s3-pod-identity | envsubst | kubectl apply -f -
-  kubectl create configmap s3-config -n s3-test --from-literal=bucket={{BUCKET}} --from-literal=region=$AWS_REGION --dry-run=client -o yaml | kubectl apply -f -
-  kubectl wait --for=condition=Available deploy/mysql -n s3-test --timeout=120s
-  @echo "=== Running sysbench ==="
-  -kubectl wait --for=condition=Complete job/sysbench-prepare -n s3-test --timeout=180s
+# Deploy core manifests to EKS
+[group('eks')]
+deploy CLUSTER="training01": _awslogin (_eks-kubeconfig CLUSTER)
+  kubectl apply -k kustomize/overlays/{{CLUSTER}}
 
-_s3-backup:
-  @echo "=== Backing up MySQL to S3 ==="
-  kubectl apply -f kustomize-s3-pod-identity/jobs/backup.yaml
-  kubectl wait --for=condition=Complete job/backup-to-s3 -n s3-test --timeout=300s
-  kubectl logs job/backup-to-s3 -n s3-test | tail -3
+# S3 Pod Identity demo (MySQL → S3 → rclone → restore)
+[group('eks')]
+s3-test: _awslogin _eks-kubeconfig _s3-clean _s3-infra _s3-deploy _s3-backup _s3-copy
+  @echo "S3 Pod Identity test complete ✓"
+  @echo "Run 'just s3-restore' to test restore, 'just s3-cleanup' when done"
 
-_s3-copy:
-  @echo "=== Copying backup1 to backup2 ==="
-  kubectl apply -f kustomize-s3-pod-identity/jobs/copy.yaml
-  kubectl wait --for=condition=Complete job/rclone-copy -n s3-test --timeout=120s
-  kubectl logs job/rclone-copy -n s3-test
-
-# Restore backup to different database name (run after s3-pod-identity-test)
+# Restore MySQL backup from S3
+[group('eks')]
 s3-restore: _eks-kubeconfig
-  @echo "=== Restoring backup to sbtest_restored ==="
   -kubectl delete job restore-from-s3 -n s3-test
   kubectl apply -f kustomize-s3-pod-identity/jobs/restore.yaml
   kubectl wait --for=condition=Complete job/restore-from-s3 -n s3-test --timeout=300s
-  kubectl logs job/restore-from-s3 -n s3-test -c mysqlsh-restore | tail -20
+  kubectl logs job/restore-from-s3 -n s3-test -c mysqlsh-restore | tail -10
 
-_s3-debug:
-  @echo "=== Debug pod with S3 CSI mount ==="
-  -kubectl wait --for=condition=Ready pod/debug -n s3-test --timeout=120s
-  @echo "Run: kubectl exec -it debug -n s3-test -- sh"
-  @echo "Then: ls /mnt/s3"
-
-# Cleanup pod identity test K8s resources (IAM role + S3 bucket managed by Terraform)
-s3-pod-identity-cleanup:
+# Cleanup S3 Pod Identity resources
+[group('eks')]
+s3-cleanup:
   -kubectl delete -k kustomize-s3-pod-identity/jobs
   -kubectl delete -k kustomize-s3-pod-identity
   -helm uninstall csi-rclone -n veloxpack
 
-# Deploy ArgoCD ApplicationSet (ArgoCD capability enabled by default with setup-eks)
-argocd-deploy: awslogin _eks-kubeconfig
-  @echo "=== Deploying ApplicationSet ==="
-  kubectl apply -k kustomize-argocd
-  @echo "ArgoCD ApplicationSet deployed ✓"
-  @echo "View in ArgoCD UI: $(aws eks describe-capability --cluster-name training01 --capability-name argocd --query 'capability.argoCdDetail.webServerEndpoint' --output text 2>/dev/null || echo 'run just argocd-ui')"
+# --- ARGOCD ---
 
-# Get ArgoCD UI URL
-argocd-ui:
-  @aws eks describe-capability --cluster-name training01 --capability-name argocd \
-    --query 'capability.argoCdDetail.webServerEndpoint' --output text
+# Create ArgoCD EKS capability
+[group('argocd')]
+argocd-create CLUSTER="training01": _awslogin
+  #!/usr/bin/env bash
+  set -euo pipefail
+  IDC=$(just _idc-arn)
+  [ "$IDC" = "null" ] && { echo "ERROR: Identity Center not configured"; exit 1; }
+  aws eks create-capability --region $AWS_REGION --cluster-name {{CLUSTER}} --capability-name argocd --type ARGOCD \
+    --role-arn "arn:aws:iam::$(just _account):role/eks-argocd-capability" --delete-propagation-policy RETAIN \
+    --configuration '{"argoCd":{"awsIdc":{"idcInstanceArn":"'"$IDC"'","idcRegion":"'"$AWS_REGION"'"}}}'
+  for i in {1..30}; do
+    STATUS=$(aws eks describe-capability --cluster-name {{CLUSTER}} --capability-name argocd | jq -r '.capability.status')
+    echo "Status: $STATUS"; [ "$STATUS" = "ACTIVE" ] && exit 0; sleep 10
+  done
+
+# Delete ArgoCD capability
+[group('argocd')]
+argocd-delete CLUSTER="training01": _awslogin
+  -aws eks delete-capability --cluster-name {{CLUSTER}} --capability-name argocd --delete-propagation-policy DELETE --region $AWS_REGION
+
+# Deploy ArgoCD ApplicationSet
+[group('argocd')]
+argocd-deploy CLUSTER="training01": _awslogin (_eks-kubeconfig CLUSTER)
+  kubectl apply -k kustomize-argocd
+  @echo "ApplicationSet deployed ✓"
+
+# Get ArgoCD UI URL (auto-adds current user as admin)
+[group('argocd')]
+argocd-ui CLUSTER="training01": _awslogin
+  #!/usr/bin/env bash
+  set -euo pipefail
+  USERNAME=$(just _username)
+  USER_ID=$(aws identitystore get-user-id --identity-store-id "$(just _idc-store)" \
+    --alternate-identifier '{"UniqueAttribute":{"AttributePath":"userName","AttributeValue":"'"$USERNAME"'"}}' | jq -r '.UserId // empty')
+  if [ -n "$USER_ID" ]; then
+    CURRENT=$(aws eks describe-capability --cluster-name {{CLUSTER}} --capability-name argocd | jq -r '.capability.configuration.argoCd // {}')
+    if ! echo "$CURRENT" | jq -e --arg id "$USER_ID" '.rbacRoleMappings[]?.identities[]?.id == $id' >/dev/null 2>&1; then
+      echo "Adding $USERNAME as admin..."
+      aws eks update-capability --cluster-name {{CLUSTER}} --capability-name argocd \
+        --configuration '{"argoCd":{"rbacRoleMappings":{"addOrUpdateRoleMappings":[{"role":"ADMIN","identities":[{"id":"'"$USER_ID"'","type":"SSO_USER"}]}]}}}' >/dev/null
+      sleep 3
+    fi
+  fi
+  aws eks describe-capability --cluster-name {{CLUSTER}} --capability-name argocd | jq -r '.capability.configuration.argoCd.serverUrl'
 
 # Cleanup ArgoCD ApplicationSet
+[group('argocd')]
 argocd-cleanup:
   -kubectl delete -k kustomize-argocd
 
-# Deploy External Secrets Operator (EKS)
-external-secrets-deploy: awslogin _eks-kubeconfig
-  @echo "=== Installing External Secrets Operator ==="
+# --- EXTERNAL SECRETS ---
+
+# Deploy External Secrets Operator
+[group('secrets')]
+secrets-deploy: _awslogin _eks-kubeconfig
   helm upgrade --install external-secrets oci://ghcr.io/external-secrets/charts/external-secrets \
-    --namespace external-secrets --create-namespace \
-    --set installCRDs=true
+    --namespace external-secrets --create-namespace --set installCRDs=true
   kubectl wait --for=condition=Available deploy/external-secrets -n external-secrets --timeout=180s
-  @echo "=== Restarting to pick up Pod Identity ==="
   kubectl rollout restart deploy -n external-secrets
   kubectl rollout status deploy/external-secrets -n external-secrets --timeout=60s
-  @echo "=== Deploying ClusterSecretStore + ExternalSecret ==="
   kubectl apply -k kustomize-external-secrets
-  @echo "External Secrets Operator deployed ✓"
+  @echo "External Secrets deployed ✓"
 
 # Test External Secrets sync
-external-secrets-test:
-  @echo "=== Checking ExternalSecret status ==="
+[group('secrets')]
+secrets-test:
   kubectl get externalsecret -n secrets-demo
-  @echo "=== Checking synced K8s Secret ==="
-  kubectl get secret db-creds -n secrets-demo -o jsonpath='{.data.username}' | base64 -d && echo
+  @kubectl get secret db-creds -n secrets-demo -o jsonpath='{.data.username}' | base64 -d && echo
 
-# Cleanup External Secrets Operator
-external-secrets-cleanup:
+# Cleanup External Secrets
+[group('secrets')]
+secrets-cleanup:
   -kubectl delete -k kustomize-external-secrets
   -helm uninstall external-secrets -n external-secrets
   -kubectl delete namespace external-secrets secrets-demo
 
-# Retreives a secret from AWS Secrets Manager as JSON and saves to kubernetes
-install-secret SECRETID $NAMESPACE $NAME: awslogin
-  kubectl get namespace $NAMESPACE || kubectl create namespace $NAMESPACE
-  cat kustomize/secrets-template.yaml | \
-  SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id {{SECRETID}} --query SecretString --output text) \
-  envsubst | kubectl apply -f -
+# --- DRUPAL ---
 
-# Load test a site with vegeta (HTTP load testing tool)
-# Usage: just vegeta https://example.com
-# Runs 1000 req/s for 10s, reports latency percentiles and success rate
-vegeta URL:
-  echo "GET {{URL}}" | vegeta attack -duration=10s -rate=1000 -insecure | vegeta report
-
-# === Drupal CMS (FrankenPHP + DDEV) ===
-
-# Setup Drupal CMS with FrankenPHP and search/news recipes
+# Setup Drupal CMS with FrankenPHP
 [group('drupal')]
 [working-directory: 'drupal-cms-perftest']
 drupal-setup:
   ddev add-on get ddev/ddev-frankenphp
   ddev dotenv set .ddev/.env.web --frankenphp-custom-extensions="apcu opcache intl bcmath"
   ddev start
-  ddev composer install
+  ddev restart
+  ddev composer update --with-all-dependencies
+  ddev composer require drupal/drupal_cms_starter drupal/drupal_cms_search drupal/drupal_cms_news
   ddev drush site:install --account-name=admin --account-pass=admin -y
   ddev drush recipe ../recipes/drupal_cms_starter
   ddev drush recipe ../recipes/drupal_cms_search
   ddev drush recipe ../recipes/drupal_cms_news
 
-# Start Drupal DDEV containers
+# Start Drupal
 [group('drupal')]
 [working-directory: 'drupal-cms-perftest']
 drupal-start:
   ddev start
 
-# Stop Drupal DDEV containers
+# Stop Drupal
 [group('drupal')]
 [working-directory: 'drupal-cms-perftest']
 drupal-stop:
   ddev stop
 
-# Get Drupal admin login link
+# Get Drupal login link
 [group('drupal')]
 [working-directory: 'drupal-cms-perftest']
 drupal-login:
   ddev drush user:login
 
-# Generate test content (100k articles)
+# Generate 100k test articles
 [group('drupal')]
 [working-directory: 'drupal-cms-perftest']
 drupal-generate:
@@ -361,32 +199,187 @@ drupal-test:
   ddev drush search-api:index --batch-size=1000
   ddev drush php:script scripts/search_performance_test.php
 
-# Clear test content
+# Load test Drupal (requires running DDEV)
 [group('drupal')]
-[working-directory: 'drupal-cms-perftest']
-drupal-clear:
-  ddev drush sql:query "DELETE FROM node WHERE type='news'"
-  ddev drush search-api:clear
+drupal-loadtest RATE="100" DURATION="30s":
+  @echo "Load testing at {{RATE}} req/s for {{DURATION}}..."
+  echo "GET http://drupal-cms-perftest.ddev.site/" | vegeta attack -duration={{DURATION}} -rate={{RATE}} | vegeta report
 
-# Full workflow: generate + test
-[group('drupal')]
-drupal-full-test:
-  just drupal-generate
-  just drupal-test
-
-# Reset Drupal (delete DDEV project)
+# Reset Drupal
 [group('drupal')]
 [working-directory: 'drupal-cms-perftest']
 drupal-reset:
   -ddev delete -O -y
 
-# Run semgrep/CodeQL (SAST) analysis locally and output results to CSV
+# --- VALIDATION ---
+
+# Validate kustomize + terraform
+[group('validate')]
+lint: _lint-kustomize _lint-terraform
+  @echo "All validations passed ✓"
+
+# Full AWS validation (creates EKS, runs tests, destroys)
+[group('validate')]
+validate-aws: _awslogin _terraform-validate
+  just setup-eks
+  just s3-test
+  just s3-restore
+  just s3-cleanup
+  just destroy-eks
+  @echo "AWS validation passed ✓"
+
+# Check required tools
+[group('validate')]
+prereqs:
+  mise install
+  @mkdir -p .codeql
+
+# Run SAST analysis (semgrep + CodeQL)
+[group('validate')]
 [working-directory: '.codeql']
 codeql: prereqs
-    gh extensions install github/gh-codeql
-    -semgrep scan --sarif --output semgrep_results.sarif ..
-    gh codeql database create --db-cluster --language=go,python,javascript-typescript --threads=0 --source-root=.. --overwrite codeql-db
-    gh codeql database analyze --download --format=sarif-latest --threads=0 --output=go_results.sarif codeql-db/go codeql/go-queries
-    gh codeql database analyze --download --format=sarif-latest --threads=0 --output=python_results.sarif codeql-db/python codeql/python-queries
-    gh codeql database analyze --download --format=sarif-latest --threads=0 --output=javascript_results.sarif codeql-db/javascript codeql/javascript-queries
-    uvx --from sarif-tools sarif csv
+  gh extensions install github/gh-codeql
+  -semgrep scan --sarif --output semgrep_results.sarif ..
+  gh codeql database create --db-cluster --language=go,python,javascript-typescript --threads=0 --source-root=.. --overwrite codeql-db
+  gh codeql database analyze --download --format=sarif-latest --threads=0 --output=go_results.sarif codeql-db/go codeql/go-queries
+  gh codeql database analyze --download --format=sarif-latest --threads=0 --output=python_results.sarif codeql-db/python codeql/python-queries
+  gh codeql database analyze --download --format=sarif-latest --threads=0 --output=javascript_results.sarif codeql-db/javascript codeql/javascript-queries
+  uvx --from sarif-tools sarif csv
+
+# --- UTILITIES ---
+
+# Load test a URL (1000 req/s for 10s)
+[group('util')]
+vegeta URL:
+  echo "GET {{URL}}" | vegeta attack -duration=10s -rate=1000 -insecure | vegeta report
+
+# Install secret from AWS Secrets Manager
+[group('util')]
+install-secret SECRETID $NAMESPACE $NAME: _awslogin
+  kubectl get namespace $NAMESPACE || kubectl create namespace $NAMESPACE
+  SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id {{SECRETID}} --query SecretString --output text) \
+    envsubst < kustomize/secrets-template.yaml | kubectl apply -f -
+
+# --- PRIVATE HELPERS ---
+
+# Lazy-evaluated AWS helpers (only run when called)
+_account:
+  @aws sts get-caller-identity | jq -r '.Account'
+
+_bucket:
+  @echo "test-$(just _account)"
+
+_username:
+  @aws sts get-caller-identity | jq -r '.UserId | split(":")[1]'
+
+_idc-store:
+  @aws sso-admin list-instances | jq -r '.Instances[0].IdentityStoreId'
+
+_idc-arn:
+  @aws sso-admin list-instances | jq -r '.Instances[0].InstanceArn'
+
+# Infrastructure helpers
+_k3d:
+  @which k3d > /dev/null || just prereqs
+  k3d cluster create tutorials || k3d cluster start tutorials
+
+_deploy-ducklake: _k3d
+  kubectl apply -k kustomize-ducklake/overlays/local --server-side
+
+_rclone-lab: _k3d
+  helm upgrade --install csi-rclone oci://ghcr.io/veloxpack/charts/csi-driver-rclone --set feature.enableInlineVolume=true
+  kubectl apply -f rclone/kustomize/deployment.yaml --server-side
+
+_awslogin:
+  @which aws > /dev/null || just prereqs
+  @aws sts get-caller-identity >/dev/null 2>&1 || aws sso login --use-device-code
+
+_eks-kubeconfig CLUSTER="training01":
+  @aws eks update-kubeconfig --name {{CLUSTER}} 2>/dev/null
+
+# Terraform helpers
+[working-directory: 'eksauto/terraform']
+_terraform-init:
+  #!/usr/bin/env bash
+  BUCKET="tfstate-$(just _account)"
+  REGION="${AWS_REGION:-ap-southeast-2}"
+  aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null || {
+    aws s3api create-bucket --bucket "$BUCKET" --region "$REGION" --create-bucket-configuration LocationConstraint="$REGION"
+    aws s3api put-bucket-versioning --bucket "$BUCKET" --versioning-configuration Status=Enabled
+  }
+  terraform init -backend-config="bucket=$BUCKET" -backend-config="region=$REGION"
+
+[working-directory: 'eksauto/terraform']
+_terraform-validate: _terraform-init
+  terraform validate
+
+_terraform-clean: _awslogin
+  -aws eks delete-cluster --name training01
+  -aws iam detach-role-policy --role-name eks-s3-test --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
+  -aws iam delete-role --role-name eks-s3-test
+  -aws logs delete-log-group --log-group-name /aws/eks/training01/cluster
+  -aws eks wait cluster-deleted --name training01 || true
+
+# Validation helpers
+_lint-kustomize:
+  @echo "Validating kustomize..."
+  kubectl kustomize kustomize/overlays/local >/dev/null
+  kubectl kustomize kustomize/overlays/training01 >/dev/null
+  kubectl kustomize kustomize-ducklake/overlays/local >/dev/null
+  kubectl kustomize kustomize-s3-pod-identity >/dev/null
+  kubectl kustomize kustomize-argocd >/dev/null
+  kubectl kustomize kustomize-external-secrets >/dev/null
+  kubectl kustomize rclone/kustomize >/dev/null
+  kubectl kustomize drupal-cms-perftest/kustomize >/dev/null
+  @echo "Kustomize valid ✓"
+
+[working-directory: 'eksauto/terraform']
+_lint-terraform:
+  @echo "Validating terraform..."
+  terraform fmt -check -recursive
+  terraform validate
+  @echo "Terraform valid ✓"
+
+_validate-ddev: drupal-setup
+  curl -sf http://drupal-cms-perftest.ddev.site/ -o /dev/null
+  just drupal-loadtest 100 10s
+  @echo "DDEV working ✓"
+
+_validate-k3d: deploy-local rclone-test _drupal-csi-test
+  @echo "k3d validation passed ✓"
+
+_drupal-csi-test: _rclone-lab
+  kubectl apply -k drupal-cms-perftest/kustomize
+  kubectl wait --for=condition=Ready pod/drupal-s3-test -n drupal-perf --timeout=120s
+  kubectl exec drupal-s3-test -n drupal-perf -- ls -la /srv
+  @echo "Drupal CSI working ✓"
+
+# S3 test helpers
+_s3-clean:
+  -@kubectl delete -k kustomize-s3-pod-identity/jobs 2>/dev/null
+  -@kubectl delete -k kustomize-s3-pod-identity 2>/dev/null
+
+_s3-infra:
+  helm upgrade --install csi-rclone oci://ghcr.io/veloxpack/charts/csi-driver-rclone --namespace veloxpack --create-namespace
+  kubectl rollout restart ds/csi-rclone-node -n veloxpack
+  kubectl rollout status ds/csi-rclone-node -n veloxpack --timeout=60s
+
+_s3-deploy:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  BUCKET=$(just _bucket)
+  echo "Using bucket: $BUCKET"
+  kubectl kustomize kustomize-s3-pod-identity | envsubst | kubectl apply -f -
+  kubectl create configmap s3-config -n s3-test --from-literal=bucket=$BUCKET --from-literal=region=$AWS_REGION --dry-run=client -o yaml | kubectl apply -f -
+  kubectl wait --for=condition=Available deploy/mysql -n s3-test --timeout=120s
+  kubectl wait --for=condition=Complete job/sysbench-prepare -n s3-test --timeout=180s || true
+
+_s3-backup:
+  kubectl apply -f kustomize-s3-pod-identity/jobs/backup.yaml
+  kubectl wait --for=condition=Complete job/backup-to-s3 -n s3-test --timeout=300s
+  kubectl logs job/backup-to-s3 -n s3-test | tail -3
+
+_s3-copy:
+  kubectl apply -f kustomize-s3-pod-identity/jobs/copy.yaml
+  kubectl wait --for=condition=Complete job/rclone-copy -n s3-test --timeout=120s
+  kubectl logs job/rclone-copy -n s3-test

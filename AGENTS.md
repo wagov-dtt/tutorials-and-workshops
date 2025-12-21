@@ -30,7 +30,7 @@ This repo follows ["grug-brained"](https://grugbrain.dev) principles. The goal i
    - Factor code, not infrastructure.
 
 ## Principles
-- Every example has a `just` recipe - run `just --choose` to explore
+- Every example has a `just` recipe - run `just` to list all
 - Keep examples minimal and document *why* decisions were made (not just how)
 - Use `kubectl kustomize <dir>` to validate manifests before committing
 - Test locally if needed with `just deploy-local` (k3d) before EKS
@@ -41,16 +41,48 @@ This repo follows ["grug-brained"](https://grugbrain.dev) principles. The goal i
 - `justfile` - All recipes, the entry point for everything
 
 ## Justfile Patterns
-- `set dotenv-load` - Loads `.env` file (AWS_PROFILE, AWS_REGION)
-- `set export` - All just variables exported as env vars to recipes
-- `set shell := ["bash", "-lc"]` - Login shell for mise/asdf tool integration
-- Define derived vars at top: `ACCOUNT := \`aws sts get-caller-identity ...\``
-- Use `{{VAR}}` in recipes for just variables, `$VAR` for env vars
-- Use `[working-directory: 'path']` attribute to run recipe in specified directory
-- Use `-` prefix to ignore errors (cleaner than `|| true`)
-- Use `envsubst` for templating manifests with `${VAR}` placeholders
-- Each command on its own line (avoid `&&` chains)
-- Private recipes prefixed with `_` (e.g., `_s3-deploy`)
+
+### Structure
+```just
+set dotenv-load                    # Load .env (AWS_PROFILE, AWS_REGION)
+set export                         # Export vars to recipes
+set shell := ["bash", "-lc"]       # Login shell for mise/asdf
+
+default:                           # MUST be first recipe
+  @just --list
+
+# --- SECTION NAME ---
+
+[group('section')]                 # Groups in --list output
+recipe-name PARAM="default":       # Public recipes
+  command
+
+_private-helper:                   # Private (hidden from --list)
+  command
+```
+
+### Lazy AWS Helpers
+Avoid top-level backtick variables (slow startup). Use private recipes called on-demand:
+
+```just
+# Define once
+_account:
+  @aws sts get-caller-identity | jq -r '.Account'
+
+# Use as: $(just _account)
+some-recipe:
+  echo "Account: $(just _account)"
+```
+
+### Conventions
+- **jq everywhere**: Use `| jq -r '.field'` instead of `--query`/`--output text`/`sed`
+- **Groups**: `[group('eks')]` organizes `just --list` output
+- **Working directory**: `[working-directory: 'path']` for context-specific recipes
+- **Ignore errors**: `-` prefix (e.g., `-kubectl delete ...`)
+- **Quiet output**: `@` prefix hides command echo
+- **Multi-line scripts**: Use `#!/usr/bin/env bash` shebang for complex logic
+- **No `&&` chains**: One command per line for readability
+- **Section dividers**: Use `# --- SECTION NAME ---` between logical groups
 
 ## EKS Auto Mode Notes
 - Cluster is managed by Terraform in `eksauto/terraform/`

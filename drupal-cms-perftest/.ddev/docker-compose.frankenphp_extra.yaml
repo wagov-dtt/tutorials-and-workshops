@@ -1,0 +1,7 @@
+services:
+  web:
+    environment:
+      # Worker mode with absolute path (global frankenphp block)
+      FRANKENPHP_CONFIG: |
+        worker /var/www/html/web/index.php
+        php_ini memory_limit 512M

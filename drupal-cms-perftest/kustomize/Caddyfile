@@ -1,0 +1,61 @@
+# FrankenPHP Caddyfile for Drupal
+# Based on: https://git.drupalcode.org/project/drupal/-/blob/11.x/Caddyfile
+# Used by both DDEV (local dev) and Dockerfile.prod (container builds)
+
+{
+    frankenphp {
+        # PHP performance tuning - sized for large sites (100+ modules, 100K+ content)
+        php_ini memory_limit 1G
+        php_ini max_execution_time 300
+        php_ini opcache.validate_timestamps 0
+        php_ini opcache.enable_file_override 1
+        php_ini opcache.memory_consumption 512
+        php_ini opcache.interned_strings_buffer 64
+        php_ini opcache.max_accelerated_files 130000
+        php_ini opcache.jit 1255
+        php_ini opcache.jit_buffer_size 256M
+        php_ini realpath_cache_size 8192K
+        php_ini realpath_cache_ttl 600
+    }
+    order php_server before file_server
+    order php before file_server
+}
+
+# Listen on port from SERVER_NAME env var, default to :8080
+{$SERVER_NAME:localhost} {
+    root * {$SERVER_ROOT:/var/www/html/web}
+    encode zstd br gzip
+
+    # Security: Block access to hidden PHP files (e.g., .git/*.php)
+    @hiddenPhpFilesRegexp path_regexp \..*/.*.php$
+    error @hiddenPhpFilesRegexp 403
+
+    # Security: Block vendor PHP files
+    @notFoundPhpFiles path_regexp /vendor/.*.php$
+    error @notFoundPhpFiles 404
+
+    # Security: Block PHP in files directories
+    @notFoundPhpFilesRegexp path_regexp ^/sites/[^/]+/files/.*.php$
+    error @notFoundPhpFilesRegexp 404
+
+    # Security: Block private directories
+    @privateDirRegexp path_regexp ^/sites/.*/private/
+    error @privateDirRegexp 403
+
+    # Security: Block sensitive files (engine, install, sql, yml, composer.json, etc.)
+    @protectedFilesRegexp {
+        not path /.well-known*
+        path_regexp \.(engine|inc|install|make|module|profile|po|sh|.*sql|theme|twig|tpl(\.php)?|xtmpl|yml)(~|\.sw[op]|\.bak|\.orig|\.save)?$|^/(\..*|Entries.*|Repository|Root|Tag|Template|composer\.(json|lock)|web\.config|yarn\.lock|package\.json)$|^/#.*#$|\.php(~|\.sw[op]|\.bak|\.orig|\.save)$
+    }
+    error @protectedFilesRegexp 403
+
+    # Cache static assets for 1 year
+    @static {
+        file
+        path *.avif *.css *.eot *.gif *.gz *.ico *.jpg *.jpeg *.js *.otf *.pdf *.png *.svg *.ttf *.webp *.woff *.woff2
+    }
+    header @static Cache-Control "max-age=31536000,public,immutable"
+
+    # Serve PHP via FrankenPHP (no explicit worker - uses php_server default behavior)
+    php_server
+}

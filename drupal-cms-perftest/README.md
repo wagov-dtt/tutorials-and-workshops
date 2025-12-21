@@ -1,192 +1,165 @@
 # Drupal CMS Performance Testing
 
-Performance testing environment for Drupal CMS with focus on content generation and search functionality.
-
-## Why FrankenPHP?
-
-This setup uses [FrankenPHP](https://frankenphp.dev/) via the official [ddev-frankenphp add-on](https://github.com/ddev/ddev-frankenphp):
-
-- **Official DDEV support**: Maintained add-on with PHP 8.2-8.5, xdebug, worker mode
-- **Modern PHP**: Built-in PHP 8.4 with Caddy web server
-- **Simpler stack**: No nginx/php-fpm, just Caddy + embedded PHP
-- **Zero config**: `ddev add-on get ddev/ddev-frankenphp` sets everything up
-
-## Prerequisites
-
-- Docker (Docker Desktop, Rancher Desktop, or Colima)
-- [DDEV](https://ddev.readthedocs.io/) installed and on your PATH
-- `just` task runner
+Performance testing environment for Drupal CMS with FrankenPHP. Keep it simple, measure what matters.
 
 ## Quick Start
 
 ```bash
-cd drupal-cms-perftest
-
-just setup      # Install Drupal CMS with search/news recipes
-ddev restart    # Apply performance configurations
-just generate   # Create 100,000 test news articles (resumes if partial)
-just test       # Reindex and run search performance benchmarks
-just clear      # Remove test content (optional)
+just drupal-setup     # Install Drupal CMS with FrankenPHP
+just drupal-loadtest  # Run load test (default: 100 req/s for 30s)
 ```
 
-**Note**: Performance configurations are included and committed to the repository.
+## Why FrankenPHP?
 
-## Learning Goals
+Single binary, no nginx/php-fpm dance. Caddy + PHP in one process.
 
-- **FrankenPHP + DDEV**: Modern PHP runtime via official add-on
-- **Drupal Recipe System**: Using recipes to install pre-configured functionality (search, news)
-- **Bulk content generation**: Patterns for creating large test datasets with batch processing
-- **Search API performance**: Understanding indexing, caching, and query performance at scale
+- **Simpler stack**: One config file (Caddyfile) for web server + PHP settings
+- **Same config everywhere**: DDEV, Docker, Kubernetes
+- **No worker mode yet**: Drupal doesn't call `frankenphp_handle_request()`, so we use classic `php_server`
+
+## Benchmarks
+
+8-core dev machine, DDEV/Docker, Drupal CMS homepage, vegeta load test:
+
+| JIT | Saturates at | Latency (p50) |
+|-----|--------------|---------------|
+| Off | ~130 req/s | 53ms |
+| **On (1255)** | **~180 req/s** | **16ms** |
+
+JIT gives ~40% more headroom before saturation.
+
+## PHP Tuning via Caddyfile
+
+FrankenPHP ignores `.ddev/php/*.ini` files. Configure PHP via `php_ini` directives in the Caddyfile:
+
+```caddyfile
+{
+    frankenphp {
+        # Memory - sized for large sites (100+ modules)
+        php_ini memory_limit 1G
+        php_ini opcache.memory_consumption 512
+        php_ini opcache.interned_strings_buffer 64
+        php_ini opcache.max_accelerated_files 130000
+        
+        # JIT - tracing mode (1255) for web apps
+        php_ini opcache.jit 1255
+        php_ini opcache.jit_buffer_size 256M
+        
+        # OPcache - disable revalidation for prod
+        php_ini opcache.validate_timestamps 0
+        php_ini opcache.enable_file_override 1
+        
+        # Realpath cache - reduce filesystem calls
+        php_ini realpath_cache_size 8192K
+        php_ini realpath_cache_ttl 600
+    }
+}
+```
+
+See [`.ddev/Caddyfile.drupal`](.ddev/Caddyfile.drupal) for the full config.
+
+### Key Settings Explained
+
+| Setting | Value | Why |
+|---------|-------|-----|
+| `opcache.jit` | `1255` | Tracing JIT - best for web apps with hot paths |
+| `opcache.jit_buffer_size` | `256M` | JIT code cache - larger = more compiled code kept |
+| `opcache.memory_consumption` | `512` | Bytecode cache - fits 100+ modules comfortably |
+| `opcache.max_accelerated_files` | `130000` | Max cached scripts - Drupal + contrib needs ~50K+ |
+| `opcache.validate_timestamps` | `0` | Skip file stat() calls - files don't change in prod |
+| `realpath_cache_size` | `8192K` | Cache resolved paths, reduce syscalls |
+
+### Worker Mode (Not Yet)
+
+Drupal's `index.php` doesn't support FrankenPHP worker mode - it doesn't call `frankenphp_handle_request()`. 
+There's [ongoing work](https://www.drupal.org/project/drupal/issues/2218651) to add support. When ready, expect another 2-5x improvement.
+
+## Configuration Files
+
+```
+.ddev/
+├── config.frankenphp.yaml   # FrankenPHP daemon (custom, no #ddev-generated)
+├── Caddyfile.drupal         # PHP + security config (the important one)
+└── mysql/performance.cnf    # MariaDB tuning
+```
+
+**Important**: Remove `#ddev-generated` from `config.frankenphp.yaml` to prevent the add-on from overwriting your custom Caddyfile path.
 
 ## Available Commands
 
-Run `just` to see all available commands:
-
 ```bash
-# Setup and basic operations
-just setup      # Install Drupal CMS with search/news
-just start      # Start DDEV containers
-just stop       # Stop DDEV containers  
-just login      # Get admin login link
-just status     # Show DDEV project status
-just reset      # Delete and recreate DDEV project
-
-# Content generation and testing
-just generate   # Create test content 
-just test       # Reindex and run search performance tests
-just clear      # Delete test content
-just full-test  # Complete workflow: generate + test
+just drupal-setup     # Full install: DDEV + Drupal CMS + recipes
+just drupal-start     # Start DDEV
+just drupal-stop      # Stop DDEV
+just drupal-login     # Get admin login link
+just drupal-loadtest  # Load test (configurable: just drupal-loadtest 200 15s)
+just drupal-reset     # Delete everything, start fresh
 ```
 
-## Configuration
+## Load Testing
 
-Edit `scripts/generate_news_content.php` to change:
-- `$total_articles` - Target number of total articles (default: 100,000)
-- `$batch_size` - Processing batch size (default: 500)
+```bash
+# Default: 100 req/s for 30s
+just drupal-loadtest
 
-**Smart Resume**: Script automatically counts existing articles and only generates the remainder to reach the target. Run multiple times safely - it won't create duplicates.
+# Custom: 200 req/s for 15s
+just drupal-loadtest 200 15s
 
-Each article contains 1-2 pages of realistic content for comprehensive performance testing.
+# Find saturation point
+just drupal-loadtest 300 10s
+```
 
-## Performance Optimizations
+Uses [vegeta](https://github.com/tsenart/vegeta) for HTTP load testing.
 
-**Pre-configured for 100K+ articles** - Run `ddev restart` after setup to apply optimizations.
+## Drupal Security (via Caddyfile)
 
-### PHP Configuration
-- **Memory limit**: 2GB for large content operations  
-- **OPcache**: 512MB cache with 20,000 max files
-- **Execution time**: 10 minutes for bulk generation
-- **File**: [`.ddev/php/performance.ini`](.ddev/php/performance.ini) *(committed to repo)*
+The Caddyfile includes security rules from the [official Drupal Caddyfile](https://git.drupalcode.org/project/drupal/-/blob/11.x/Caddyfile):
 
-### MariaDB Configuration  
-- **Buffer pool**: 1GB InnoDB buffer for caching
-- **Query cache**: 128MB for repeated searches
-- **Connections**: 200 max concurrent connections
-- **Timeouts**: Extended for bulk operations
-- **File**: [`.ddev/mysql/performance.cnf`](.ddev/mysql/performance.cnf) *(committed to repo)*
-
-## Research & Findings
-
-### Search API Issues Encountered
-
-1. **Index Tracking Problem**: Search API tracker wasn't recognizing newly created content
-   - **Solution**: Use `search-api:rebuild-tracker` after content generation
-   - **Root cause**: Tracker established before content types were fully configured
-
-2. **Bundle Configuration**: Default bundle tracking (`default: true`) didn't work initially
-   - **Issue**: Configuration was set correctly but tracker cache wasn't updated
-   - **Fix**: Clear search index and rebuild tracker completely
-
-3. **Memory Issues**: Large content generation caused PHP memory exhaustion
-   - **Solution**: Process in batches and clear entity cache between batches
-   - **Best practice**: Use `entity.memory_cache::deleteAll()` for large operations
-
-### Performance Characteristics
-
-Based on testing with 100,000 articles:
-- **Generation**: ~10-20 articles/second depending on field complexity  
-- **Indexing**: Search API can index ~50-100 items/second
-- **Search**: Performance varies with content size and search complexity
-
-## Useful Resources
-
-### Drupal CMS Documentation
-- [Drupal CMS Project](https://www.drupal.org/project/drupal_cms)
-- [Recipe System](https://www.drupal.org/docs/drupal-apis/recipe-system)
-- [Installation Guide](https://new.drupal.org/docs/drupal-cms)
-
-### Search API Resources  
-- [Search API Module](https://www.drupal.org/project/search_api)
-- [Search API Documentation](https://www.drupal.org/docs/contributed-modules/search-api)
-- [Performance Optimization](https://www.drupal.org/docs/contributed-modules/search-api/getting-started/frequently-asked-questions#performance)
-
-### Performance Testing
-- [Drupal Performance Guide](https://www.drupal.org/docs/administering-a-drupal-site/optimizing-performance)
-- [Database Performance](https://www.drupal.org/docs/system-requirements/database-requirements)
-
-### DDEV Resources
-- [DDEV Documentation](https://ddev.readthedocs.io/)
-- [DDEV Commands](https://ddev.readthedocs.io/en/stable/users/cli-usage/)
+- Block `.sql`, `.yml`, `composer.json` access
+- Block PHP execution in `/sites/*/files/`
+- Block `/vendor/*.php` access
+- 1-year cache headers for static assets
 
 ## Troubleshooting
 
-### Search Not Working
-```bash
-# Check index status
-ddev drush search-api:status
-
-# Rebuild and reindex
-just test
-```
-
-### Content Generation Fails
-```bash  
-# Check for memory/timeout issues
-ddev drush php:eval "echo ini_get('memory_limit');"
-
-# Clear existing content first
-just clear
-```
-
-### DDEV Issues
-```bash
-# Restart DDEV
-just stop && just start
-
-# Complete reset
-just reset && just setup
-```
-
-## Kubernetes CSI Mount Testing
-
-The `kustomize/` directory contains manifests for testing rclone CSI mounts on k3d - a stepping stone toward production k8s deployment with S3 media storage.
+### Check if settings are applied
 
 ```bash
-just drupal-csi-test  # Deploy test pod with S3 CSI mount
+# Create temp phpinfo (FrankenPHP serves it, not CLI)
+echo '<?php phpinfo();' > web/phpinfo.php
+curl -s http://drupal-cms-perftest.ddev.site/phpinfo.php | grep opcache.jit
+rm web/phpinfo.php
 ```
 
-### Planned: Prod S3 Readonly + Local Writable Overlay
+### FrankenPHP won't start
 
-Future workflow for devs to access large prod media directories without pulling everything:
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  rclone union remote                                    │
-│  ┌─────────────────────┐  ┌─────────────────────────┐  │
-│  │  Prod S3 (readonly) │  │  Local overlay (rw)     │  │
-│  │  - 100GB media      │  │  - new/modified files   │  │
-│  └─────────────────────┘  └─────────────────────────┘  │
-└─────────────────────────────────────────────────────────┘
-                        ↓
-              CSI mount into pod /srv
+Check logs:
+```bash
+ddev logs -s web | tail -20
 ```
 
-This lets developers work with prod-like media without syncing terabytes locally.
+Common issue: Caddyfile syntax error. Validate with:
+```bash
+ddev exec frankenphp validate --config /var/www/html/.ddev/Caddyfile.drupal
+```
 
-## Development Notes
+### Settings not applied
 
-- Uses simplified PHP scripts instead of complex custom code
-- Leverages core Drupal/Drush commands where possible  
-- Batch processing prevents memory issues with large datasets
-- Search API database backend for consistent performance testing
-- Minimal dependencies - only essential modules installed
+`ddev drush php:eval` and `php -i` use CLI, not FrankenPHP. Always test via HTTP request.
+
+## Philosophy
+
+This follows [grug-brained](https://grugbrain.dev) principles:
+
+1. **One config file** - PHP settings in Caddyfile, not scattered `.ini` files
+2. **Measure first** - `just drupal-loadtest` before and after changes
+3. **Boring tech** - OPcache/JIT are battle-tested, no exotic extensions
+4. **WET > DRY** - DDEV and prod Caddyfiles are similar but separate (different ports, paths)
+
+## Resources
+
+- [FrankenPHP Configuration](https://frankenphp.dev/docs/config/)
+- [FrankenPHP Performance](https://frankenphp.dev/docs/performance/)
+- [Official Drupal Caddyfile](https://git.drupalcode.org/project/drupal/-/blob/11.x/Caddyfile)
+- [DDEV FrankenPHP Add-on](https://github.com/ddev/ddev-frankenphp)
+- [Drupal Worker Mode Issue](https://www.drupal.org/project/drupal/issues/2218651)
