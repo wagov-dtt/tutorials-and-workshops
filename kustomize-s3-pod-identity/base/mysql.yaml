@@ -27,6 +27,7 @@ spec:
       containers:
       - name: mysql
         image: percona:8.0
+        args: ["--local-infile=1"]
         ports:
         - containerPort: 3306
         envFrom:

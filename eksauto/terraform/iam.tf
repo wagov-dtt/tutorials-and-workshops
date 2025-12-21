@@ -29,9 +29,10 @@ resource "aws_iam_role_policy_attachment" "eks_s3_test" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 }
 
-# S3 bucket for backups (versioning for recovery)
+# S3 bucket for backups (versioned, force_destroy for easy cleanup)
 resource "aws_s3_bucket" "test" {
-  bucket = "test-${local.account_id}"
+  bucket        = "test-${local.account_id}"
+  force_destroy = true
 
   tags = {
     Terraform   = "true"

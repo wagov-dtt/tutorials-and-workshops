@@ -44,6 +44,8 @@ setup-eks: _awslogin _terraform-init
 [group('eks')]
 [working-directory: 'eksauto/terraform']
 destroy-eks: _awslogin
+  -aws eks delete-capability --cluster-name training01 --capability-name argocd
+  @sleep 30
   terraform destroy -auto-approve
 
 # Add current SSO user as cluster admin
@@ -99,7 +101,7 @@ argocd-create CLUSTER="training01": _awslogin
 # Delete ArgoCD capability
 [group('argocd')]
 argocd-delete CLUSTER="training01": _awslogin
-  -aws eks delete-capability --cluster-name {{CLUSTER}} --capability-name argocd --delete-propagation-policy DELETE
+  -aws eks delete-capability --cluster-name {{CLUSTER}} --capability-name argocd
 
 # Deploy ArgoCD ApplicationSet
 [group('argocd')]
@@ -309,7 +311,6 @@ _eks-kubeconfig CLUSTER="training01":
 [working-directory: 'eksauto/terraform']
 _terraform-init:
   -aws s3api create-bucket --bucket tfstate-$(just _account) --create-bucket-configuration LocationConstraint="$AWS_REGION" 2>/dev/null
-  -aws s3api put-bucket-versioning --bucket tfstate-$(just _account) --versioning-configuration Status=Enabled 2>/dev/null
   terraform init -backend-config="bucket=tfstate-$(just _account)" -backend-config="region=$AWS_REGION"
 
 [working-directory: 'eksauto/terraform']
