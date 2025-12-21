@@ -1,7 +1,0 @@
-# kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-namespace: kube-system
-resources:
-- https://github.com/k3s-io/helm-controller/releases/latest/download/deploy-cluster-scoped.yaml
-- helm-charts.yaml

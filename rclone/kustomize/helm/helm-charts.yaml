@@ -1,8 +1,0 @@
-apiVersion: helm.cattle.io/v1
-kind: HelmChart
-metadata:
-  name: csi-rclone
-spec:
-  chart: oci://ghcr.io/veloxpack/charts/csi-driver-rclone
-  set:
-    feature.enableInlineVolume: "true"

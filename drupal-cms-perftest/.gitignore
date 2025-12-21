@@ -49,6 +49,4 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Ignore ddev generated files
-/.ddev/.webimageBuild*
-/.ddev/db_snapshots/
+

@@ -1,5 +1,0 @@
-dev:
-    uv run fastapi dev
-
-prettier:
-    prettier --write 'static/**/*.{html,css,js}'

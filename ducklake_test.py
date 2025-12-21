@@ -11,17 +11,23 @@ import requests
 import atexit
 import time
 
-def wait_for_postgres():
+def wait_for_pods():
+    print("Waiting for postgres...")
     while True:
         result = subprocess.run(['kubectl', 'get', 'pods', '-n', 'databases', '-l', 'app=postgres', '-o', 'jsonpath={.items[0].status.phase}'], capture_output=True, text=True)
         if result.stdout.strip() == 'Running':
             break
-        time.sleep(10)
+        time.sleep(5)
+    print("Waiting for rclone-s3...")
+    while True:
+        result = subprocess.run(['kubectl', 'get', 'pods', '-n', 'databases', '-l', 'app=rclone-s3', '-o', 'jsonpath={.items[0].status.phase}'], capture_output=True, text=True)
+        if result.stdout.strip() == 'Running':
+            break
+        time.sleep(5)
 
 def setup_port_forwards():
     """Setup kubectl port forwards and return process objects"""
-    print("Waiting for postgres...")
-    wait_for_postgres()
+    wait_for_pods()
     print("Setting up port forwards...")
 
     # Port forward for rclone-s3
@@ -48,12 +54,25 @@ def setup_port_forwards():
     atexit.register(cleanup)
     return s3_proc, pg_proc
 
-def create_s3_bucket(bucket_name="data", s3_endpoint="localhost:30080"):
-    requests.put(f"http://{s3_endpoint}/{bucket_name}")
+def create_s3_bucket(bucket_name="data"):
+    """Create bucket via kubectl exec since rclone serve s3 doesn't support CreateBucket"""
+    subprocess.run([
+        'kubectl', 'exec', '-n', 'databases', 'statefulset/rclone-s3', '--',
+        'mkdir', '-p', f'/data/{bucket_name}'
+    ], capture_output=True)
+
+def create_ducklake_db():
+    """Create the ducklake database in postgres if it doesn't exist"""
+    import subprocess
+    subprocess.run([
+        'kubectl', 'exec', '-n', 'databases', 'deploy/postgres', '--',
+        'psql', '-U', 'postgres', '-c', "CREATE DATABASE ducklake;"
+    ], capture_output=True)
 
 def main() -> None:
     setup_port_forwards()
     create_s3_bucket()
+    create_ducklake_db()
 
     con = duckdb.connect()
     con.execute("INSTALL ducklake; INSTALL postgres; INSTALL httpfs; LOAD ducklake; LOAD postgres; LOAD httpfs;")

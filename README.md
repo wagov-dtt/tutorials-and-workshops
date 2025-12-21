@@ -1,44 +1,120 @@
 # tutorials-and-workshops
 
-See our [DevSecOps Induction](https://soc.cyber.wa.gov.au/training/devsecops-induction/) for more structured content, this repo has concepts and templates. Best local environment to play with this repo is [project Bluefin](https://projectbluefin.io/) as primary OS / a VM or [Debian on WSL2 with systemd support](https://wiki.debian.org/InstallingDebianOn/Microsoft/Windows/SubsystemForLinux)
+Concise, self-contained examples for DevOps/K8s activities. See [DevSecOps Induction](https://soc.cyber.wa.gov.au/training/devsecops-induction/) for structured training content.
 
-
-## IaC intro
-
-Getting started - run below commands to setup your local devcontainer ready to interact with AWS.
+Best local environment: [Project Bluefin](https://projectbluefin.io/) or [Debian on WSL2 with systemd](https://wiki.debian.org/InstallingDebianOn/Microsoft/Windows/SubsystemForLinux). Alternatively, use the included [devcontainer](.devcontainer/) with VS Code or DevPod.
 
 ```bash
-just prereqs
-just awslogin # Follow instructions to setup sso account
-just setup-eks # Create the training01 cluster in your AWS account
+just help      # Show core workflows
+just --choose  # Fuzzy-pick any recipe
 ```
 
-Once configured can deploy the 2048 application as per [AWS quickstart](https://docs.aws.amazon.com/eks/latest/userguide/quickstart.html#_deploy_the_2048_game_sample_application) and test out cluster operations. Using [k9s](https://k9scli.io) to explore the cluster is another great way to learn k8s basics.
+## Examples
+
+| Directory | Purpose |
+|-----------|---------|
+| [kustomize/](kustomize/) | Base K8s manifests with local/training01 overlays (Postgres, MySQL, MongoDB, Elasticsearch) |
+| [kustomize-s3-pod-identity/](kustomize-s3-pod-identity/) | EKS Pod Identity demo: MySQL backup → S3 → rclone copy → restore |
+| [kustomize-argocd/](kustomize-argocd/) | ArgoCD + ApplicationSets for GitOps workflow |
+| [kustomize-external-secrets/](kustomize-external-secrets/) | External Secrets Operator with AWS Secrets Manager |
+| [kustomize-ducklake/](kustomize-ducklake/) | DuckLake (DuckDB + S3) local development setup |
+| [eksauto/](eksauto/) | EKS Auto Mode cluster via Terraform (includes CloudWatch observability) |
+| [drupal-cms-perftest/](drupal-cms-perftest/) | Drupal CMS testing: DDEV for local, k8s manifests for CSI mount validation |
+| [rclone/](rclone/) | Rclone CSI driver examples for S3 mounts |
+
+## Quick Start
+
+### Local-only (no AWS required)
+
+```bash
+just deploy-local   # Start k3d + deploy databases
+k9s                 # Explore the cluster
+```
+
+Other local examples:
+```bash
+just ducklake-test  # DuckLake with NY Taxi data
+just rclone-lab     # rclone CSI S3 mount + filebrowser
+```
+
+Validate everything locally (runs lint, DDEV, k3d tests):
+```bash
+just validate-local
+```
+
+### EKS (requires AWS account)
+
+```bash
+just prereqs        # Check required tools
+just awslogin       # Setup SSO
+just setup-eks      # Create cluster via Terraform
+just deploy         # Deploy core manifests
+# ... do your training ...
+just destroy-eks    # IMPORTANT: destroy when done
+```
+
+Full AWS validation (creates EKS cluster, runs S3 Pod Identity tests, cleans up):
+```bash
+just validate-aws
+```
+
+> **Cost warning**: EKS clusters cost ~$80-100/mo minimum. See [eksauto/](eksauto/) for Terraform details.
+
+Once configured, deploy the [2048 game](https://docs.aws.amazon.com/eks/latest/userguide/quickstart.html#_deploy_the_2048_game_sample_application) to test cluster operations. Use [k9s](https://k9scli.io) to explore.
+
+### Drupal examples
+
+Drupal examples have their own justfile:
+```bash
+cd drupal-cms-perftest && just
+```
 
 ## S3 Pod Identity Example
 
 Demo of [EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html) - MySQL backup to S3 with rclone, no credentials in cluster. See [kustomize-s3-pod-identity/](kustomize-s3-pod-identity/) for full details.
 
 ```bash
-just s3-pod-identity-test    # Full demo: sysbench data → mysqlsh dump → S3 → rclone copy → restore
-just s3-pod-identity-cleanup # Removes resources
+just s3-pod-identity-test    # Full demo: sysbench → mysqlsh dump → S3 → rclone copy → restore
+just s3-pod-identity-cleanup # Remove resources
 ```
 
-Flow: `MySQL → sysbench test data → mysqlsh dump → S3 backup1/ → rclone server-side copy → S3 backup2/ → mysqlsh restore`
+## ArgoCD (GitOps)
+
+ArgoCD EKS Capability is **enabled by default** with `just setup-eks`. It auto-discovers Identity Center - if not configured, Terraform fails with guidance.
+
+For simple setups without Identity Center, disable with `terraform apply -var="enable_argocd=false"`.
+
+```bash
+just argocd-ui         # Get UI URL (login with Identity Center)
+just argocd-deploy     # Deploy example ApplicationSet
+```
+
+See [kustomize-argocd/](kustomize-argocd/) for details.
+
+## External Secrets Operator
+
+Sync secrets from AWS Secrets Manager to Kubernetes. See [kustomize-external-secrets/](kustomize-external-secrets/) for details.
+
+```bash
+just external-secrets-deploy  # Install ESO + ClusterSecretStore
+just external-secrets-test    # Verify secret sync
+```
 
 ## Justfile Conventions
 
 This repo uses [just](https://github.com/casey/just) as task runner with these patterns:
 
 - `set dotenv-load` + `set export` - `.env` vars available everywhere
+- `set shell := ["bash", "-lc"]` - login shell for mise/asdf tool integration
 - Derived vars at top: `ACCOUNT := \`aws sts ...\`` then use `{{ACCOUNT}}` in recipes
+- `[working-directory: 'path']` - run recipe in specified directory
 - `-` prefix ignores errors, `@` prefix hides command echo
 - `envsubst` for templating K8s manifests with `${VAR}` placeholders
 - Private recipes prefixed with `_`
 
-# Local development
+## Local Development
 
-Similar to above, a close-to-production environment can be stood up locally with [k3d](https://k3d.io/stable/#quick-start) (we use this over minikube as it has better loadbalancer/storage defaults).
+A close-to-production environment can be stood up locally with [k3d](https://k3d.io/stable/#quick-start) (better loadbalancer/storage defaults than minikube).
 
 ```bash
 just deploy-local
@@ -50,22 +126,22 @@ This configures simple single-node databases for local testing:
 - [MongoDB](kustomize/databases/mongodb.yaml) (official mongo:7)
 - [Elasticsearch](kustomize/databases/elasticsearch.yaml) (single-node dev mode, no operator)
 
-# macOS tips
+## macOS Setup
 
-To get working `x86_64` devcontainers locally on macOS below is a quickstart on Apple Silicon with [homebrew](https://brew.sh/) installed.
+For Apple Silicon Macs, use Colima + Rosetta for x86_64 devcontainers:
 
 ```bash
-# Setup devpod & colima for docker support
+# Install tools
 brew install colima docker docker-buildx devpod
 mkdir -p ~/.docker/cli-plugins
 ln -s $(which docker-buildx) ~/.docker/cli-plugins/docker-buildx
-# Create a suitably sized vm for dev activities (k3d clusters with local dbs will use 2-3GB of memory)
+
+# Start VM with Rosetta (needs 2-3GB for k3d + databases)
 softwareupdate --install-rosetta --agree-to-license
 colima start --cpu 4 --memory 12 --vz-rosetta
 devpod provider add docker
 
-# Launch devcontainer with default ide
-cd ~/GitHub
+# Clone and launch devcontainer
 gh repo clone wagov-dtt/tutorials-and-workshops
 DOCKER_DEFAULT_PLATFORM=linux/amd64 devpod up tutorials-and-workshops
 ```

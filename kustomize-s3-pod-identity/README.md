@@ -4,6 +4,16 @@ Demo of [EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-
 
 > **Note**: EKS Auto Mode has Pod Identity Agent built-in - no addon required.
 
+## Prerequisites
+
+- AWS account with SSO configured (`AWS_PROFILE` and `AWS_REGION` in `.env`)
+- EKS cluster created via `just setup-eks` (Terraform)
+
+Terraform pre-creates:
+- S3 bucket: `test-<ACCOUNT_ID>`
+- IAM role: `eks-s3-test` with S3FullAccess
+- Pod Identity associations for `s3-test` and `veloxpack` namespaces
+
 ## Architecture
 
 ```mermaid
@@ -45,11 +55,19 @@ flowchart TB
 ## Usage
 
 ```bash
-just s3-pod-identity-test    # Full demo
-just s3-pod-identity-cleanup # Remove resources
+just s3-pod-identity-test    # Full demo: sysbench → backup → copy → debug pod
+just s3-restore              # Optional: restore backup to sbtest_restored database
+just s3-pod-identity-cleanup # Remove K8s resources and IAM role (S3 bucket kept)
 ```
 
-## Structure
+## Learning Goals
+
+- **EKS Pod Identity**: How pods assume IAM roles without static credentials
+- **mysqlsh for backups**: Using MySQL Shell's `util.dumpSchemas()` and `util.loadDump()`
+- **rclone server-side copy**: Copying between S3 prefixes without downloading locally
+- **CSI S3 mounts**: Mounting S3 buckets into pods for debugging/inspection
+
+## What's Here
 
 | File | Purpose |
 |------|---------|
@@ -75,4 +93,9 @@ Uses [veloxpack rclone CSI driver](https://github.com/veloxpack/csi-driver-rclon
 - **initContainer + main container**: [backup.yaml](jobs/backup.yaml) uses initContainer for mysqlsh dump, main container for rclone upload
 - **Server-side copy**: [copy.yaml](jobs/copy.yaml) copies between S3 prefixes without downloading locally
 - **Schema rename on restore**: [restore.yaml](jobs/restore.yaml) uses `util.loadDump()` with `schema` option to restore to different DB name
-- **Pod Identity auth**: All jobs use `serviceAccountName: s3-access` bound to IAM role via `eksctl create podidentityassociation`
+- **Pod Identity auth**: All jobs use `serviceAccountName: s3-access` bound to IAM role via Terraform `aws_eks_pod_identity_association`
+
+## See Also
+
+- [rclone/](../rclone/) - rclone CSI examples on local k3d (S3-compatible)
+- [eksauto/](../eksauto/) - EKS cluster configuration and cost info

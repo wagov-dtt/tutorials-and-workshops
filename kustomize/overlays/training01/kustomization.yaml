@@ -1,8 +1,10 @@
-# kustomization.yaml
+# Entry point for EKS training01 cluster deployment
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../../base
   - ../../databases
+  - ingress.yaml
+
 commonAnnotations:
   targetCluster: training01

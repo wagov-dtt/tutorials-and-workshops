@@ -1,0 +1,7 @@
+# Entry point for Drupal performance FUSE/CSI test on k3d
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: drupal-perf
+resources:
+  - namespace.yaml
+  - pod.yaml

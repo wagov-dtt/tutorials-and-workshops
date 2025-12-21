@@ -4,7 +4,8 @@ __pycache__/
 *.pyc
 .python-version
 .aws_config
-.terraform
+.terraform/
+.terraform.lock.hcl
 *.tfstate*
 .env
 .mnt

@@ -2,12 +2,39 @@
 
 This repo is a collection of concise, self-contained examples for tricky DevOps/K8s activities. Examples here are referenced from other projects.
 
+**Note**: This is a training/examples repo. Local `just` recipes matter more than CI automation. No GitHub Actions workflows are needed - validation happens locally via `just lint`.
+
+## Philosophy: Grug-Brained Development
+
+This repo follows ["grug-brained"](https://grugbrain.dev) principles. The goal is working software, not architectural purity.
+
+1. **Complexity is the Enemy**
+   - Complexity is cognitive debt. Always choose simpler over "correct."
+   - If a solution feels clever, it's probably wrong.
+
+2. **Locality of Behavior (LoB) is King**
+   - Behavior should be obvious by looking at a single unit of code.
+   - Don't split logic across files for "Separation of Concerns."
+   - Co-locate everything: HTML directives inline, styles via utility classes.
+
+3. **WET > DRY**
+   - A little duplication beats a bad abstraction.
+   - Only abstract with 3+ identical cases AND an obvious pattern.
+
+4. **Testing: Behavior Over Implementation**
+   - E2E/integration tests > unit tests.
+   - Test what users see, not internal details.
+
+5. **Boring Tech Wins**
+   - Use battle-tested tools. Avoid shiny new things.
+   - Factor code, not infrastructure.
+
 ## Principles
 - Every example has a `just` recipe - run `just --choose` to explore
 - Keep examples minimal and document *why* decisions were made (not just how)
 - Use `kubectl kustomize <dir>` to validate manifests before committing
 - Test locally if needed with `just deploy-local` (k3d) before EKS
-- **Agent workflow**: Edit manifests/recipes, then human runs `just` commands (agent should not run just recipes directly)
+- **Agent workflow**: Agent can run local recipes (k3d, DDEV, `just lint`, `just validate-local`) but should NOT run recipes that use credentials against remote targets (AWS, EKS, terraform apply)
 
 ## Structure
 - `kustomize-*/` - K8s examples with base/overlays pattern
@@ -16,15 +43,18 @@ This repo is a collection of concise, self-contained examples for tricky DevOps/
 ## Justfile Patterns
 - `set dotenv-load` - Loads `.env` file (AWS_PROFILE, AWS_REGION)
 - `set export` - All just variables exported as env vars to recipes
+- `set shell := ["bash", "-lc"]` - Login shell for mise/asdf tool integration
 - Define derived vars at top: `ACCOUNT := \`aws sts get-caller-identity ...\``
 - Use `{{VAR}}` in recipes for just variables, `$VAR` for env vars
+- Use `[working-directory: 'path']` attribute to run recipe in specified directory
 - Use `-` prefix to ignore errors (cleaner than `|| true`)
 - Use `envsubst` for templating manifests with `${VAR}` placeholders
 - Each command on its own line (avoid `&&` chains)
 - Private recipes prefixed with `_` (e.g., `_s3-deploy`)
 
 ## EKS Auto Mode Notes
-- Pod Identity Agent is built-in - no addon needed
-- Use `eksctl create podidentityassociation` to link SA → IAM role
+- Cluster is managed by Terraform in `eksauto/terraform/`
+- Pod Identity associations are pre-created by Terraform for s3-test and veloxpack namespaces
+- Use `just setup-eks` to create, `just destroy-eks` to tear down
 - Pods must be restarted after association created to pick up credentials
 - CSI drivers need their own Pod Identity association (separate namespace/SA)

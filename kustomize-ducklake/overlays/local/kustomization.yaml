@@ -1,8 +1,8 @@
-# kustomization.yaml
+# Entry point for DuckLake on k3d (Postgres + rclone-s3)
+# Uses k3d defaults: traefik ingress, local-path storage
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../../kube-system
   - ../../databases
   - ../../base
 

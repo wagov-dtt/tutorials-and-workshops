@@ -1,4 +1,5 @@
 # rclone serve s3 - local S3-compatible storage for DuckLake data
+# No auth-key = anonymous access allowed
 apiVersion: v1
 kind: Service
 metadata:
@@ -9,11 +10,10 @@ spec:
   ports:
   - port: 80
     targetPort: 8080
-    nodePort: 30080
     name: s3
   selector:
     app: rclone-s3
-  type: NodePort
+  type: ClusterIP
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -37,25 +37,12 @@ spec:
           - s3
           - /data
           - --addr=:8080
-          - --auth-key=,
         ports:
         - containerPort: 8080
           name: s3
         volumeMounts:
-        - name: s3local
+        - name: data
           mountPath: /data
       volumes:
-      - name: s3local
-        persistentVolumeClaim:
-          claimName: s3local
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: s3local
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 2Gi
+      - name: data
+        emptyDir: {}

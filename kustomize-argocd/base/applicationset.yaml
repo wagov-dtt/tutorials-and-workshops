@@ -1,0 +1,37 @@
+# ApplicationSet - generates Applications from apps/ directory
+# Why: Instead of manually creating an Application per app, this watches
+# a directory and auto-creates Applications for each subdirectory.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: apps
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    # Git directory generator - each subdir under apps/ becomes an Application
+    - git:
+        repoURL: https://github.com/wagov-dtt/tutorials-and-workshops.git
+        revision: HEAD
+        directories:
+          - path: kustomize-argocd/apps/*
+  template:
+    metadata:
+      # App name = directory name
+      name: "{{.path.basename}}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/wagov-dtt/tutorials-and-workshops.git
+        targetRevision: HEAD
+        path: "{{.path.path}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{.path.basename}}"
+      syncPolicy:
+        automated:
+          prune: true      # Delete resources removed from git
+          selfHeal: true   # Revert manual changes
+        syncOptions:
+          - CreateNamespace=true

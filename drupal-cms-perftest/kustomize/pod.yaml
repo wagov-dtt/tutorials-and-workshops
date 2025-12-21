@@ -1,0 +1,40 @@
+# Test pod with rclone CSI S3 mount (uses veloxpack driver from rclone-lab)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: drupal-s3-test
+  labels:
+    app: drupal-s3-test
+spec:
+  containers:
+    - name: test
+      image: ghcr.io/astral-sh/uv:bookworm
+      command: ["sleep", "infinity"]
+      volumeMounts:
+        - name: s3-data
+          mountPath: /srv
+  volumes:
+    - name: s3-data
+      csi:
+        driver: rclone.csi.veloxpack.io
+        volumeAttributes:
+          remote: "s3local"
+          remotePath: "drupal"
+          vfs-cache-mode: "full"
+          vfs-cache-max-size: "1G"
+        nodePublishSecretRef:
+          name: rclone-s3local
+---
+# Secret for rclone config (points to rclone-serve from rclone-lab)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rclone-s3local
+type: Opaque
+stringData:
+  configData: |
+    [s3local]
+    type = s3
+    provider = Rclone
+    endpoint = http://rclone-serve.default:8080
+    use_multipart_uploads = false

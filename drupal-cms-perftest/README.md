@@ -2,15 +2,41 @@
 
 Performance testing environment for Drupal CMS with focus on content generation and search functionality.
 
+## Why FrankenPHP?
+
+This setup uses [FrankenPHP](https://frankenphp.dev/) via the official [ddev-frankenphp add-on](https://github.com/ddev/ddev-frankenphp):
+
+- **Official DDEV support**: Maintained add-on with PHP 8.2-8.5, xdebug, worker mode
+- **Modern PHP**: Built-in PHP 8.4 with Caddy web server
+- **Simpler stack**: No nginx/php-fpm, just Caddy + embedded PHP
+- **Zero config**: `ddev add-on get ddev/ddev-frankenphp` sets everything up
+
+## Prerequisites
+
+- Docker (Docker Desktop, Rancher Desktop, or Colima)
+- [DDEV](https://ddev.readthedocs.io/) installed and on your PATH
+- `just` task runner
+
 ## Quick Start
 
-1. **Setup**: `just setup` - Install Drupal CMS with search and news recipes
-2. **Restart**: `ddev restart` - Apply performance configurations  
-3. **Generate**: `just generate` - Create 100,000 test news articles (resumes if partial)  
-4. **Test**: `just test` - Reindex content and run search performance benchmarks
-5. **Clear**: `just clear` - Remove test content
+```bash
+cd drupal-cms-perftest
+
+just setup      # Install Drupal CMS with search/news recipes
+ddev restart    # Apply performance configurations
+just generate   # Create 100,000 test news articles (resumes if partial)
+just test       # Reindex and run search performance benchmarks
+just clear      # Remove test content (optional)
+```
 
 **Note**: Performance configurations are included and committed to the repository.
+
+## Learning Goals
+
+- **FrankenPHP + DDEV**: Modern PHP runtime via official add-on
+- **Drupal Recipe System**: Using recipes to install pre-configured functionality (search, news)
+- **Bulk content generation**: Patterns for creating large test datasets with batch processing
+- **Search API performance**: Understanding indexing, caching, and query performance at scale
 
 ## Available Commands
 
@@ -50,14 +76,14 @@ Each article contains 1-2 pages of realistic content for comprehensive performan
 - **Memory limit**: 2GB for large content operations  
 - **OPcache**: 512MB cache with 20,000 max files
 - **Execution time**: 10 minutes for bulk generation
-- **File**: [`.ddev/php/performance.ini`](file:///home/adonm/tutorials-and-workshops/drupal-cms-perftest/.ddev/php/performance.ini) *(committed to repo)*
+- **File**: [`.ddev/php/performance.ini`](.ddev/php/performance.ini) *(committed to repo)*
 
 ### MariaDB Configuration  
 - **Buffer pool**: 1GB InnoDB buffer for caching
 - **Query cache**: 128MB for repeated searches
 - **Connections**: 200 max concurrent connections
 - **Timeouts**: Extended for bulk operations
-- **File**: [`.ddev/mysql/performance.cnf`](file:///home/adonm/tutorials-and-workshops/drupal-cms-perftest/.ddev/mysql/performance.cnf) *(committed to repo)*
+- **File**: [`.ddev/mysql/performance.cnf`](.ddev/mysql/performance.cnf) *(committed to repo)*
 
 ## Research & Findings
 
@@ -130,6 +156,32 @@ just stop && just start
 # Complete reset
 just reset && just setup
 ```
+
+## Kubernetes CSI Mount Testing
+
+The `kustomize/` directory contains manifests for testing rclone CSI mounts on k3d - a stepping stone toward production k8s deployment with S3 media storage.
+
+```bash
+just drupal-csi-test  # Deploy test pod with S3 CSI mount
+```
+
+### Planned: Prod S3 Readonly + Local Writable Overlay
+
+Future workflow for devs to access large prod media directories without pulling everything:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  rclone union remote                                    │
+│  ┌─────────────────────┐  ┌─────────────────────────┐  │
+│  │  Prod S3 (readonly) │  │  Local overlay (rw)     │  │
+│  │  - 100GB media      │  │  - new/modified files   │  │
+│  └─────────────────────┘  └─────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+                        ↓
+              CSI mount into pod /srv
+```
+
+This lets developers work with prod-like media without syncing terabytes locally.
 
 ## Development Notes
 
