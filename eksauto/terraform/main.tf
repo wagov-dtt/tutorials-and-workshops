@@ -62,6 +62,9 @@ module "eks" {
   # CloudWatch logging
   cluster_enabled_log_types = ["audit", "authenticator"]
 
+  # Access - allow current caller (SSO user) admin access
+  enable_cluster_creator_admin_permissions = true
+
   # Addons - all use latest versions
   # Note: We use rclone CSI for S3 mounts, not EFS CSI
   cluster_addons = {

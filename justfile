@@ -46,6 +46,13 @@ setup-eks: _awslogin _terraform-init
 destroy-eks: _awslogin
   terraform destroy -auto-approve
 
+# Add current SSO user as cluster admin
+[group('eks')]
+eks-access CLUSTER="training01": _awslogin
+  aws eks create-access-entry --cluster-name {{CLUSTER}} --principal-arn $(just _sso-role-arn) --type STANDARD || true
+  aws eks associate-access-policy --cluster-name {{CLUSTER}} --principal-arn $(just _sso-role-arn) \
+    --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy --access-scope type=cluster
+
 # Deploy core manifests to EKS
 [group('eks')]
 deploy CLUSTER="training01": _awslogin (_eks-kubeconfig CLUSTER)
@@ -81,7 +88,7 @@ argocd-create CLUSTER="training01": _awslogin
   set -euo pipefail
   IDC=$(just _idc-arn)
   [ "$IDC" = "null" ] && { echo "ERROR: Identity Center not configured"; exit 1; }
-  aws eks create-capability --region $AWS_REGION --cluster-name {{CLUSTER}} --capability-name argocd --type ARGOCD \
+  aws eks create-capability --cluster-name {{CLUSTER}} --capability-name argocd --type ARGOCD \
     --role-arn "arn:aws:iam::$(just _account):role/eks-argocd-capability" --delete-propagation-policy RETAIN \
     --configuration '{"argoCd":{"awsIdc":{"idcInstanceArn":"'"$IDC"'","idcRegion":"'"$AWS_REGION"'"}}}'
   for i in {1..30}; do
@@ -92,7 +99,7 @@ argocd-create CLUSTER="training01": _awslogin
 # Delete ArgoCD capability
 [group('argocd')]
 argocd-delete CLUSTER="training01": _awslogin
-  -aws eks delete-capability --cluster-name {{CLUSTER}} --capability-name argocd --delete-propagation-policy DELETE --region $AWS_REGION
+  -aws eks delete-capability --cluster-name {{CLUSTER}} --capability-name argocd --delete-propagation-policy DELETE
 
 # Deploy ArgoCD ApplicationSet
 [group('argocd')]
@@ -199,12 +206,6 @@ drupal-test:
   ddev drush search-api:index --batch-size=1000
   ddev drush php:script scripts/search_performance_test.php
 
-# Load test Drupal (requires running DDEV)
-[group('drupal')]
-drupal-loadtest RATE="100" DURATION="30s":
-  @echo "Load testing at {{RATE}} req/s for {{DURATION}}..."
-  echo "GET http://drupal-cms-perftest.ddev.site/" | vegeta attack -duration={{DURATION}} -rate={{RATE}} | vegeta report
-
 # Reset Drupal
 [group('drupal')]
 [working-directory: 'drupal-cms-perftest']
@@ -222,6 +223,7 @@ lint: _lint-kustomize _lint-terraform
 [group('validate')]
 validate-aws: _awslogin _terraform-validate
   just setup-eks
+  just eks-access
   just s3-test
   just s3-restore
   just s3-cleanup
@@ -278,6 +280,10 @@ _idc-store:
 _idc-arn:
   @aws sso-admin list-instances | jq -r '.Instances[0].InstanceArn'
 
+_sso-role-arn:
+  @ROLE_NAME=$(aws sts get-caller-identity | jq -r '.Arn | split("/")[1]') && \
+    aws iam get-role --role-name $ROLE_NAME | jq -r '.Role.Arn'
+
 # Infrastructure helpers
 _k3d:
   @which k3d > /dev/null || just prereqs
@@ -295,30 +301,20 @@ _awslogin:
   @aws sts get-caller-identity >/dev/null 2>&1 || aws sso login --use-device-code
 
 _eks-kubeconfig CLUSTER="training01":
-  @aws eks update-kubeconfig --name {{CLUSTER}} 2>/dev/null
+  aws eks update-kubeconfig --name {{CLUSTER}}
+  yq -i '(.users[] | select(.name | test("{{CLUSTER}}")) | .user.exec.command) = "'$(which aws)'"' ~/.kube/config
+  kubectl cluster-info
 
 # Terraform helpers
 [working-directory: 'eksauto/terraform']
 _terraform-init:
-  #!/usr/bin/env bash
-  BUCKET="tfstate-$(just _account)"
-  REGION="${AWS_REGION:-ap-southeast-2}"
-  aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null || {
-    aws s3api create-bucket --bucket "$BUCKET" --region "$REGION" --create-bucket-configuration LocationConstraint="$REGION"
-    aws s3api put-bucket-versioning --bucket "$BUCKET" --versioning-configuration Status=Enabled
-  }
-  terraform init -backend-config="bucket=$BUCKET" -backend-config="region=$REGION"
+  -aws s3api create-bucket --bucket tfstate-$(just _account) --create-bucket-configuration LocationConstraint="$AWS_REGION" 2>/dev/null
+  -aws s3api put-bucket-versioning --bucket tfstate-$(just _account) --versioning-configuration Status=Enabled 2>/dev/null
+  terraform init -backend-config="bucket=tfstate-$(just _account)" -backend-config="region=$AWS_REGION"
 
 [working-directory: 'eksauto/terraform']
 _terraform-validate: _terraform-init
   terraform validate
-
-_terraform-clean: _awslogin
-  -aws eks delete-cluster --name training01
-  -aws iam detach-role-policy --role-name eks-s3-test --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
-  -aws iam delete-role --role-name eks-s3-test
-  -aws logs delete-log-group --log-group-name /aws/eks/training01/cluster
-  -aws eks wait cluster-deleted --name training01 || true
 
 # Validation helpers
 _lint-kustomize:
@@ -342,7 +338,7 @@ _lint-terraform:
 
 _validate-ddev: drupal-setup
   curl -sf http://drupal-cms-perftest.ddev.site/ -o /dev/null
-  just drupal-loadtest 100 10s
+  just vegeta http://drupal-cms-perftest.ddev.site/
   @echo "DDEV working ✓"
 
 _validate-k3d: deploy-local rclone-test _drupal-csi-test
