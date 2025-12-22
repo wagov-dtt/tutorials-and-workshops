@@ -1,6 +1,10 @@
 set dotenv-load
 set export
 set shell := ["bash", "-lc"]
+set unstable
+
+# Constants
+default_cluster := "training01"
 
 # List all recipes
 default:
@@ -34,7 +38,7 @@ validate-local: lint _validate-ddev _validate-k3d
 
 # Create EKS cluster via Terraform
 [group('eks')]
-[working-directory: 'eksauto/terraform']
+[working-directory('eksauto/terraform')]
 setup-eks: _awslogin _terraform-init
   terraform apply -auto-approve || { terraform destroy -auto-approve; terraform apply -auto-approve; }
   aws eks update-kubeconfig --name $(terraform output -raw cluster_name)
@@ -42,7 +46,8 @@ setup-eks: _awslogin _terraform-init
 
 # Destroy EKS cluster
 [group('eks')]
-[working-directory: 'eksauto/terraform']
+[confirm("This will destroy the EKS cluster. Continue?")]
+[working-directory('eksauto/terraform')]
 destroy-eks: _awslogin
   -aws eks delete-capability --cluster-name training01 --capability-name argocd
   @sleep 30
@@ -50,14 +55,14 @@ destroy-eks: _awslogin
 
 # Add current SSO user as cluster admin
 [group('eks')]
-eks-access CLUSTER="training01": _awslogin
+eks-access CLUSTER=default_cluster: _awslogin
   aws eks create-access-entry --cluster-name {{CLUSTER}} --principal-arn $(just _sso-role-arn) --type STANDARD || true
   aws eks associate-access-policy --cluster-name {{CLUSTER}} --principal-arn $(just _sso-role-arn) \
     --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy --access-scope type=cluster
 
 # Deploy core manifests to EKS
 [group('eks')]
-deploy CLUSTER="training01": _awslogin (_eks-kubeconfig CLUSTER)
+deploy CLUSTER=default_cluster: _awslogin (_eks-kubeconfig CLUSTER)
   kubectl apply -k kustomize/overlays/{{CLUSTER}}
 
 # S3 Pod Identity demo (MySQL → S3 → rclone → restore)
@@ -85,18 +90,20 @@ s3-cleanup:
 
 # Create ArgoCD EKS capability
 [group('argocd')]
-argocd-create CLUSTER="training01": _awslogin (_argocd-create-inner CLUSTER `just _idc-arn` `just _account`)
+argocd-create CLUSTER=default_cluster: _awslogin (_argocd-create-inner CLUSTER `just _idc-arn` `just _account`)
 
+[private]
 _argocd-create-inner CLUSTER IDC ACCOUNT:
-  @test "{{IDC}}" != "null" || (echo "ERROR: Identity Center not configured" && exit 1)
+  {{ assert(IDC != "null", "Identity Center not configured") }}
   aws eks create-capability --cluster-name {{CLUSTER}} --capability-name argocd --type ARGOCD \
     --role-arn "arn:aws:iam::{{ACCOUNT}}:role/eks-argocd-capability" --delete-propagation-policy RETAIN \
     --configuration '{"argoCd":{"awsIdc":{"idcInstanceArn":"{{IDC}}","idcRegion":"'"$AWS_REGION"'"}}}'
   just _argocd-wait {{CLUSTER}}
 
+[private]
 _argocd-wait CLUSTER:
-  @for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do \
-    STATUS=$$(aws eks describe-capability --cluster-name {{CLUSTER}} --capability-name argocd | jq -r '.capability.status'); \
+  @while true; do \
+    STATUS=`aws eks describe-capability --cluster-name {{CLUSTER}} --capability-name argocd | jq -r '.capability.status'`; \
     echo "Status: $$STATUS"; \
     [ "$$STATUS" = "ACTIVE" ] && exit 0; \
     sleep 10; \
@@ -104,23 +111,25 @@ _argocd-wait CLUSTER:
 
 # Delete ArgoCD capability
 [group('argocd')]
-argocd-delete CLUSTER="training01": _awslogin
+argocd-delete CLUSTER=default_cluster: _awslogin
   -aws eks delete-capability --cluster-name {{CLUSTER}} --capability-name argocd
 
 # Deploy ArgoCD ApplicationSet
 [group('argocd')]
-argocd-deploy CLUSTER="training01": _awslogin (_eks-kubeconfig CLUSTER)
+argocd-deploy CLUSTER=default_cluster: _awslogin (_eks-kubeconfig CLUSTER)
   kubectl apply -k argocd
   @echo "ApplicationSet deployed ✓"
 
 # Get ArgoCD UI URL (auto-adds current user as admin)
 [group('argocd')]
-argocd-ui CLUSTER="training01": _awslogin (_argocd-ui-inner CLUSTER `just _username` `just _idc-store`)
+argocd-ui CLUSTER=default_cluster: _awslogin (_argocd-ui-inner CLUSTER `just _username` `just _idc-store`)
 
+[private]
 _argocd-ui-inner CLUSTER USERNAME IDC_STORE:
   @just _argocd-add-admin {{CLUSTER}} {{USERNAME}} {{IDC_STORE}}
   @aws eks describe-capability --cluster-name {{CLUSTER}} --capability-name argocd | jq -r '.capability.configuration.argoCd.serverUrl'
 
+[private]
 _argocd-add-admin CLUSTER USERNAME IDC_STORE:
   @USER_ID=$$(aws identitystore get-user-id --identity-store-id "{{IDC_STORE}}" \
     --alternate-identifier '{"UniqueAttribute":{"AttributePath":"userName","AttributeValue":"{{USERNAME}}"}}' 2>/dev/null | jq -r '.UserId // empty'); \
@@ -169,7 +178,7 @@ secrets-cleanup:
 
 # Setup Drupal CMS with FrankenPHP
 [group('drupal')]
-[working-directory: 'drupal']
+[working-directory('drupal')]
 drupal-setup:
   ddev add-on get ddev/ddev-frankenphp
   ddev dotenv set .ddev/.env.web --frankenphp-custom-extensions="apcu opcache intl bcmath"
@@ -184,31 +193,31 @@ drupal-setup:
 
 # Start Drupal
 [group('drupal')]
-[working-directory: 'drupal']
+[working-directory('drupal')]
 drupal-start:
   ddev start
 
 # Stop Drupal
 [group('drupal')]
-[working-directory: 'drupal']
+[working-directory('drupal')]
 drupal-stop:
   ddev stop
 
 # Get Drupal login link
 [group('drupal')]
-[working-directory: 'drupal']
+[working-directory('drupal')]
 drupal-login:
   ddev drush user:login
 
 # Generate 100k test articles
 [group('drupal')]
-[working-directory: 'drupal']
+[working-directory('drupal')]
 drupal-generate:
   ddev drush php:script scripts/generate_news_content.php
 
 # Run search performance tests
 [group('drupal')]
-[working-directory: 'drupal']
+[working-directory('drupal')]
 drupal-test:
   ddev drush search-api:rebuild-tracker content
   ddev drush search-api:index --batch-size=1000
@@ -216,7 +225,8 @@ drupal-test:
 
 # Reset Drupal
 [group('drupal')]
-[working-directory: 'drupal']
+[confirm("This will delete the Drupal instance. Continue?")]
+[working-directory('drupal')]
 drupal-reset:
   -ddev delete -O -y
 
@@ -229,6 +239,7 @@ lint: _lint-kustomize _lint-terraform _lint-trivy
 
 # Full AWS validation (creates EKS, runs tests, destroys)
 [group('validate')]
+[confirm("This will create and destroy an EKS cluster. Continue?")]
 validate-aws: _awslogin _terraform-validate
   just setup-eks
   just eks-access
@@ -246,7 +257,7 @@ prereqs:
 
 # Run SAST analysis (semgrep + CodeQL)
 [group('validate')]
-[working-directory: '.codeql']
+[working-directory('.codeql')]
 codeql: prereqs
   gh extensions install github/gh-codeql
   -semgrep scan --sarif --output semgrep_results.sarif ..
@@ -258,7 +269,7 @@ codeql: prereqs
 
 # --- UTILITIES ---
 
-# Load test a URL (1000 req/s for 10s)
+# Load test a URL (640 req/s for 10s)
 [group('util')]
 vegeta URL:
   echo "GET {{URL}}" | vegeta attack -duration=10s -rate=640 -insecure | vegeta report
@@ -272,58 +283,68 @@ install-secret SECRETID $NAMESPACE $NAME: _awslogin
 
 # --- PRIVATE HELPERS ---
 
-# Lazy-evaluated AWS helpers (only run when called)
+[private]
 _account:
   @aws sts get-caller-identity | jq -r '.Account'
 
+[private]
 _bucket:
   @echo "test-$(just _account)"
 
+[private]
 _username:
   @aws sts get-caller-identity | jq -r '.UserId | split(":")[1]'
 
+[private]
 _idc-store:
   @aws sso-admin list-instances | jq -r '.Instances[0].IdentityStoreId'
 
+[private]
 _idc-arn:
   @aws sso-admin list-instances | jq -r '.Instances[0].InstanceArn'
 
+[private]
 _sso-role-arn:
   @ROLE_NAME=$(aws sts get-caller-identity | jq -r '.Arn | split("/")[1]') && \
     aws iam get-role --role-name $ROLE_NAME | jq -r '.Role.Arn'
 
-# Infrastructure helpers
+[private]
 _k3d:
   @which k3d > /dev/null || just prereqs
   k3d cluster create tutorials || k3d cluster start tutorials
 
+[private]
 _ducklake: _k3d
   kubectl apply -k ducklake/overlays/local --server-side
 
+[private]
 _rclone: _k3d
   helm upgrade --install csi-rclone oci://ghcr.io/veloxpack/charts/csi-driver-rclone --set feature.enableInlineVolume=true
   kubectl apply -f rclone/base/deployment.yaml --server-side
 
+[private]
 _awslogin:
   @which aws > /dev/null || just prereqs
   @aws sts get-caller-identity >/dev/null 2>&1 || aws sso login --use-device-code
 
-_eks-kubeconfig CLUSTER="training01":
+[private]
+_eks-kubeconfig CLUSTER=default_cluster:
   aws eks update-kubeconfig --name {{CLUSTER}}
   yq -i '(.users[] | select(.name | test("{{CLUSTER}}")) | .user.exec.command) = "'$(which aws)'"' ~/.kube/config
   kubectl cluster-info
 
-# Terraform helpers
-[working-directory: 'eksauto/terraform']
+[private]
+[working-directory('eksauto/terraform')]
 _terraform-init:
   -aws s3api create-bucket --bucket tfstate-$(just _account) --create-bucket-configuration LocationConstraint="$AWS_REGION" 2>/dev/null
   terraform init -backend-config="bucket=tfstate-$(just _account)" -backend-config="region=$AWS_REGION"
 
-[working-directory: 'eksauto/terraform']
+[private]
+[working-directory('eksauto/terraform')]
 _terraform-validate: _terraform-init
   terraform validate
 
-# Validation helpers
+[private]
 _lint-kustomize:
   @echo "Validating kustomize..."
   kubectl kustomize kustomize/overlays/local >/dev/null
@@ -336,7 +357,8 @@ _lint-kustomize:
   kubectl kustomize drupal/kustomize >/dev/null
   @echo "Kustomize valid ✓"
 
-[working-directory: 'eksauto/terraform']
+[private]
+[working-directory('eksauto/terraform')]
 _lint-terraform:
   @echo "Validating terraform..."
   terraform fmt -check -recursive
@@ -344,6 +366,7 @@ _lint-terraform:
   terraform validate
   @echo "Terraform valid ✓"
 
+[private]
 _lint-trivy:
   @echo "Running trivy misconfiguration scan..."
   trivy config --exit-code 1 --ignorefile eksauto/terraform/.trivyignore --skip-dirs .terraform eksauto/terraform
@@ -356,32 +379,38 @@ _lint-trivy:
   trivy config --exit-code 1 --ignorefile .trivyignore drupal/kustomize
   @echo "Trivy scan passed ✓"
 
+[private]
 _validate-ddev: drupal-setup
   curl -sf http://drupal.ddev.site/ -o /dev/null
   just vegeta http://drupal.ddev.site/
   @echo "DDEV working ✓"
 
+[private]
 _validate-k3d: deploy-local rclone-test _drupal-csi
   @echo "k3d validation passed ✓"
 
+[private]
 _drupal-csi: _rclone
   kubectl apply -k drupal/kustomize
   kubectl wait --for=condition=Ready pod/drupal-s3-test -n drupal-perf --timeout=120s
   kubectl exec drupal-s3-test -n drupal-perf -- ls -la /srv
   @echo "Drupal CSI working ✓"
 
-# S3 test helpers
+[private]
 _s3-clean:
   -@kubectl delete -k s3-pod-identity/jobs 2>/dev/null
   -@kubectl delete -k s3-pod-identity 2>/dev/null
 
+[private]
 _s3-infra:
   helm upgrade --install csi-rclone oci://ghcr.io/veloxpack/charts/csi-driver-rclone --namespace veloxpack --create-namespace
   kubectl rollout restart ds/csi-rclone-node -n veloxpack
   kubectl rollout status ds/csi-rclone-node -n veloxpack --timeout=60s
 
+[private]
 _s3-deploy: (_s3-deploy-inner `just _bucket`)
 
+[private]
 _s3-deploy-inner BUCKET:
   @echo "Using bucket: {{BUCKET}}"
   kubectl kustomize s3-pod-identity | envsubst | kubectl apply -f -
@@ -389,11 +418,13 @@ _s3-deploy-inner BUCKET:
   kubectl wait --for=condition=Available deploy/mysql -n s3-test --timeout=120s
   -kubectl wait --for=condition=Complete job/sysbench-prepare -n s3-test --timeout=180s
 
+[private]
 _s3-backup:
   kubectl apply -f s3-pod-identity/jobs/backup.yaml
   kubectl wait --for=condition=Complete job/backup-to-s3 -n s3-test --timeout=300s
   kubectl logs job/backup-to-s3 -n s3-test | tail -3
 
+[private]
 _s3-copy:
   kubectl apply -f s3-pod-identity/jobs/copy.yaml
   kubectl wait --for=condition=Complete job/rclone-copy -n s3-test --timeout=120s
