@@ -1,5 +1,5 @@
 # DDEV FrankenPHP Caddyfile for Drupal
-# Based on: https://git.drupalcode.org/project/drupal/-/blob/11.x/Caddyfile
+# Based on: https://git.drupalcode.org/project/drupal/-/blob/e1f055e383ebd345baa13412f25329ea24f74432/Caddyfile
 
 {
     frankenphp {
