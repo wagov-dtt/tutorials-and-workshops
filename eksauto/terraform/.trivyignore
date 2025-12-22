@@ -1,0 +1,19 @@
+# Trivy ignore file for training environment
+# These findings are from external modules or acceptable for training purposes
+
+# EKS public access - intentional for training (accessed via SSO)
+AVD-AWS-0040
+AVD-AWS-0041
+
+# VPC flow logs - external module, not configurable without forking
+AVD-AWS-0178
+
+# Node egress rules - external module default, nodes need internet access
+AVD-AWS-0104
+
+# S3 bucket logging - not needed for training bucket
+AVD-AWS-0089
+
+# CMK encryption - default AWS encryption is sufficient for training
+AVD-AWS-0098
+AVD-AWS-0132

@@ -1,7 +1,7 @@
 name: frankenphp
 repository: ddev/ddev-frankenphp
 version: v1.0.1
-install_date: "2025-12-21T20:20:21+08:00"
+install_date: "2025-12-22T13:31:24+08:00"
 project_files:
     - config.frankenphp.yaml
     - docker-compose.frankenphp.yaml

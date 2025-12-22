@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: rclone
-        image: rclone/rclone:latest
+        image: rclone/rclone:1.72
         ports:
         - {containerPort: 8080, name: s3}
         volumeMounts:
@@ -63,7 +63,7 @@ spec:
     spec:
       containers:
       - name: filebrowser
-        image: filebrowser/filebrowser:latest
+        image: filebrowser/filebrowser:v2.32.0
         ports:
         - containerPort: 80
         volumeMounts:

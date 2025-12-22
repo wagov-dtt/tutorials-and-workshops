@@ -29,9 +29,16 @@ spec:
       labels:
         app: rclone-s3
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: rclone
-        image: rclone/rclone:latest
+        image: rclone/rclone:1.68
         args:
           - serve
           - s3
@@ -43,6 +50,17 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
       volumes:
       - name: data
         emptyDir: {}

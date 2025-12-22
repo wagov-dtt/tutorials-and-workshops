@@ -59,8 +59,8 @@ module "eks" {
     node_pools = ["general-purpose", "system"]
   }
 
-  # CloudWatch logging
-  cluster_enabled_log_types = ["audit", "authenticator"]
+  # CloudWatch logging (all control plane logs)
+  cluster_enabled_log_types = ["audit", "api", "authenticator", "controllerManager", "scheduler"]
 
   # Access managed via `just eks-access` (SSO roles can't be imported to TF state)
 

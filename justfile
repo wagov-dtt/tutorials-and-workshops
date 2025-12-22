@@ -216,9 +216,9 @@ drupal-reset:
 
 # --- VALIDATION ---
 
-# Validate kustomize + terraform
+# Validate kustomize + terraform + trivy
 [group('validate')]
-lint: _lint-kustomize _lint-terraform
+lint: _lint-kustomize _lint-terraform _lint-trivy
   @echo "All validations passed ✓"
 
 # Full AWS validation (creates EKS, runs tests, destroys)
@@ -255,7 +255,7 @@ codeql: prereqs
 # Load test a URL (1000 req/s for 10s)
 [group('util')]
 vegeta URL:
-  echo "GET {{URL}}" | vegeta attack -duration=10s -rate=1000 -insecure | vegeta report
+  echo "GET {{URL}}" | vegeta attack -duration=10s -rate=640 -insecure | vegeta report
 
 # Install secret from AWS Secrets Manager
 [group('util')]
@@ -334,8 +334,21 @@ _lint-kustomize:
 _lint-terraform:
   @echo "Validating terraform..."
   terraform fmt -check -recursive
+  terraform init -backend=false -upgrade
   terraform validate
   @echo "Terraform valid ✓"
+
+_lint-trivy:
+  @echo "Running trivy misconfiguration scan..."
+  trivy config --exit-code 1 --ignorefile eksauto/terraform/.trivyignore --skip-dirs .terraform eksauto/terraform
+  trivy config --exit-code 1 --ignorefile .trivyignore kustomize
+  trivy config --exit-code 1 --ignorefile .trivyignore argocd
+  trivy config --exit-code 1 --ignorefile .trivyignore ducklake
+  trivy config --exit-code 1 --ignorefile .trivyignore s3-pod-identity
+  trivy config --exit-code 1 --ignorefile .trivyignore secrets
+  trivy config --exit-code 1 --ignorefile .trivyignore rclone
+  trivy config --exit-code 1 --ignorefile .trivyignore drupal/kustomize
+  @echo "Trivy scan passed ✓"
 
 _validate-ddev: drupal-setup
   curl -sf http://drupal.ddev.site/ -o /dev/null

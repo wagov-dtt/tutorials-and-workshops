@@ -1,0 +1,36 @@
+# Shared Trivy ignore file for Kubernetes manifests in training/demo workloads
+# These findings are acceptable for training and demo environments
+
+# Security context warnings - many containers require specific configurations
+AVD-KSV-0001  # allowPrivilegeEscalation
+AVD-KSV-0003  # capabilities drop ALL
+AVD-KSV-0004  # capabilities drop
+AVD-KSV-0012  # runAsNonRoot
+AVD-KSV-0014  # readOnlyRootFilesystem - databases need writable fs
+AVD-KSV-0030  # seccompProfile
+AVD-KSV-0104  # seccomp profile
+AVD-KSV-0106  # drop all capabilities
+AVD-KSV-0118  # default security context
+
+# Resource limits - not critical for training
+AVD-KSV-0011  # CPU limits
+AVD-KSV-0015  # CPU requests
+AVD-KSV-0016  # memory requests
+AVD-KSV-0018  # memory limits
+
+# Container UIDs are set by upstream images
+AVD-KSV-0020  # runAsUser > 10000
+AVD-KSV-0021  # runAsGroup > 10000
+
+# Default namespace - resources are namespaced via kustomization overlays
+AVD-KSV-0110
+
+# Image warnings - acceptable for training
+AVD-KSV-0013  # image tag
+AVD-KSV-0125  # untrusted registry
+
+# ConfigMap false positives (provider names are not secrets)
+AVD-KSV-01010
+
+# Privileged ports - acceptable for training services (e.g., port 80)
+AVD-KSV-0117

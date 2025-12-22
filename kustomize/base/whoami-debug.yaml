@@ -13,6 +13,12 @@ spec:
       labels:
         app: whoami
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: whoami
         image: traefik/whoami
@@ -20,6 +26,14 @@ spec:
           requests:
             memory: "64Mi"
             cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
 ---
 apiVersion: v1
 kind: Service
