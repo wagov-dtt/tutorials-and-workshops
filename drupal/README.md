@@ -77,6 +77,8 @@ DDEV provides Docker-based local development. It handles:
 - Database management
 - Composer/Drush commands
 
+FrankenPHP integration is provided by the [ddev-frankenphp](https://github.com/ddev/ddev-frankenphp) addon.
+
 Run commands inside the container with `ddev exec`:
 ```bash
 ddev exec drush status
