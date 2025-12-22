@@ -85,17 +85,21 @@ s3-cleanup:
 
 # Create ArgoCD EKS capability
 [group('argocd')]
-argocd-create CLUSTER="training01": _awslogin
-  #!/usr/bin/env bash
-  set -euo pipefail
-  IDC=$(just _idc-arn)
-  [ "$IDC" = "null" ] && { echo "ERROR: Identity Center not configured"; exit 1; }
+argocd-create CLUSTER="training01": _awslogin (_argocd-create-inner CLUSTER `just _idc-arn` `just _account`)
+
+_argocd-create-inner CLUSTER IDC ACCOUNT:
+  @test "{{IDC}}" != "null" || (echo "ERROR: Identity Center not configured" && exit 1)
   aws eks create-capability --cluster-name {{CLUSTER}} --capability-name argocd --type ARGOCD \
-    --role-arn "arn:aws:iam::$(just _account):role/eks-argocd-capability" --delete-propagation-policy RETAIN \
-    --configuration '{"argoCd":{"awsIdc":{"idcInstanceArn":"'"$IDC"'","idcRegion":"'"$AWS_REGION"'"}}}'
-  for i in {1..30}; do
-    STATUS=$(aws eks describe-capability --cluster-name {{CLUSTER}} --capability-name argocd | jq -r '.capability.status')
-    echo "Status: $STATUS"; [ "$STATUS" = "ACTIVE" ] && exit 0; sleep 10
+    --role-arn "arn:aws:iam::{{ACCOUNT}}:role/eks-argocd-capability" --delete-propagation-policy RETAIN \
+    --configuration '{"argoCd":{"awsIdc":{"idcInstanceArn":"{{IDC}}","idcRegion":"'"$AWS_REGION"'"}}}'
+  just _argocd-wait {{CLUSTER}}
+
+_argocd-wait CLUSTER:
+  @for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do \
+    STATUS=$$(aws eks describe-capability --cluster-name {{CLUSTER}} --capability-name argocd | jq -r '.capability.status'); \
+    echo "Status: $$STATUS"; \
+    [ "$$STATUS" = "ACTIVE" ] && exit 0; \
+    sleep 10; \
   done
 
 # Delete ArgoCD capability
@@ -111,22 +115,24 @@ argocd-deploy CLUSTER="training01": _awslogin (_eks-kubeconfig CLUSTER)
 
 # Get ArgoCD UI URL (auto-adds current user as admin)
 [group('argocd')]
-argocd-ui CLUSTER="training01": _awslogin
-  #!/usr/bin/env bash
-  set -euo pipefail
-  USERNAME=$(just _username)
-  USER_ID=$(aws identitystore get-user-id --identity-store-id "$(just _idc-store)" \
-    --alternate-identifier '{"UniqueAttribute":{"AttributePath":"userName","AttributeValue":"'"$USERNAME"'"}}' | jq -r '.UserId // empty')
-  if [ -n "$USER_ID" ]; then
-    CURRENT=$(aws eks describe-capability --cluster-name {{CLUSTER}} --capability-name argocd | jq -r '.capability.configuration.argoCd // {}')
-    if ! echo "$CURRENT" | jq -e --arg id "$USER_ID" '.rbacRoleMappings[]?.identities[]?.id == $id' >/dev/null 2>&1; then
-      echo "Adding $USERNAME as admin..."
+argocd-ui CLUSTER="training01": _awslogin (_argocd-ui-inner CLUSTER `just _username` `just _idc-store`)
+
+_argocd-ui-inner CLUSTER USERNAME IDC_STORE:
+  @just _argocd-add-admin {{CLUSTER}} {{USERNAME}} {{IDC_STORE}}
+  @aws eks describe-capability --cluster-name {{CLUSTER}} --capability-name argocd | jq -r '.capability.configuration.argoCd.serverUrl'
+
+_argocd-add-admin CLUSTER USERNAME IDC_STORE:
+  @USER_ID=$$(aws identitystore get-user-id --identity-store-id "{{IDC_STORE}}" \
+    --alternate-identifier '{"UniqueAttribute":{"AttributePath":"userName","AttributeValue":"{{USERNAME}}"}}' 2>/dev/null | jq -r '.UserId // empty'); \
+  if [ -n "$$USER_ID" ]; then \
+    CURRENT=$$(aws eks describe-capability --cluster-name {{CLUSTER}} --capability-name argocd | jq -r '.capability.configuration.argoCd // {}'); \
+    if ! echo "$$CURRENT" | jq -e --arg id "$$USER_ID" '.rbacRoleMappings[]?.identities[]?.id == $$id' >/dev/null 2>&1; then \
+      echo "Adding {{USERNAME}} as admin..."; \
       aws eks update-capability --cluster-name {{CLUSTER}} --capability-name argocd \
-        --configuration '{"argoCd":{"rbacRoleMappings":{"addOrUpdateRoleMappings":[{"role":"ADMIN","identities":[{"id":"'"$USER_ID"'","type":"SSO_USER"}]}]}}}' >/dev/null
-      sleep 3
-    fi
+        --configuration '{"argoCd":{"rbacRoleMappings":{"addOrUpdateRoleMappings":[{"role":"ADMIN","identities":[{"id":"'"$$USER_ID"'","type":"SSO_USER"}]}]}}}' >/dev/null; \
+      sleep 3; \
+    fi; \
   fi
-  aws eks describe-capability --cluster-name {{CLUSTER}} --capability-name argocd | jq -r '.capability.configuration.argoCd.serverUrl'
 
 # Cleanup ArgoCD ApplicationSet
 [group('argocd')]
@@ -374,15 +380,14 @@ _s3-infra:
   kubectl rollout restart ds/csi-rclone-node -n veloxpack
   kubectl rollout status ds/csi-rclone-node -n veloxpack --timeout=60s
 
-_s3-deploy:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  BUCKET=$(just _bucket)
-  echo "Using bucket: $BUCKET"
+_s3-deploy: (_s3-deploy-inner `just _bucket`)
+
+_s3-deploy-inner BUCKET:
+  @echo "Using bucket: {{BUCKET}}"
   kubectl kustomize s3-pod-identity | envsubst | kubectl apply -f -
-  kubectl create configmap s3-config -n s3-test --from-literal=bucket=$BUCKET --from-literal=region=$AWS_REGION --dry-run=client -o yaml | kubectl apply -f -
+  kubectl create configmap s3-config -n s3-test --from-literal=bucket={{BUCKET}} --from-literal=region=$AWS_REGION --dry-run=client -o yaml | kubectl apply -f -
   kubectl wait --for=condition=Available deploy/mysql -n s3-test --timeout=120s
-  kubectl wait --for=condition=Complete job/sysbench-prepare -n s3-test --timeout=180s || true
+  -kubectl wait --for=condition=Complete job/sysbench-prepare -n s3-test --timeout=180s
 
 _s3-backup:
   kubectl apply -f s3-pod-identity/jobs/backup.yaml
