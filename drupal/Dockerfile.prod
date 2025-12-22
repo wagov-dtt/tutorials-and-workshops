@@ -1,6 +1,6 @@
 # Prod image - assumes DDEV already ran composer install
 # Uses FrankenPHP without worker mode (Drupal doesn't support worker mode yet)
-FROM dunglas/frankenphp:php8.3-bookworm
+FROM dunglas/frankenphp:php8.4
 
 # Use PHP production config + install Drupal extensions
 RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini && \
@@ -15,7 +15,7 @@ COPY web ./web
 COPY recipes ./recipes
 
 # Copy Caddyfile for Drupal-specific URL handling
-COPY kustomize/Caddyfile /etc/caddy/Caddyfile
+COPY .ddev/Caddyfile.drupal /etc/caddy/Caddyfile
 
 # FrankenPHP config - uses official Drupal Caddyfile
 # See: https://git.drupalcode.org/project/drupal/-/blob/11.x/Caddyfile
