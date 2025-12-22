@@ -96,7 +96,7 @@ View metrics in AWS Console → CloudWatch → Container Insights → Performanc
 
 ## Manual Terraform Commands
 
-If you prefer to run Terraform directly:
+To run Terraform directly:
 
 ```bash
 cd eksauto/terraform

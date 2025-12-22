@@ -10,7 +10,7 @@ Rclone CSI driver examples for mounting S3-compatible storage as Kubernetes volu
 2. **Unified interface**: Same volume mount pattern for S3, GCS, SFTP, etc.
 3. **Built-in caching**: VFS cache modes handle read-heavy workloads efficiently
 
-**Why not just use the S3 API directly?** Sometimes you need filesystem semantics - legacy apps, config files, static assets. CSI mounts bridge the gap without refactoring.
+**Why not the S3 API directly?** Some apps need filesystem semantics - legacy apps, config files, static assets. CSI mounts bridge the gap without refactoring.
 
 ## What's Here
 

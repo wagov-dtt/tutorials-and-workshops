@@ -7,17 +7,17 @@ EKS Capability for ArgoCD - fully managed GitOps.
 **ArgoCD is optional.** For simple setups, `kubectl apply` or `helm upgrade` works fine. ArgoCD adds value when:
 
 - Multiple people deploy to the same cluster
-- You need audit trails for compliance  
+- Audit trails are needed for compliance  
 - Self-healing (auto-revert manual changes) matters
-- You're managing multiple clusters
+- Multiple clusters are managed
 
-**Skip ArgoCD if**: You're learning solo or running a simple single-cluster setup.
+**Skip ArgoCD if**: Learning solo or running a simple single-cluster setup.
 
 ## How It Works
 
-ArgoCD is enabled by default via Terraform. When you run `just setup-eks`:
+ArgoCD is enabled by default via Terraform. Running `just setup-eks`:
 
-1. Terraform auto-discovers your Identity Center instance
+1. Terraform auto-discovers the Identity Center instance
 2. Creates the ArgoCD EKS Capability (AWS-managed)
 3. Prints the ArgoCD UI URL
 
@@ -43,7 +43,7 @@ Login to the UI with your Identity Center credentials.
 By default, ArgoCD is created without RBAC mappings (anyone in Identity Center can view). To add an admin:
 
 ```bash
-# Get your Identity Center user ID
+# Get the Identity Center user ID
 STORE_ID=$(aws sso-admin list-instances --query 'Instances[0].IdentityStoreId' --output text)
 aws identitystore list-users --identity-store-id $STORE_ID
 
@@ -54,7 +54,7 @@ terraform apply -var="idc_admin_user_id=YOUR_USER_ID"
 
 ## Disabling ArgoCD
 
-If you don't have Identity Center or don't want ArgoCD:
+To disable ArgoCD (no Identity Center or not needed):
 
 ```bash
 just setup-eks ARGOCD=false

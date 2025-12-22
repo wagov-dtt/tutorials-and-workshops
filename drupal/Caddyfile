@@ -1,8 +1,10 @@
-# DDEV FrankenPHP Caddyfile for Drupal
-# Based on: https://git.drupalcode.org/project/drupal/-/blob/e1f055e383ebd345baa13412f25329ea24f74432/Caddyfile
+# FrankenPHP Caddyfile for Drupal
+# Based on: https://git.drupalcode.org/issue/drupal-3437187/-/tree/3437187-add-caddyfile-configuration
+# Used by both DDEV (local dev) and Dockerfile (container builds)
 
 {
     frankenphp {
+        # PHP performance tuning - sized for large sites (100+ modules, 100K+ content)
         php_ini memory_limit 1G
         php_ini max_execution_time 300
         php_ini opcache.validate_timestamps 0
@@ -19,8 +21,9 @@
     order php before file_server
 }
 
-:80 {
-    root * /var/www/html/web
+# Listen on port from SERVER_NAME env var, default to :8080
+{$SERVER_NAME:localhost} {
+    root * {$SERVER_ROOT:/var/www/html/web}
     encode zstd br gzip
 
     # Security: Block access to hidden PHP files (e.g., .git/*.php)
@@ -53,6 +56,6 @@
     }
     header @static Cache-Control "max-age=31536000,public,immutable"
 
-    # Serve PHP via FrankenPHP
+    # Serve PHP via FrankenPHP (no explicit worker - uses php_server default behavior)
     php_server
 }

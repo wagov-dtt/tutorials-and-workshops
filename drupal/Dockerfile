@@ -15,10 +15,8 @@ COPY web ./web
 COPY recipes ./recipes
 
 # Copy Caddyfile for Drupal-specific URL handling
-COPY .ddev/Caddyfile.drupal /etc/caddy/Caddyfile
+COPY Caddyfile /etc/caddy/Caddyfile
 
-# FrankenPHP config - uses official Drupal Caddyfile
-# See: https://git.drupalcode.org/project/drupal/-/blob/11.x/Caddyfile
 ENV SERVER_NAME=:8080
 ENV SERVER_ROOT=/var/www/html/web
 

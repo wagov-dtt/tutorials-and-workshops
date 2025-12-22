@@ -4,7 +4,7 @@ DuckLake (DuckDB + S3-compatible storage) local development setup on k3d.
 
 ## Why DuckLake?
 
-**DuckDB query performance + cloud storage economics.** DuckLake gives you:
+**DuckDB query performance + cloud storage economics.** DuckLake provides:
 
 1. **Separation of compute and storage**: Query engine (DuckDB) is stateless, data lives in S3
 2. **No data warehouse costs**: Use your existing Postgres for metadata, S3 for cheap storage

@@ -1,7 +1,7 @@
 webserver_type: generic
 web_extra_daemons:
   - name: "frankenphp"
-    command: "frankenphp run --config /var/www/html/.ddev/Caddyfile.drupal --adapter=caddyfile"
+    command: "frankenphp run --config /var/www/html/Caddyfile --adapter=caddyfile"
     directory: /var/www/html
 web_extra_exposed_ports:
   - name: "frankenphp"

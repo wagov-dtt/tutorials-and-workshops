@@ -46,13 +46,13 @@ ArgoCD uses AWS Identity Center for SSO authentication:
 
 ```bash
 just argocd-create  # Create capability (requires Identity Center)
-just argocd-ui      # Get URL (auto-adds you as admin)
+just argocd-ui      # Get URL (auto-adds current user as admin)
 just argocd-deploy  # Deploy ApplicationSet
 ```
 
 The `argocd-ui` recipe automatically:
-1. Looks up your Identity Center user by username
-2. Adds you as ArgoCD admin if not already configured
+1. Looks up the Identity Center user by username
+2. Adds the user as ArgoCD admin if not already configured
 3. Returns the UI URL
 
 ## External Secrets
