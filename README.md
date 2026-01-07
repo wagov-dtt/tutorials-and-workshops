@@ -18,7 +18,7 @@ This creates a local Kubernetes cluster with databases. No cloud account needed.
 
 | What you want | Command | Cloud needed? |
 |---------------|---------|---------------|
-| AI agent (Goose + Bedrock) | `just litellm` then `just goose` | Yes (Bedrock) |
+| AI agent (Goose + Bedrock) | `just goose` | Yes (Bedrock) |
 | Local K8s cluster | `just deploy-local` | No |
 | Analytics demo | `just ducklake-test` | No |
 | Local Drupal CMS | `just drupal-setup` | No |
@@ -32,7 +32,6 @@ Run `just` to see all available commands.
 
 | Directory | What it teaches | Difficulty |
 |-----------|-----------------|------------|
-| [goose-bedrock/](goose-bedrock/) | AI agent with Claude on AWS Bedrock | ⭐ Beginner |
 | [kustomize/](kustomize/) | Base K8s manifests, overlays pattern | ⭐ Beginner |
 | [ducklake/](ducklake/) | DuckDB analytics + S3 storage | ⭐ Beginner |
 | [rclone/](rclone/) | Mount S3 as filesystem (CSI driver) | ⭐⭐ Intermediate |
@@ -44,15 +43,32 @@ Run `just` to see all available commands.
 
 📚 See [LEARNING_PATH.md](LEARNING_PATH.md) for the recommended order.
 
-## Why Goose?
+## Goose AI Agent (AWS Bedrock)
 
-This repo uses [Goose](https://block.github.io/goose/) as the recommended AI agent for working with these examples. Goose is part of the [Agentic AI Foundation (AAIF)](https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation) under the Linux Foundation, alongside:
+Run [Goose](https://block.github.io/goose/) with Claude models on Amazon Bedrock via LiteLLM proxy.
 
-- **[Model Context Protocol (MCP)](https://github.com/modelcontextprotocol)** - Universal standard for AI-to-tool connections (Anthropic)
-- **[Goose](https://block.github.io/goose)** - Local-first AI agent with MCP integration (Block)
-- **[AGENTS.md](http://agents.md/)** - Standard for project-specific AI guidance (OpenAI)
+**Why Goose?** Part of the [Agentic AI Foundation (AAIF)](https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation) under the Linux Foundation, alongside the Model Context Protocol (MCP) and AGENTS.md standard.
 
-See [goose-bedrock/](goose-bedrock/) for setup instructions using AWS Bedrock.
+### Quick Start
+
+```bash
+# 1. Enable Bedrock model access (AWS Console → Bedrock → Model access)
+# 2. Configure AWS credentials
+aws configure sso && aws sso login
+
+# 3. Run Goose (auto-starts/stops LiteLLM proxy)
+just goose                           # Claude Sonnet 4.5 (recommended)
+just goose MODEL="global.anthropic.claude-opus-4-5-20251101-v1:0"    # Opus (most capable)
+just goose MODEL="global.anthropic.claude-haiku-4-5-20251001-v1:0"   # Haiku (fastest)
+```
+
+**How it works:**
+- LiteLLM runs as background proxy (localhost:54000) translating OpenAI API → Bedrock
+- Goose connects to proxy using env vars configured in justfile
+- Includes `developer` (shell, files, code analysis) and `computercontroller` (web scraping, automation) extensions
+- Auto-cleanup on exit
+
+**Cost:** ~$0.03-0.75/session with Sonnet (10-50K tokens). See [Bedrock pricing](https://aws.amazon.com/bedrock/pricing/).
 
 ## Prerequisites
 

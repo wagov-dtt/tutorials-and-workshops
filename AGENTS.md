@@ -43,7 +43,6 @@ This repo follows ["grug-brained"](https://grugbrain.dev) principles. The goal i
 - **Agent workflow**: Agent can run local recipes (k3d, DDEV, `just lint`, `just validate-local`) but should NOT run recipes that use credentials against remote targets (AWS, EKS, terraform apply)
 
 ## Structure
-- `goose-bedrock/` - AI agent setup with Goose + AWS Bedrock
 - `argocd/`, `ducklake/`, `rclone/`, `s3-pod-identity/`, `secrets/` - K8s examples
 - `kustomize/` - Shared base manifests
 - `eksauto/` - EKS Terraform
@@ -93,6 +92,8 @@ some-recipe:
 - **Multi-line scripts**: Use `#!/usr/bin/env bash` shebang for complex logic
 - **No `&&` chains**: One command per line for readability
 - **Section dividers**: Use `# --- SECTION NAME ---` between logical groups
+- **Environment variables**: Define as constants at top (e.g., `GOOSE_PROVIDER := "litellm"`)
+- **Background processes**: Use `&` for background + `pkill -f <port>` for cleanup (e.g., litellm proxy)
 
 ## EKS Auto Mode Notes
 - Cluster is managed by Terraform in `eksauto/terraform/`

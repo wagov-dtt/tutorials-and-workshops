@@ -269,20 +269,33 @@ codeql: prereqs
 
 # --- GOOSE + BEDROCK ---
 
-# Start LiteLLM proxy for Bedrock Claude (run in separate terminal)
-[group('goose')]
-litellm MODEL="global.anthropic.claude-sonnet-4-5-20250929-v1:0": _awslogin
-  uvx --with boto3 litellm[proxy] --model bedrock/{{MODEL}} --alias bedrock
+# Goose/LiteLLM configuration - these env vars configure Goose to use the LiteLLM proxy
+# The proxy translates OpenAI-compatible API calls to AWS Bedrock format
+GOOSE_PROVIDER := "litellm"              # Use LiteLLM provider
+GOOSE_MODEL := "bedrock"                 # Alias defined in litellm command
+GOOSE_DISABLE_KEYRING := "true"          # Don't store credentials in system keyring
+BEDROCK_MODEL := "global.anthropic.claude-sonnet-4-5-20250929-v1:0"  # Default Claude model
+LITELLM_HOST := "http://127.0.0.1:54000" # Where Goose connects to LiteLLM
+LITELLM_API_KEY := "fake"                # LiteLLM doesn't validate this (uses AWS creds)
 
-# Configure Goose to use LiteLLM proxy (one-time setup)
+# Start LiteLLM proxy for Bedrock (optional - for manual control)
+# Runs a local proxy that translates OpenAI API → Bedrock API
+# Uses AWS credentials from environment (aws sso login)
 [group('goose')]
-goose-configure:
-  goose configure provider --provider openai --model bedrock --api-key fake --host http://localhost:4000
+litellm : _awslogin
+  -uvx --with boto3 litellm[proxy] --model bedrock/{{BEDROCK_MODEL}} --alias {{GOOSE_MODEL}} \
+    --host 127.0.0.1 --port 54000 --log_level critical
 
-# Start Goose session (requires litellm running)
+# Start Goose with auto-managed LiteLLM proxy (recommended)
+# 1. Starts LiteLLM in background
+# 2. Waits for proxy to be ready
+# 3. Runs Goose with developer + computercontroller extensions
+# 4. Cleans up proxy on exit
 [group('goose')]
-goose:
-  goose session
+goose MODEL="global.anthropic.claude-sonnet-4-5-20250929-v1:0":
+  just litellm & sleep 5
+  -goose session --with-builtin "developer,computercontroller"
+  pkill -f 54000
 
 # --- UTILITIES ---
 
