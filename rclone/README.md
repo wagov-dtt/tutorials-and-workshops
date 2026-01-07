@@ -1,43 +1,37 @@
 # rclone/
 
-Rclone CSI driver examples for mounting S3-compatible storage as Kubernetes volumes.
+> Mount S3-compatible storage as Kubernetes volumes using the rclone CSI driver.
 
 ## Why rclone CSI?
 
-**Mount any cloud storage as a filesystem.** The rclone CSI driver lets pods access S3/GCS/Azure/40+ backends as if they were local directories:
+The rclone CSI driver lets pods access S3, GCS, Azure, and 40+ other backends as if they were local directories:
 
-1. **No code changes**: Existing apps that read/write files "just work" with S3
-2. **Unified interface**: Same volume mount pattern for S3, GCS, SFTP, etc.
+1. **No code changes**: Existing apps that read/write files work with S3 without modification
+2. **Unified interface**: Same volume mount pattern for S3, GCS, SFTP, and other backends
 3. **Built-in caching**: VFS cache modes handle read-heavy workloads efficiently
 
-**Why not the S3 API directly?** Some apps need filesystem semantics - legacy apps, config files, static assets. CSI mounts bridge the gap without refactoring.
-
-## What's Here
-
-| Path | Purpose |
-|------|---------|
-| `base/` | Full example: rclone-serve (S3 server) + filebrowser + CSI mounts |
-| `example-rclone.conf` | Sample rclone configuration |
+**When to use this**: When your application needs filesystem semantics—legacy apps, config files, static assets. CSI mounts bridge the gap without refactoring code to use S3 APIs directly.
 
 ## Quick Start
 
 ```bash
-just rclone-test        # Deploy to k3d + verify CSI mount
+just rclone-test        # Deploy to k3d and verify CSI mount
 kubectl get pods        # Check filebrowser and rclone-serve pods
 ```
 
 Access filebrowser (after LoadBalancer is ready):
+
 ```bash
 kubectl get svc filebrowser  # Get external IP
 # Open in browser, default login: admin/admin
 ```
 
-## Learning Goals
+## What's Here
 
-- **CSI drivers**: How Container Storage Interface allows custom storage backends
-- **rclone as S3 server**: `rclone serve s3` exposes local storage as S3 API
-- **CSI volume mounting**: Pods mount S3 buckets as local filesystems via `csi:` volume type
-- **VFS caching**: How rclone caches remote files for performance (`vfs-cache-mode: full`)
+| Path | Purpose |
+|------|---------|
+| `base/` | Full example: rclone-serve (S3 server), filebrowser, and CSI mounts |
+| `example-rclone.conf` | Sample rclone configuration |
 
 ## Architecture
 
@@ -50,9 +44,17 @@ kubectl get svc filebrowser  # Get external IP
        └──── /srv mount ────┘
 ```
 
+## Learning Goals
+
+- **CSI drivers**: How Container Storage Interface allows custom storage backends in Kubernetes
+- **rclone as S3 server**: `rclone serve s3` exposes local storage as an S3-compatible API
+- **CSI volume mounting**: Pods mount S3 buckets as local filesystems via `csi:` volume type
+- **VFS caching**: How rclone caches remote files for performance (`vfs-cache-mode: full`)
+
 ## Key Concepts
 
-**CSI Volume in Pod spec:**
+**CSI Volume in Pod spec**:
+
 ```yaml
 volumes:
   - name: s3-data
@@ -63,7 +65,8 @@ volumes:
         remotePath: "mybucket"
 ```
 
-**Secret for rclone config:**
+**Secret for rclone config**:
+
 ```yaml
 stringData:
   configData: |
@@ -80,4 +83,8 @@ stringData:
 
 ## See Also
 
-- [s3-pod-identity/](../s3-pod-identity/) - CSI mounts with real AWS S3 + Pod Identity
+- [LEARNING_PATH.md](../LEARNING_PATH.md#13-csi-volumes-with-rclone) - Step-by-step walkthrough
+- [GLOSSARY.md](../GLOSSARY.md#csi-container-storage-interface) - CSI definition
+- [GLOSSARY.md](../GLOSSARY.md#rclone) - rclone definition
+- [s3-pod-identity/](../s3-pod-identity/) - CSI mounts with real AWS S3 and Pod Identity
+- [rclone documentation](https://rclone.org/) - Official rclone docs

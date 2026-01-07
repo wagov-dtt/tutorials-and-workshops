@@ -1,8 +1,8 @@
 # eksauto/
 
-EKS Auto Mode cluster managed by Terraform.
+> EKS Auto Mode cluster managed by Terraform. AWS handles node provisioning, scaling, and security patches.
 
-## ⚠️ Cost Warning
+## Cost Warning
 
 **This creates AWS resources that cost money.**
 
@@ -16,6 +16,7 @@ EKS Auto Mode cluster managed by Terraform.
 **Minimum idle cluster**: ~$80-100/month (control plane + minimal nodes)
 
 **Always destroy when done:**
+
 ```bash
 just destroy-eks
 ```
@@ -47,16 +48,25 @@ just destroy-eks    # IMPORTANT: destroys everything
 
 | File | Purpose |
 |------|---------|
-| [terraform/main.tf](terraform/main.tf) | VPC + EKS cluster + addons |
-| [terraform/iam.tf](terraform/iam.tf) | IAM role + S3 bucket |
+| [terraform/main.tf](terraform/main.tf) | VPC, EKS cluster, and addons |
+| [terraform/iam.tf](terraform/iam.tf) | IAM role and S3 bucket |
 | [terraform/pod_identity.tf](terraform/pod_identity.tf) | Pod Identity associations |
-| [terraform/outputs.tf](terraform/outputs.tf) | Cluster info + kubectl command |
+| [terraform/outputs.tf](terraform/outputs.tf) | Cluster info and kubectl command |
+
+## Learning Goals
+
+- **Terraform for EKS**: Declarative infrastructure with state management
+- **S3 backend with native locking**: No DynamoDB needed (Terraform 1.10+)
+- **EKS Auto Mode**: AWS manages node provisioning, scaling, and security patches
+- **Pod Identity**: Pre-created associations linking ServiceAccounts to IAM roles
+- **terraform-aws-modules**: Using community modules for VPC and EKS
+- **Managed observability**: CloudWatch Container Insights vs self-hosted Prometheus
 
 ## ArgoCD Capability
 
-[EKS Capability for ArgoCD](https://docs.aws.amazon.com/eks/latest/userguide/argocd-comparison.html) is **enabled by default**. Terraform auto-discovers your Identity Center instance.
+[EKS Capability for ArgoCD](https://docs.aws.amazon.com/eks/latest/userguide/argocd-comparison.html) is enabled by default. Terraform auto-discovers your Identity Center instance.
 
-If Identity Center isn't configured, Terraform fails with clear guidance - either configure it or disable ArgoCD:
+If Identity Center isn't configured, Terraform fails with clear guidance—either configure it or disable ArgoCD:
 
 ```bash
 terraform apply -var="enable_argocd=false"
@@ -77,22 +87,13 @@ terraform apply -var="idc_admin_user_id=YOUR_USER_ID"
 
 The cluster includes the `amazon-cloudwatch-observability` addon which provides:
 
-- **Container Insights**: CPU, memory, disk, network metrics per pod/node
+- **Container Insights**: CPU, memory, disk, and network metrics per pod/node
 - **CloudWatch Logs**: Container logs automatically shipped to CloudWatch
 - **ADOT collector**: OpenTelemetry-based metrics and traces collection
 
-**Why use the managed addon?** Zero configuration, auto-updates, integrates with existing CloudWatch dashboards and alarms. No need to deploy Prometheus/Grafana for basic observability.
+**Why use the managed addon?** Zero configuration, auto-updates, and integration with existing CloudWatch dashboards and alarms. No need to deploy Prometheus/Grafana for basic observability.
 
 View metrics in AWS Console → CloudWatch → Container Insights → Performance Monitoring.
-
-## Learning Goals
-
-- **Terraform for EKS**: Declarative infrastructure with state management
-- **S3 backend with native locking**: No DynamoDB needed (Terraform 1.10+)
-- **EKS Auto Mode**: AWS manages node provisioning, scaling, security patches
-- **Pod Identity**: Pre-created associations linking ServiceAccounts to IAM roles
-- **terraform-aws-modules**: Using community modules for VPC and EKS
-- **Managed observability**: CloudWatch Container Insights vs self-hosted Prometheus
 
 ## Manual Terraform Commands
 
@@ -118,3 +119,14 @@ If destroy fails, check for:
 - LoadBalancer services still running (delete them first)
 - Stuck PVCs (delete them first)
 - Then retry `just destroy-eks`
+
+## See Also
+
+- [LEARNING_PATH.md](../LEARNING_PATH.md#21-create-an-eks-cluster) - Step-by-step walkthrough
+- [GLOSSARY.md](../GLOSSARY.md#eks-elastic-kubernetes-service) - EKS definition
+- [GLOSSARY.md](../GLOSSARY.md#eks-auto-mode) - Auto Mode explanation
+- [GLOSSARY.md](../GLOSSARY.md#terraform) - Terraform definition
+- [argocd/](../argocd/) - GitOps with ArgoCD
+- [s3-pod-identity/](../s3-pod-identity/) - Pod Identity examples
+- [secrets/](../secrets/) - External Secrets examples
+- [terraform-aws-modules/eks](https://github.com/terraform-aws-modules/terraform-aws-eks) - EKS module documentation

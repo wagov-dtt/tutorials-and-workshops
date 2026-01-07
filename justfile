@@ -290,12 +290,12 @@ litellm : _awslogin
 # Start Goose with auto-managed LiteLLM proxy (recommended)
 # 1. Starts LiteLLM in background
 # 2. Waits for proxy to be ready
-# 3. Runs Goose with developer + computercontroller extensions
+# 3. Runs Goose with developer + computercontroller + chatrecall extensions
 # 4. Cleans up proxy on exit
 [group('goose')]
 goose MODEL="global.anthropic.claude-sonnet-4-5-20250929-v1:0":
   just litellm & sleep 5
-  -goose session --with-builtin "developer,computercontroller"
+  -goose session --with-builtin "developer,computercontroller,chatrecall"
   pkill -f 54000
 
 # --- UTILITIES ---

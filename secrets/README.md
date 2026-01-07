@@ -1,27 +1,27 @@
-# kustomize-external-secrets/
+# secrets/
 
-External Secrets Operator with AWS Secrets Manager.
+> External Secrets Operator with AWS Secrets Manager. Keep secrets out of git entirely.
 
 ## Why External Secrets Operator?
 
-**Secrets don't belong in git.** But K8s Secrets need to exist in the cluster. External Secrets Operator bridges this gap:
+Secrets don't belong in git, but Kubernetes Secrets need to exist in the cluster. External Secrets Operator bridges this gap:
 
-1. **Secrets stay in Secrets Manager**: Single source of truth, proper access controls, audit logging
-2. **Auto-sync to K8s**: ESO creates/updates K8s Secrets from external sources
-3. **Rotation works**: Update secret in AWS, ESO syncs it (configurable interval)
-4. **No credentials in cluster**: Uses Pod Identity - no AWS keys stored anywhere
+1. **Secrets stay in Secrets Manager**: Single source of truth with proper access controls and audit logging
+2. **Auto-sync to Kubernetes**: ESO creates and updates K8s Secrets from external sources
+3. **Rotation works**: Update a secret in AWS, and ESO syncs it (configurable interval)
+4. **No credentials in cluster**: Uses Pod Identity—no AWS keys stored anywhere
 
-**Why not Sealed Secrets?** Sealed Secrets encrypt secrets for git storage. Works, but:
-- Still commits encrypted blobs to git
+**Why not Sealed Secrets?** Sealed Secrets encrypt secrets for git storage. This works, but:
+- You still commit encrypted blobs to git
 - Rotation requires re-sealing and committing
-- Key management complexity
+- Key management adds complexity
 
-ESO keeps secrets out of git entirely. Secrets Manager handles encryption, rotation, access control.
+ESO keeps secrets out of git entirely. Secrets Manager handles encryption, rotation, and access control.
 
 ## Quick Start
 
 ```bash
-just secrets-deploy   # Install ESO + create example secret
+just secrets-deploy   # Install ESO and create example secret
 just secrets-test     # Verify secret sync works
 ```
 
@@ -60,13 +60,20 @@ AWS Secrets Manager          External Secrets Operator          Kubernetes
 ## Directory Structure
 
 ```
-kustomize-external-secrets/
+secrets/
 ├── base/
-│   ├── namespace.yaml         # external-secrets namespace
-│   ├── clustersecretstore.yaml # AWS Secrets Manager config
-│   └── externalsecret.yaml    # Example secret reference
+│   ├── namespace.yaml           # external-secrets namespace
+│   ├── clustersecretstore.yaml  # AWS Secrets Manager config
+│   └── externalsecret.yaml      # Example secret reference
 └── kustomization.yaml
 ```
+
+## Learning Goals
+
+- **Zero secrets in git**: ExternalSecret references a path, not the actual value
+- **Pod Identity for ESO**: The operator uses an IAM role with no credentials stored
+- **ClusterSecretStore vs SecretStore**: Cluster-wide vs namespace-scoped backends
+- **Sync behavior**: Refresh interval, error handling, and secret templates
 
 ## Creating Secrets in AWS
 
@@ -82,11 +89,12 @@ aws secretsmanager put-secret-value \
   --secret-string '{"username":"admin","password":"newpassword"}'
 ```
 
-ESO syncs changes within the refresh interval (default: 1 hour, our config: 5 minutes).
+ESO syncs changes within the refresh interval (default: 1 hour, configured to 5 minutes in this example).
 
-## Learning Goals
+## See Also
 
-- **Zero secrets in git**: ExternalSecret references a path, not the value
-- **Pod Identity for ESO**: Operator uses IAM role, no credentials stored
-- **ClusterSecretStore vs SecretStore**: Cluster-wide vs namespace-scoped
-- **Sync behavior**: Refresh interval, error handling, secret templates
+- [LEARNING_PATH.md](../LEARNING_PATH.md#23-external-secrets) - Step-by-step walkthrough
+- [GLOSSARY.md](../GLOSSARY.md#secrets-manager) - Secrets Manager definition
+- [GLOSSARY.md](../GLOSSARY.md#pod-identity) - Pod Identity definition
+- [eksauto/](../eksauto/) - Terraform that creates the IAM role and secret
+- [External Secrets Operator docs](https://external-secrets.io/) - Official ESO documentation

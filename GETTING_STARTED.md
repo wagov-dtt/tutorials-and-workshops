@@ -6,11 +6,13 @@ New to DevOps or Kubernetes? Start here.
 
 This repo teaches modern infrastructure patterns through hands-on examples:
 
-- **Kubernetes basics** - Deploying apps, databases, and services
-- **Kustomize** - Managing config without templating
-- **S3 and cloud storage** - Backups, mounts, and object storage
-- **GitOps** - Automated deployments with ArgoCD
-- **Infrastructure as Code** - Creating cloud resources with Terraform
+- **Kubernetes basics**: Deploying apps, databases, and services
+- **Kustomize**: Managing configuration without templating
+- **S3 and cloud storage**: Backups, mounts, and object storage
+- **GitOps**: Automated deployments with ArgoCD
+- **Infrastructure as Code**: Creating cloud resources with Terraform
+
+See [GLOSSARY.md](GLOSSARY.md) for definitions of these terms.
 
 ## Prerequisites
 
@@ -27,7 +29,7 @@ That's it! Everything else (kubectl, k3d, terraform, etc.) is installed automati
 
 ```bash
 # Clone the repo
-git clone https://github.com/user/tutorials-and-workshops
+git clone https://github.com/wagov/tutorials-and-workshops
 cd tutorials-and-workshops
 
 # Install all tools
@@ -44,20 +46,21 @@ This creates a local [k3d](https://k3d.io/) cluster (Kubernetes in Docker) with 
 ```bash
 # See all running pods
 kubectl get pods -A
+# Expected: pods in databases, kube-system, and default namespaces
 
 # Open k9s (terminal UI for Kubernetes)
 k9s
 ```
 
-In k9s, press `0` to see all namespaces, arrow keys to navigate, `d` to describe a pod, `l` for logs, `q` to quit.
+In k9s: press `0` to see all namespaces, arrow keys to navigate, `d` to describe a pod, `l` for logs, `q` to quit.
 
 ## What Just Happened?
 
-1. `just prereqs` - Installed kubectl, k3d, helm, and other tools via mise
-2. `just deploy-local` - Created a k3d cluster called "tutorials"
-3. Applied Kubernetes manifests from `kustomize/` to deploy databases
+1. **`just prereqs`** installed kubectl, k3d, helm, and other tools via mise
+2. **`just deploy-local`** created a k3d cluster called "tutorials"
+3. Kubernetes manifests from `kustomize/` were applied to deploy databases
 
-The magic is in `kustomize/overlays/local/kustomization.yaml` - it combines base manifests with local-specific settings.
+The configuration lives in `kustomize/overlays/local/kustomization.yaml`—it combines base manifests with local-specific settings.
 
 ## Next Steps
 
@@ -81,13 +84,15 @@ After you're comfortable with local examples:
 | 3 | `just secrets-deploy` | External Secrets Operator |
 | 4 | `just argocd-ui` | GitOps with ArgoCD |
 
-⚠️ **Cost warning**: EKS costs ~$80-100/month. Always run `just destroy-eks` when done!
+**Cost warning**: EKS costs ~$80-100/month. Always run `just destroy-eks` when done!
+
+Once you've completed this guide, continue with [LEARNING_PATH.md](LEARNING_PATH.md) for detailed walkthroughs of each example.
 
 ## Key Concepts
 
 ### What is Kubernetes?
 
-Kubernetes (K8s) runs containers across multiple machines. You describe what you want (YAML manifests), and K8s makes it happen.
+Kubernetes (K8s) runs containers across multiple machines. You describe what you want in YAML manifests, and Kubernetes makes it happen.
 
 ```yaml
 # A simple pod - one container running nginx
@@ -101,9 +106,11 @@ spec:
       image: nginx
 ```
 
+See [GLOSSARY.md](GLOSSARY.md) for more Kubernetes terms.
+
 ### What is Kustomize?
 
-Kustomize lets you customize Kubernetes YAML without templates. Instead of `{{ .Values.replicas }}`, you write patches:
+[Kustomize](https://kustomize.io/) lets you customize Kubernetes YAML without templates. Instead of `{{ .Values.replicas }}` placeholders, you write patches:
 
 ```yaml
 # kustomization.yaml - combines resources and patches
@@ -145,15 +152,17 @@ just deploy-local
 ### Pods stuck in "Pending"
 
 Usually waiting for resources. Check events:
+
 ```bash
 kubectl describe pod <pod-name> -n <namespace>
 ```
 
 ## Getting Help
 
-- `just` - Lists all available commands with descriptions
+- Run `just` to list all available commands with descriptions
 - Each directory has a README.md explaining that example
-- Check LEARNING_PATH.md for the recommended order
+- Check [GLOSSARY.md](GLOSSARY.md) for term definitions
+- See [LEARNING_PATH.md](LEARNING_PATH.md) for the recommended order
 
 ## Cleanup
 
@@ -167,3 +176,9 @@ k3d cluster delete tutorials
 # Stop Drupal
 just drupal-stop
 ```
+
+## See Also
+
+- [LEARNING_PATH.md](LEARNING_PATH.md) - Detailed walkthrough of each example
+- [GLOSSARY.md](GLOSSARY.md) - Definitions of key terms
+- [kustomize/](kustomize/) - The base manifests deployed by `just deploy-local`
