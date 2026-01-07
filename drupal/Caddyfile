@@ -1,78 +1,90 @@
 # FrankenPHP Caddyfile for Drupal
-# Based on: https://git.drupalcode.org/issue/drupal-3437187/-/tree/3437187-add-caddyfile-configuration
-# Used by both DDEV (local dev) and Dockerfile (container builds)
-
+# Ref: https://git.drupalcode.org/issue/drupal-3437187/-/tree/3437187-add-caddyfile-configuration
+#
+# Shared by DDEV (local dev) and Dockerfile (production).
+# Validate with: caddy fmt --diff Caddyfile
 {
-    frankenphp {
-        # PHP performance tuning - sized for large sites (100+ modules, 100K+ content)
-        php_ini memory_limit 1G
-        php_ini max_execution_time 300
-        php_ini opcache.validate_timestamps 0
-        php_ini opcache.enable_file_override 1
-        php_ini opcache.memory_consumption 512
-        php_ini opcache.interned_strings_buffer 64
-        php_ini opcache.max_accelerated_files 130000
-        php_ini opcache.jit 1255
-        php_ini opcache.jit_buffer_size 256M
-        php_ini realpath_cache_size 8192K
-        php_ini realpath_cache_ttl 600
-    }
-    order php_server before file_server
-    order php before file_server
+	frankenphp {
+		# PHP tuning for large sites (100+ modules, 100K+ content)
+		php_ini memory_limit 1G
+		php_ini max_execution_time 300
+
+		# OPcache - cache compiled PHP bytecode
+		php_ini opcache.validate_timestamps 0
+		php_ini opcache.enable_file_override 1
+		php_ini opcache.memory_consumption 512
+		php_ini opcache.interned_strings_buffer 64
+		php_ini opcache.max_accelerated_files 130000
+
+		# JIT - compile hot paths to machine code (~40% faster)
+		php_ini opcache.jit 1255
+		php_ini opcache.jit_buffer_size 256M
+
+		# Realpath cache - reduce filesystem stat() calls
+		php_ini realpath_cache_size 8192K
+		php_ini realpath_cache_ttl 600
+	}
+	order php_server before file_server
+	order php before file_server
 }
 
-# Listen on port from SERVER_NAME env var, default to :8080
+# SERVER_NAME/SERVER_ROOT set by DDEV or docker run -e
 {$SERVER_NAME:localhost} {
-    root * {$SERVER_ROOT:/var/www/html/web}
-    encode zstd br gzip
+	root * {$SERVER_ROOT:/var/www/html/web}
+	encode zstd br gzip
 
-    # Security: Block access to hidden files and directories (.git, .env, Caddyfile, etc.)
-    @hidden path /.*
-    error @hidden 403
+	# ============================================================
+	# SECURITY RULES
+	# Block sensitive files from being served. Order matters -
+	# more specific rules should come first.
+	# ============================================================
 
-    # Security: Block Caddyfile from being served
-    @caddyfile path /Caddyfile */Caddyfile
-    error @caddyfile 403
+	# Block hidden files/dirs (.git, .env, .htaccess, etc.)
+	@hidden path /.*
+	error @hidden 403
 
-    # Security: Block access to hidden PHP files (e.g., .git/*.php)
-    @hiddenPhpFiles path_regexp ^\..*/.*\.php$
-    error @hiddenPhpFiles 403
+	# Block Caddyfile itself
+	@caddyfile path /Caddyfile */Caddyfile
+	error @caddyfile 403
 
-    # Security: Block vendor PHP files
-    @vendorPhp path_regexp ^/vendor/.*\.php$
-    error @vendorPhp 404
+	# Block PHP execution in dangerous locations
+	@dangerousPhp {
+		path_regexp ^\..*/.*\.php$
+		path_regexp ^/vendor/.*\.php$
+		path_regexp ^/sites/[^/]+/files/.*\.php$
+	}
+	error @dangerousPhp 404
 
-    # Security: Block PHP in files directories
-    @filesPhp path_regexp ^/sites/[^/]+/files/.*\.php$
-    error @filesPhp 404
+	# Block private directories
+	@private path_regexp ^/sites/.*/private/
+	error @private 403
 
-    # Security: Block private directories
-    @privateDir path_regexp ^/sites/.*/private/
-    error @privateDir 403
+	# Block Drupal internal files (modules, themes, configs)
+	@internal path_regexp \.(engine|inc|install|make|module|profile|po|sh|theme|twig|tpl\.php|xtmpl|yml)$
+	error @internal 403
 
-    # Security: Block Drupal module/theme files that shouldn't be accessed directly
-    @drupalInternal path_regexp \.(engine|inc|install|make|module|profile|po|sh|theme|twig|tpl\.php|xtmpl|yml)$
-    error @drupalInternal 403
+	# Block database dumps, backups, temp files
+	@sensitive path_regexp \.(sql|bak|orig|save|sw[op]|~)$
+	error @sensitive 403
 
-    # Security: Block SQL files
-    @sqlFiles path_regexp \.sql$
-    error @sqlFiles 403
+	# Block package manager files
+	@packages path /composer.json /composer.lock /package.json /yarn.lock /web.config
+	error @packages 403
 
-    # Security: Block backup/temp files
-    @backupFiles path_regexp \.(bak|orig|save|sw[op]|~)$
-    error @backupFiles 403
+	# ============================================================
+	# CACHING
+	# ============================================================
 
-    # Security: Block composer/package files
-    @packageFiles path /composer.json /composer.lock /package.json /yarn.lock /web.config
-    error @packageFiles 403
+	# Cache static assets for 1 year (immutable = never revalidate)
+	@static {
+		file
+		path *.avif *.css *.eot *.gif *.gz *.ico *.jpg *.jpeg *.js *.otf *.pdf *.png *.svg *.ttf *.webp *.woff *.woff2
+	}
+	header @static Cache-Control "max-age=31536000, public, immutable"
 
-    # Cache static assets for 1 year
-    @static {
-        file
-        path *.avif *.css *.eot *.gif *.gz *.ico *.jpg *.jpeg *.js *.otf *.pdf *.png *.svg *.ttf *.webp *.woff *.woff2
-    }
-    header @static Cache-Control "max-age=31536000,public,immutable"
+	# ============================================================
+	# PHP HANDLER
+	# ============================================================
 
-    # Serve PHP via FrankenPHP (no explicit worker - uses php_server default behavior)
-    php_server
+	php_server
 }

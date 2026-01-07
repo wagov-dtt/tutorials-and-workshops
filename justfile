@@ -232,9 +232,9 @@ drupal-reset:
 
 # --- VALIDATION ---
 
-# Validate kustomize + terraform + trivy
+# Validate kustomize + terraform + trivy + caddyfile
 [group('validate')]
-lint: _lint-kustomize _lint-terraform _lint-trivy
+lint: _lint-kustomize _lint-terraform _lint-trivy _lint-caddyfile
   @echo "All validations passed ✓"
 
 # Full AWS validation (creates EKS, runs tests, destroys)
@@ -395,6 +395,12 @@ _lint-trivy:
   trivy config --exit-code 1 --ignorefile .trivyignore rclone
   trivy config --exit-code 1 --ignorefile .trivyignore drupal/kustomize
   @echo "Trivy scan passed ✓"
+
+[private]
+_lint-caddyfile:
+  @echo "Validating Caddyfile..."
+  caddy fmt --diff drupal/Caddyfile
+  @echo "Caddyfile valid ✓"
 
 [private]
 _validate-ddev: drupal-setup

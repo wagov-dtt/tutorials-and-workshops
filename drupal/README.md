@@ -1,152 +1,159 @@
 # Drupal CMS with FrankenPHP
 
-A local development setup for Drupal CMS using [DDEV](https://ddev.com/) and [FrankenPHP](https://frankenphp.dev/).
-
-## Prerequisites
-
-- [mise](https://mise.jdx.dev/) - run `mise install` in this repo to get DDEV, just, and other tools
+Local Drupal development using [DDEV](https://ddev.com/) and [FrankenPHP](https://frankenphp.dev/).
 
 ## Quick Start
 
 ```bash
-# Install and start Drupal CMS
-just drupal-setup
-
-# Open in browser
-just drupal-login
+just drupal-setup    # Install Drupal CMS (~3 min)
+just drupal-login    # Get admin login link
 ```
 
-Drupal CMS is now running at https://drupal.ddev.site/
+Site runs at <https://drupal.ddev.site/>
 
-## What This Sets Up
+## Commands
 
-- **Drupal CMS** - The official Drupal starter with sensible defaults
-- **FrankenPHP** - Modern PHP runtime (Caddy + PHP in one binary)
-- **MariaDB** - Database with performance tuning
-- **DDEV** - Local development environment
-
-## Common Commands
-
-| Command | What it does |
-|---------|--------------|
+| Command | Description |
+|---------|-------------|
 | `just drupal-setup` | Full install from scratch |
-| `just drupal-start` | Start the environment |
-| `just drupal-stop` | Stop the environment |
+| `just drupal-start` | Start environment |
+| `just drupal-stop` | Stop environment |
 | `just drupal-login` | Get admin login link |
-| `just drupal-reset` | Delete everything and start fresh |
+| `just drupal-reset` | Delete and start fresh |
+
+## What's Included
+
+- **Drupal CMS** - Official starter with sensible defaults
+- **FrankenPHP** - Caddy + PHP in one binary (no nginx/php-fpm)
+- **MariaDB** - Database with performance tuning
+- **DDEV** - Docker-based local dev with SSL
 
 ## Project Structure
 
 ```
 drupal/
-├── Caddyfile              # Web server + PHP config (used by DDEV and Docker)
-├── Dockerfile             # Production container build
-├── composer.json          # Drupal dependencies
-├── .ddev/                 # DDEV configuration
-│   ├── config.yaml        # Main DDEV config
-│   └── config.frankenphp.yaml  # FrankenPHP settings
-└── kustomize/             # Kubernetes deployment (optional)
+├── Caddyfile           # Web server + PHP config
+├── Dockerfile          # Production container
+├── composer.json       # Drupal dependencies
+├── .ddev/              # DDEV configuration
+└── kustomize/          # Kubernetes deployment (optional)
 ```
 
-### Key Files
+## Caddyfile
 
-- **Caddyfile** - One config for web server, PHP settings, and security rules. Used by both local dev (DDEV) and production builds.
-- **Dockerfile** - Builds a production container image with FrankenPHP.
+The `Caddyfile` configures Caddy web server and PHP in one place. Shared between DDEV (local) and Docker (production).
 
-## How It Works
+### Key Sections
 
-### FrankenPHP
-
-Traditional PHP setups use nginx + php-fpm (two processes). FrankenPHP combines Caddy web server with PHP into a single binary - simpler to configure and deploy.
-
-PHP settings are configured directly in the `Caddyfile`:
-
+**PHP Settings** - Memory, timeouts, OPcache, JIT:
 ```caddyfile
-{
-    frankenphp {
-        php_ini memory_limit 1G
-        php_ini opcache.jit 1255
-    }
+frankenphp {
+    php_ini memory_limit 1G
+    php_ini opcache.jit 1255
 }
 ```
 
-### DDEV
+**Security Rules** - Block sensitive files:
+```caddyfile
+# Hidden files (.git, .env)
+@hidden path /.*
+error @hidden 403
 
-DDEV provides Docker-based local development. It handles:
-- SSL certificates (https://drupal.ddev.site)
-- Database management
-- Composer/Drush commands
+# PHP in uploads
+@dangerousPhp path_regexp ^/sites/[^/]+/files/.*\.php$
+error @dangerousPhp 404
+```
 
-FrankenPHP integration is provided by the [ddev-frankenphp](https://github.com/ddev/ddev-frankenphp) addon.
+**Static Caching** - 1 year for assets:
+```caddyfile
+@static {
+    file
+    path *.css *.js *.jpg *.png *.woff2
+}
+header @static Cache-Control "max-age=31536000, public, immutable"
+```
 
-Run commands inside the container with `ddev exec`:
+### Validation
+
 ```bash
-ddev exec drush status
-ddev composer require drupal/module_name
+just lint                           # Includes Caddyfile check
+caddy fmt --diff drupal/Caddyfile   # Manual check
+caddy fmt --overwrite drupal/Caddyfile  # Auto-format
+```
+
+### Regex Notes
+
+Caddy uses Go regexp:
+- `/` is literal (no escaping needed)
+- `\.` for literal dots
+- `^` and `$` for anchors
+
+## FrankenPHP
+
+Traditional: nginx → php-fpm (2 processes, socket/TCP between them)  
+FrankenPHP: Single binary with Caddy + PHP embedded
+
+Benefits:
+- Simpler config (one file)
+- Faster (no IPC overhead)
+- Worker mode for persistent PHP processes
+
+## DDEV Commands
+
+```bash
+ddev exec drush status              # Run Drush
+ddev composer require drupal/redis  # Add module
+ddev ssh                            # Shell into container
+ddev logs -s web                    # View web logs
 ```
 
 ## Troubleshooting
 
-### Site won't load
-
+**Site won't load:**
 ```bash
-# Check if DDEV is running
-ddev status
-
-# View logs
-ddev logs -s web | tail -20
+ddev status                # Check if running
+ddev logs -s web | tail -20  # View errors
 ```
 
-### FrankenPHP won't start
-
-Usually a Caddyfile syntax error:
+**Caddyfile syntax error:**
 ```bash
-ddev exec frankenphp validate --config /var/www/html/Caddyfile
+caddy fmt --diff drupal/Caddyfile
+ddev exec frankenphp validate --config /etc/caddy/Caddyfile
 ```
 
-### Check PHP settings
-
-PHP settings must be tested via HTTP (not CLI):
+**Check PHP settings:**
 ```bash
+# Must test via HTTP (CLI has different php.ini)
 echo '<?php phpinfo();' > web/phpinfo.php
 open https://drupal.ddev.site/phpinfo.php
 rm web/phpinfo.php
 ```
 
-## Benchmarks
+## Performance
 
-Drupal homepage load test (8-core machine, DDEV):
+Drupal homepage, 8-core machine:
 
-| PHP JIT | Requests/sec | Response time |
-|---------|--------------|---------------|
-| Off     | ~130         | 53ms          |
-| **On**  | **~180**     | **16ms**      |
+| JIT | Requests/sec | Response |
+|-----|--------------|----------|
+| Off | ~130 | 53ms |
+| **On** | **~180** | **16ms** |
 
-JIT (already enabled in this setup) provides ~40% more throughput and 3x faster responses.
-
-*Load tested with [vegeta](https://github.com/tsenart/vegeta).*
-
-### Run your own benchmarks
-
+JIT enabled by default. Run your own test:
 ```bash
 just vegeta https://drupal.ddev.site/
 ```
 
-## Building for Production
-
-The `Dockerfile` creates a production-ready container:
+## Production Build
 
 ```bash
-# Build after running ddev composer install
+ddev composer install     # Install dependencies first
 docker build -t my-drupal .
 docker run -p 8080:8080 my-drupal
 ```
 
-Note: Run `ddev composer install` first - the Dockerfile copies vendor files from the local workspace.
-
 ## Resources
 
-- [DDEV Documentation](https://ddev.readthedocs.io/)
-- [FrankenPHP Documentation](https://frankenphp.dev/docs/)
+- [DDEV Docs](https://ddev.readthedocs.io/)
+- [FrankenPHP Docs](https://frankenphp.dev/docs/)
 - [Drupal CMS](https://www.drupal.org/about/drupal-cms)
-- [Official Drupal Caddyfile](https://git.drupalcode.org/issue/drupal-3437187/-/tree/3437187-add-caddyfile-configuration)
+- [Caddy Matchers](https://caddyserver.com/docs/caddyfile/matchers)
