@@ -281,10 +281,11 @@ LITELLM_API_KEY := "fake"                # LiteLLM doesn't validate this (uses A
 # Start LiteLLM proxy for Bedrock (optional - for manual control)
 # Runs a local proxy that translates OpenAI API → Bedrock API
 # Uses AWS credentials from environment (aws sso login)
+# Logs to /tmp/litellm.log
 [group('goose')]
 litellm : _awslogin
   -uvx --with boto3 litellm[proxy] --model bedrock/{{BEDROCK_MODEL}} --alias {{GOOSE_MODEL}} \
-    --host 127.0.0.1 --port 54000 --log_level critical
+    --host 127.0.0.1 --port 54000 > /tmp/litellm.log 2>&1
 
 # Start Goose with auto-managed LiteLLM proxy (recommended)
 # 1. Starts LiteLLM in background
