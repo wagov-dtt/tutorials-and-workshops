@@ -60,7 +60,7 @@
 	error @private 403
 
 	# Block Drupal internal files (modules, themes, configs)
-	@internal path_regexp \.(engine|inc|install|make|module|profile|po|sh|theme|twig|tpl\.php|xtmpl|yml)$
+	@internal path_regexp \.(engine|inc|install|make|module|profile|po|sh|theme|twig|tpl|tpl\.php|xtmpl|yml)$
 	error @internal 403
 
 	# Block database dumps, backups, temp files
