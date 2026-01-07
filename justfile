@@ -267,6 +267,23 @@ codeql: prereqs
   gh codeql database analyze --download --format=sarif-latest --threads=0 --output=javascript_results.sarif codeql-db/javascript codeql/javascript-queries
   uvx --from sarif-tools sarif csv
 
+# --- GOOSE + BEDROCK ---
+
+# Start LiteLLM proxy for Bedrock Claude (run in separate terminal)
+[group('goose')]
+litellm MODEL="global.anthropic.claude-sonnet-4-5-20250929-v1:0": _awslogin
+  uvx --with boto3 litellm[proxy] --model bedrock/{{MODEL}} --alias bedrock
+
+# Configure Goose to use LiteLLM proxy (one-time setup)
+[group('goose')]
+goose-configure:
+  goose configure provider --provider openai --model bedrock --api-key fake --host http://localhost:4000
+
+# Start Goose session (requires litellm running)
+[group('goose')]
+goose:
+  goose session
+
 # --- UTILITIES ---
 
 # Load test a URL (640 req/s for 10s)

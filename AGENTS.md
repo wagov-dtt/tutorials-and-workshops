@@ -4,6 +4,12 @@ This repo is a collection of concise, self-contained examples for tricky DevOps/
 
 **Note**: This is a training/examples repo. Local `just` recipes matter more than CI automation. No GitHub Actions workflows are needed - validation happens locally via `just lint`.
 
+## About AGENTS.md
+
+This file follows the [AGENTS.md standard](http://agents.md/) from OpenAI, now part of the [Agentic AI Foundation (AAIF)](https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation) under the Linux Foundation. It provides project-specific guidance for AI coding agents like [Goose](https://block.github.io/goose), Cursor, Copilot, and others.
+
+See [goose-bedrock/](goose-bedrock/) for instructions on setting up Goose with AWS Bedrock.
+
 ## Philosophy: Grug-Brained Development
 
 This repo follows ["grug-brained"](https://grugbrain.dev) principles. The goal is working software, not architectural purity.
@@ -37,6 +43,7 @@ This repo follows ["grug-brained"](https://grugbrain.dev) principles. The goal i
 - **Agent workflow**: Agent can run local recipes (k3d, DDEV, `just lint`, `just validate-local`) but should NOT run recipes that use credentials against remote targets (AWS, EKS, terraform apply)
 
 ## Structure
+- `goose-bedrock/` - AI agent setup with Goose + AWS Bedrock
 - `argocd/`, `ducklake/`, `rclone/`, `s3-pod-identity/`, `secrets/` - K8s examples
 - `kustomize/` - Shared base manifests
 - `eksauto/` - EKS Terraform

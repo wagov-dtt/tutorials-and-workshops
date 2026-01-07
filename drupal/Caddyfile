@@ -26,28 +26,45 @@
     root * {$SERVER_ROOT:/var/www/html/web}
     encode zstd br gzip
 
+    # Security: Block access to hidden files and directories (.git, .env, Caddyfile, etc.)
+    @hidden path /.*
+    error @hidden 403
+
+    # Security: Block Caddyfile from being served
+    @caddyfile path /Caddyfile */Caddyfile
+    error @caddyfile 403
+
     # Security: Block access to hidden PHP files (e.g., .git/*.php)
-    @hiddenPhpFilesRegexp path_regexp \..*/.*.php$
-    error @hiddenPhpFilesRegexp 403
+    @hiddenPhpFiles path_regexp ^\..*/.*\.php$
+    error @hiddenPhpFiles 403
 
     # Security: Block vendor PHP files
-    @notFoundPhpFiles path_regexp /vendor/.*.php$
-    error @notFoundPhpFiles 404
+    @vendorPhp path_regexp ^/vendor/.*\.php$
+    error @vendorPhp 404
 
     # Security: Block PHP in files directories
-    @notFoundPhpFilesRegexp path_regexp ^/sites/[^/]+/files/.*.php$
-    error @notFoundPhpFilesRegexp 404
+    @filesPhp path_regexp ^/sites/[^/]+/files/.*\.php$
+    error @filesPhp 404
 
     # Security: Block private directories
-    @privateDirRegexp path_regexp ^/sites/.*/private/
-    error @privateDirRegexp 403
+    @privateDir path_regexp ^/sites/.*/private/
+    error @privateDir 403
 
-    # Security: Block sensitive files (engine, install, sql, yml, composer.json, etc.)
-    @protectedFilesRegexp {
-        not path /.well-known*
-        path_regexp \.(engine|inc|install|make|module|profile|po|sh|.*sql|theme|twig|tpl(\.php)?|xtmpl|yml)(~|\.sw[op]|\.bak|\.orig|\.save)?$|^/(\..*|Entries.*|Repository|Root|Tag|Template|composer\.(json|lock)|web\.config|yarn\.lock|package\.json)$|^/#.*#$|\.php(~|\.sw[op]|\.bak|\.orig|\.save)$
-    }
-    error @protectedFilesRegexp 403
+    # Security: Block Drupal module/theme files that shouldn't be accessed directly
+    @drupalInternal path_regexp \.(engine|inc|install|make|module|profile|po|sh|theme|twig|tpl\.php|xtmpl|yml)$
+    error @drupalInternal 403
+
+    # Security: Block SQL files
+    @sqlFiles path_regexp \.sql$
+    error @sqlFiles 403
+
+    # Security: Block backup/temp files
+    @backupFiles path_regexp \.(bak|orig|save|sw[op]|~)$
+    error @backupFiles 403
+
+    # Security: Block composer/package files
+    @packageFiles path /composer.json /composer.lock /package.json /yarn.lock /web.config
+    error @packageFiles 403
 
     # Cache static assets for 1 year
     @static {

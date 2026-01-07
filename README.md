@@ -1,114 +1,120 @@
 # tutorials-and-workshops
 
-Concise DevOps/K8s examples. See [DevSecOps Induction](https://soc.cyber.wa.gov.au/training/devsecops-induction/) for structured training.
+Hands-on DevOps and Kubernetes examples. Learn by doing.
+
+## 🚀 Start Here
+
+**New to this?** Read [GETTING_STARTED.md](GETTING_STARTED.md) first.
 
 ```bash
-just              # List all recipes
-just prereqs      # Install tools via mise
+# Install tools and run your first example
+just prereqs
+just deploy-local
 ```
 
-## Quick Start
+This creates a local Kubernetes cluster with databases. No cloud account needed.
 
-### Local (no AWS)
+## Quick Reference
 
-```bash
-just deploy-local   # k3d + databases (Postgres, MySQL, MongoDB, ES)
-just ducklake-test  # DuckLake with NY Taxi data
-just rclone-test    # rclone CSI S3 mount
-just validate-local # Run all local tests
-```
+| What you want | Command | Cloud needed? |
+|---------------|---------|---------------|
+| AI agent (Goose + Bedrock) | `just litellm` then `just goose` | Yes (Bedrock) |
+| Local K8s cluster | `just deploy-local` | No |
+| Analytics demo | `just ducklake-test` | No |
+| Local Drupal CMS | `just drupal-setup` | No |
+| AWS EKS cluster | `just setup-eks` | Yes |
+| S3 backup demo | `just s3-test` | Yes |
+| GitOps with ArgoCD | `just argocd-ui` | Yes |
 
-### EKS (requires AWS)
-
-```bash
-just setup-eks      # Create cluster (~$80-100/mo)
-just deploy         # Deploy core manifests
-just s3-test        # S3 Pod Identity demo
-just destroy-eks    # Destroy when done
-```
+Run `just` to see all available commands.
 
 ## Examples
 
-| Directory | Purpose |
-|-----------|---------|
-| [kustomize/](kustomize/) | Base K8s manifests with overlays |
-| [s3-pod-identity/](s3-pod-identity/) | EKS Pod Identity: MySQL → S3 → rclone |
-| [argocd/](argocd/) | ArgoCD ApplicationSets |
-| [secrets/](secrets/) | External Secrets + AWS Secrets Manager |
-| [ducklake/](ducklake/) | DuckLake (DuckDB + S3) |
-| [rclone/](rclone/) | rclone CSI driver examples |
-| [eksauto/](eksauto/) | EKS Auto Mode via Terraform |
-| [drupal/](drupal/) | Drupal CMS with DDEV/FrankenPHP |
+| Directory | What it teaches | Difficulty |
+|-----------|-----------------|------------|
+| [goose-bedrock/](goose-bedrock/) | AI agent with Claude on AWS Bedrock | ⭐ Beginner |
+| [kustomize/](kustomize/) | Base K8s manifests, overlays pattern | ⭐ Beginner |
+| [ducklake/](ducklake/) | DuckDB analytics + S3 storage | ⭐ Beginner |
+| [rclone/](rclone/) | Mount S3 as filesystem (CSI driver) | ⭐⭐ Intermediate |
+| [drupal/](drupal/) | PHP development with DDEV | ⭐⭐ Intermediate |
+| [s3-pod-identity/](s3-pod-identity/) | EKS Pod Identity, MySQL backups | ⭐⭐⭐ Advanced |
+| [secrets/](secrets/) | External Secrets + AWS Secrets Manager | ⭐⭐⭐ Advanced |
+| [argocd/](argocd/) | GitOps with ArgoCD | ⭐⭐⭐ Advanced |
+| [eksauto/](eksauto/) | EKS cluster via Terraform | ⭐⭐⭐ Advanced |
 
-## ArgoCD (EKS Capability)
+📚 See [LEARNING_PATH.md](LEARNING_PATH.md) for the recommended order.
 
-ArgoCD uses AWS Identity Center for SSO authentication:
+## Why Goose?
+
+This repo uses [Goose](https://block.github.io/goose/) as the recommended AI agent for working with these examples. Goose is part of the [Agentic AI Foundation (AAIF)](https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation) under the Linux Foundation, alongside:
+
+- **[Model Context Protocol (MCP)](https://github.com/modelcontextprotocol)** - Universal standard for AI-to-tool connections (Anthropic)
+- **[Goose](https://block.github.io/goose)** - Local-first AI agent with MCP integration (Block)
+- **[AGENTS.md](http://agents.md/)** - Standard for project-specific AI guidance (OpenAI)
+
+See [goose-bedrock/](goose-bedrock/) for setup instructions using AWS Bedrock.
+
+## Prerequisites
+
+| Tool | Purpose | Install |
+|------|---------|---------|
+| [mise](https://mise.jdx.dev/) | Tool version manager | `curl https://mise.run \| sh` |
+| [Docker](https://docs.docker.com/get-docker/) | Container runtime | Docker Desktop or `docker.io` |
+
+Everything else is installed automatically by `just prereqs`.
+
+## Local Development (No Cloud)
 
 ```bash
-just argocd-create  # Create capability (requires Identity Center)
-just argocd-ui      # Get URL (auto-adds current user as admin)
-just argocd-deploy  # Deploy ApplicationSet
+just deploy-local   # K8s cluster + databases
+just ducklake-test  # DuckLake analytics demo
+just rclone-test    # S3 filesystem mount demo
+just drupal-setup   # Drupal CMS
 ```
 
-The `argocd-ui` recipe automatically:
-1. Looks up the Identity Center user by username
-2. Adds the user as ArgoCD admin if not already configured
-3. Returns the UI URL
+## AWS Examples
 
-## External Secrets
-
-Sync secrets from AWS Secrets Manager to Kubernetes:
+⚠️ **Cost warning**: EKS clusters cost ~$80-100/month. Always destroy when done!
 
 ```bash
-just secrets-deploy # Install ESO + ClusterSecretStore
-just secrets-test   # Verify secret sync
+just setup-eks      # Create EKS cluster (~15 min)
+just deploy         # Deploy base manifests
+just s3-test        # S3 Pod Identity demo
+just secrets-deploy # External Secrets demo
+just argocd-ui      # ArgoCD UI URL
+just destroy-eks    # IMPORTANT: Destroy when done!
 ```
 
-## Drupal
+## Validation
 
 ```bash
-just drupal-setup   # DDEV + FrankenPHP + recipes
-just drupal-test    # Search performance tests
+just lint           # Validate all manifests (kustomize + terraform + trivy)
+just validate-local # Run all local tests
 ```
 
-## Environment
+## Environment Setup
 
-Recommended: [Project Bluefin](https://projectbluefin.io/), [Debian on WSL2](https://wiki.debian.org/InstallingDebianOn/Microsoft/Windows/SubsystemForLinux), or the included [devcontainer](.devcontainer/).
+**Recommended**: [Debian on WSL2](https://wiki.debian.org/InstallingDebianOn/Microsoft/Windows/SubsystemForLinux), [Project Bluefin](https://projectbluefin.io/), or the included [devcontainer](.devcontainer/).
 
-### macOS (Apple Silicon)
-
+**macOS (Apple Silicon)**:
 ```bash
-brew install colima docker devpod
+brew install colima docker
 softwareupdate --install-rosetta --agree-to-license
 colima start --cpu 4 --memory 12 --vz-rosetta
 ```
 
-## Justfile Patterns
+## Documentation
 
-This repo uses [just](https://github.com/casey/just) with these conventions:
+| Document | Purpose |
+|----------|---------|
+| [GETTING_STARTED.md](GETTING_STARTED.md) | First-time setup, beginner concepts |
+| [LEARNING_PATH.md](LEARNING_PATH.md) | Suggested order for examples |
+| [AGENTS.md](AGENTS.md) | For AI agents and contributors |
 
-```just
-set dotenv-load                    # Load .env
-set shell := ["bash", "-lc"]       # Login shell for mise
+Each example directory has its own README with detailed explanations.
 
-default:                           # MUST be first recipe
-  @just --list
+## Links
 
-# --- SECTION NAME ---
-
-# Lazy AWS helper (only runs when called)
-_account:
-  @aws sts get-caller-identity | jq -r '.Account'
-
-# Use as: $(just _account)
-[group('eks')]
-some-recipe:
-  echo "Account: $(just _account)"
-```
-
-Key patterns:
-- **Lazy helpers**: `_account`, `_bucket`, `_username` - avoids slow startup
-- **jq everywhere**: `| jq -r '.field'` instead of `--query`/`sed`
-- **Groups**: `[group('eks')]` organizes `just --list` output
-- **Section dividers**: `# --- NAME ---` for visual separation
-- **Private recipes**: `_` prefix hides from listing
+- [DevSecOps Induction](https://soc.cyber.wa.gov.au/training/devsecops-induction/) - Structured training course
+- [Just command runner](https://github.com/casey/just) - How the justfile works
+- [Kustomize docs](https://kubectl.docs.kubernetes.io/guides/introduction/kustomize/) - Base/overlay pattern
