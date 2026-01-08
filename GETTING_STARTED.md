@@ -157,6 +157,15 @@ Usually waiting for resources. Check events:
 kubectl describe pod <pod-name> -n <namespace>
 ```
 
+### "Drupal site won't load"
+
+```bash
+cd drupal
+ddev status       # Check if running
+ddev start        # Start if stopped
+ddev logs -s web  # View errors
+```
+
 ## Getting Help
 
 - Run `just` to list all available commands with descriptions
@@ -173,8 +182,8 @@ k3d cluster stop tutorials
 # Delete local cluster completely
 k3d cluster delete tutorials
 
-# Stop Drupal
-just drupal-stop
+# Stop Drupal (use DDEV directly)
+cd drupal && ddev stop
 ```
 
 ## See Also

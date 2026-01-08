@@ -83,10 +83,20 @@ Run [Goose](https://block.github.io/goose/) with Claude models on Amazon Bedrock
 # 2. Configure AWS credentials
 aws configure sso && aws sso login
 
-# 3. Run Goose (auto-starts LiteLLM proxy)
+# 3. Run Goose in this project
 just goose                                                                     # Claude Sonnet (default)
 BEDROCK_MODEL=global.anthropic.claude-opus-4-5-20251101-v1:0 just goose       # Claude Opus
 BEDROCK_MODEL=global.anthropic.claude-haiku-4-5-20251001-v1:0 just goose      # Claude Haiku
+
+# 4. Run Goose in another project
+DIR=/path/to/project just goose                                                # Change working directory
+DIR=~/myapp just goose                                                         # Use any absolute path
+
+# 5. Advanced usage
+just goose --help                                                              # Show all options
+just goose session start --profile custom                                      # Custom session
+just goose session list                                                        # View past sessions
+just goose session resume <id>                                                 # Continue session
 ```
 
 **How it works**: LiteLLM runs as a background proxy translating OpenAI API calls to Bedrock. Goose connects via environment variables configured in the justfile. Includes `developer`, `computercontroller`, and `chatrecall` extensions for code editing, automation, and conversation memory.

@@ -5,21 +5,46 @@ Local Drupal development using [DDEV](https://ddev.com/) and [FrankenPHP](https:
 ## Quick Start
 
 ```bash
-just drupal-setup    # Install Drupal CMS (~3 min)
-just drupal-login    # Get admin login link
+just drupal-setup    # Full install (~3 min)
+cd drupal
+ddev drush user:login  # Get admin login link
 ```
 
 Site runs at <https://drupal.ddev.site/>
 
 ## Commands
 
+### Just Recipes (Complex Tasks)
+
 | Command | Description |
 |---------|-------------|
 | `just drupal-setup` | Full install from scratch |
-| `just drupal-start` | Start environment |
-| `just drupal-stop` | Stop environment |
-| `just drupal-login` | Get admin login link |
-| `just drupal-reset` | Delete and start fresh |
+| `just drupal-test` | Run search performance tests |
+| `just drupal-reset` | Delete and start fresh (with confirmation) |
+
+### DDEV Commands (Daily Use)
+
+After setup, work directly with DDEV in the `drupal/` directory:
+
+```bash
+cd drupal
+
+# Start/stop
+ddev start
+ddev stop
+
+# Admin access
+ddev drush user:login               # Get login link
+
+# Content generation
+ddev drush php:script scripts/generate_news_content.php  # 100k articles
+
+# Development
+ddev composer require drupal/redis  # Add module
+ddev exec drush status              # Run Drush
+ddev ssh                            # Shell into container
+ddev logs -s web                    # View web logs
+```
 
 ## What's Included
 

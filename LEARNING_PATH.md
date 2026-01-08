@@ -71,12 +71,13 @@ just rclone-test
 
 ```bash
 just drupal-setup
-just drupal-login
+cd drupal
+ddev drush user:login  # Get admin login
 ```
 
 **What you learn**: DDEV for local development, FrankenPHP (modern PHP runtime), and Composer/Drush for Drupal management.
 
-**Detailed guide**: [drupal/README.md](drupal/README.md) (if available)
+**Detailed guide**: [drupal/README.md](drupal/README.md)
 
 **Files to study**:
 - `drupal/Caddyfile` - Web server and PHP config in one file
@@ -84,7 +85,16 @@ just drupal-login
 
 **Exercises**:
 1. Create a new article in Drupal
-2. Run `just vegeta https://drupal.ddev.site/` for load testing
+2. Generate test content: `cd drupal && ddev drush php:script scripts/generate_news_content.php`
+3. Run performance test: `just drupal-test`
+
+**Daily commands** (use DDEV directly):
+```bash
+cd drupal
+ddev start              # Start environment
+ddev stop               # Stop environment
+ddev drush user:login   # Get admin login link
+```
 
 ---
 

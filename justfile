@@ -67,7 +67,38 @@ deploy CLUSTER=default_cluster: _awslogin (_eks-kubeconfig CLUSTER)
 
 # S3 Pod Identity demo (MySQL → S3 → rclone → restore)
 [group('eks')]
-s3-test: _awslogin _eks-kubeconfig _s3-clean _s3-infra _s3-deploy _s3-backup _s3-copy
+s3-test: _awslogin _eks-kubeconfig
+  # Cleanup previous resources
+  -kubectl delete -k s3-pod-identity/jobs 2>/dev/null
+  -kubectl delete -k s3-pod-identity 2>/dev/null
+  
+  # Deploy rclone CSI driver
+  @echo "Deploying rclone CSI driver..."
+  helm upgrade --install csi-rclone oci://ghcr.io/veloxpack/charts/csi-driver-rclone --namespace veloxpack --create-namespace
+  kubectl rollout restart ds/csi-rclone-node -n veloxpack
+  kubectl rollout status ds/csi-rclone-node -n veloxpack --timeout=60s
+  
+  # Deploy MySQL with Pod Identity
+  @echo "Deploying MySQL with Pod Identity..."
+  kubectl kustomize s3-pod-identity | envsubst | kubectl apply -f -
+  kubectl create configmap s3-config -n s3-test \
+    --from-literal=bucket=$(just _bucket) --from-literal=region=$AWS_REGION \
+    --dry-run=client -o yaml | kubectl apply -f -
+  kubectl wait --for=condition=Available deploy/mysql -n s3-test --timeout=120s
+  -kubectl wait --for=condition=Complete job/sysbench-prepare -n s3-test --timeout=180s
+  
+  # Backup MySQL to S3
+  @echo "Backing up MySQL to S3..."
+  kubectl apply -f s3-pod-identity/jobs/backup.yaml
+  kubectl wait --for=condition=Complete job/backup-to-s3 -n s3-test --timeout=300s
+  kubectl logs job/backup-to-s3 -n s3-test | tail -3
+  
+  # Copy backup via rclone CSI mount
+  @echo "Testing rclone CSI mount..."
+  kubectl apply -f s3-pod-identity/jobs/copy.yaml
+  kubectl wait --for=condition=Complete job/rclone-copy -n s3-test --timeout=120s
+  kubectl logs job/rclone-copy -n s3-test
+  
   @echo "S3 Pod Identity test complete ✓"
   @echo "Run 'just s3-restore' to test restore, 'just s3-cleanup' when done"
 
@@ -191,30 +222,6 @@ drupal-setup:
   ddev drush recipe ../recipes/drupal_cms_search
   ddev drush recipe ../recipes/drupal_cms_news
 
-# Start Drupal
-[group('drupal')]
-[working-directory('drupal')]
-drupal-start:
-  ddev start
-
-# Stop Drupal
-[group('drupal')]
-[working-directory('drupal')]
-drupal-stop:
-  ddev stop
-
-# Get Drupal login link
-[group('drupal')]
-[working-directory('drupal')]
-drupal-login:
-  ddev drush user:login
-
-# Generate 100k test articles
-[group('drupal')]
-[working-directory('drupal')]
-drupal-generate:
-  ddev drush php:script scripts/generate_news_content.php
-
 # Run search performance tests
 [group('drupal')]
 [working-directory('drupal')]
@@ -223,7 +230,7 @@ drupal-test:
   ddev drush search-api:index --batch-size=1000
   ddev drush php:script scripts/search_performance_test.php
 
-# Reset Drupal
+# Reset Drupal (delete and start fresh)
 [group('drupal')]
 [confirm("This will delete the Drupal instance. Continue?")]
 [working-directory('drupal')]
@@ -234,7 +241,19 @@ drupal-reset:
 
 # Validate kustomize + terraform + trivy + caddyfile
 [group('validate')]
-lint: _lint-kustomize _lint-terraform _lint-trivy _lint-caddyfile
+lint:
+  @echo "Validating kustomize..." && \
+    kubectl kustomize kustomize/overlays/local kustomize/overlays/training01 ducklake/overlays/local \
+      s3-pod-identity argocd secrets rclone/base drupal/kustomize >/dev/null && \
+    echo "Kustomize valid ✓"
+  @echo "Validating terraform..." && \
+    cd eksauto/terraform && terraform fmt -check -recursive && terraform init -backend=false -upgrade && terraform validate && \
+    echo "Terraform valid ✓"
+  @echo "Running trivy..." && \
+    trivy config --exit-code 1 --ignorefile eksauto/terraform/.trivyignore --skip-dirs .terraform eksauto/terraform && \
+    trivy config --exit-code 1 --ignorefile .trivyignore kustomize argocd ducklake s3-pod-identity secrets rclone drupal/kustomize && \
+    echo "Trivy passed ✓"
+  @echo "Validating Caddyfile..." && caddy fmt --diff drupal/Caddyfile && echo "Caddyfile valid ✓"
   @echo "All validations passed ✓"
 
 # Full AWS validation (creates EKS, runs tests, destroys)
@@ -271,12 +290,14 @@ codeql: prereqs
 
 # Goose/LiteLLM configuration - these env vars configure Goose to use the LiteLLM proxy
 # The proxy translates OpenAI-compatible API calls to AWS Bedrock format
-GOOSE_PROVIDER := "litellm"              # Use LiteLLM provider
-GOOSE_MODEL := "bedrock"                 # Alias defined in litellm command
-GOOSE_DISABLE_KEYRING := "true"          # Don't store credentials in system keyring
-BEDROCK_MODEL := "global.anthropic.claude-sonnet-4-5-20250929-v1:0"  # Default Claude model
-LITELLM_HOST := "http://127.0.0.1:54000" # Where Goose connects to LiteLLM
-LITELLM_API_KEY := "fake"                # LiteLLM doesn't validate this (uses AWS creds)
+# These can be overridden by setting environment variables before running 'just goose'
+GOOSE_PROVIDER := env_var_or_default("GOOSE_PROVIDER", "litellm")
+GOOSE_MODEL := env_var_or_default("GOOSE_MODEL", "bedrock")
+GOOSE_DISABLE_KEYRING := env_var_or_default("GOOSE_DISABLE_KEYRING", "true")
+BEDROCK_MODEL := env_var_or_default("BEDROCK_MODEL", "global.anthropic.claude-sonnet-4-5-20250929-v1:0")
+LITELLM_HOST := env_var_or_default("LITELLM_HOST", "http://127.0.0.1:54000")
+LITELLM_API_KEY := env_var_or_default("LITELLM_API_KEY", "fake")
+DIR := env_var_or_default("DIR", justfile_directory())  # Working directory for Goose
 
 # Start LiteLLM proxy for Bedrock (optional - for manual control)
 # Runs a local proxy that translates OpenAI API → Bedrock API
@@ -290,12 +311,14 @@ litellm : _awslogin
 # Start Goose with auto-managed LiteLLM proxy (recommended)
 # 1. Starts LiteLLM in background
 # 2. Waits for proxy to be ready
-# 3. Runs Goose with developer + computercontroller + chatrecall extensions
-# 4. Cleans up proxy on exit
+# 3. Runs Goose in specified directory (use DIR=/path to change)
+# 4. Accepts variadic args to override goose command (e.g., just goose --help)
+# 5. Cleans up proxy on exit
+# Default: goose session --with-builtin "developer,computercontroller,chatrecall"
 [group('goose')]
-goose MODEL="global.anthropic.claude-sonnet-4-5-20250929-v1:0":
+goose *ARGS="session --with-builtin developer,computercontroller,chatrecall":
   just litellm & sleep 5
-  -goose session --with-builtin "developer,computercontroller,chatrecall"
+  -cd {{DIR}} && goose {{ARGS}}
   pkill -f 54000
 
 # --- UTILITIES ---
@@ -376,47 +399,6 @@ _terraform-validate: _terraform-init
   terraform validate
 
 [private]
-_lint-kustomize:
-  @echo "Validating kustomize..."
-  kubectl kustomize kustomize/overlays/local >/dev/null
-  kubectl kustomize kustomize/overlays/training01 >/dev/null
-  kubectl kustomize ducklake/overlays/local >/dev/null
-  kubectl kustomize s3-pod-identity >/dev/null
-  kubectl kustomize argocd >/dev/null
-  kubectl kustomize secrets >/dev/null
-  kubectl kustomize rclone/base >/dev/null
-  kubectl kustomize drupal/kustomize >/dev/null
-  @echo "Kustomize valid ✓"
-
-[private]
-[working-directory('eksauto/terraform')]
-_lint-terraform:
-  @echo "Validating terraform..."
-  terraform fmt -check -recursive
-  terraform init -backend=false -upgrade
-  terraform validate
-  @echo "Terraform valid ✓"
-
-[private]
-_lint-trivy:
-  @echo "Running trivy misconfiguration scan..."
-  trivy config --exit-code 1 --ignorefile eksauto/terraform/.trivyignore --skip-dirs .terraform eksauto/terraform
-  trivy config --exit-code 1 --ignorefile .trivyignore kustomize
-  trivy config --exit-code 1 --ignorefile .trivyignore argocd
-  trivy config --exit-code 1 --ignorefile .trivyignore ducklake
-  trivy config --exit-code 1 --ignorefile .trivyignore s3-pod-identity
-  trivy config --exit-code 1 --ignorefile .trivyignore secrets
-  trivy config --exit-code 1 --ignorefile .trivyignore rclone
-  trivy config --exit-code 1 --ignorefile .trivyignore drupal/kustomize
-  @echo "Trivy scan passed ✓"
-
-[private]
-_lint-caddyfile:
-  @echo "Validating Caddyfile..."
-  caddy fmt --diff drupal/Caddyfile
-  @echo "Caddyfile valid ✓"
-
-[private]
 _validate-ddev: drupal-setup
   curl -sf http://drupal.ddev.site/ -o /dev/null
   just vegeta http://drupal.ddev.site/
@@ -432,37 +414,3 @@ _drupal-csi: _rclone
   kubectl wait --for=condition=Ready pod/drupal-s3-test -n drupal-perf --timeout=120s
   kubectl exec drupal-s3-test -n drupal-perf -- ls -la /srv
   @echo "Drupal CSI working ✓"
-
-[private]
-_s3-clean:
-  -@kubectl delete -k s3-pod-identity/jobs 2>/dev/null
-  -@kubectl delete -k s3-pod-identity 2>/dev/null
-
-[private]
-_s3-infra:
-  helm upgrade --install csi-rclone oci://ghcr.io/veloxpack/charts/csi-driver-rclone --namespace veloxpack --create-namespace
-  kubectl rollout restart ds/csi-rclone-node -n veloxpack
-  kubectl rollout status ds/csi-rclone-node -n veloxpack --timeout=60s
-
-[private]
-_s3-deploy: (_s3-deploy-inner `just _bucket`)
-
-[private]
-_s3-deploy-inner BUCKET:
-  @echo "Using bucket: {{BUCKET}}"
-  kubectl kustomize s3-pod-identity | envsubst | kubectl apply -f -
-  kubectl create configmap s3-config -n s3-test --from-literal=bucket={{BUCKET}} --from-literal=region=$AWS_REGION --dry-run=client -o yaml | kubectl apply -f -
-  kubectl wait --for=condition=Available deploy/mysql -n s3-test --timeout=120s
-  -kubectl wait --for=condition=Complete job/sysbench-prepare -n s3-test --timeout=180s
-
-[private]
-_s3-backup:
-  kubectl apply -f s3-pod-identity/jobs/backup.yaml
-  kubectl wait --for=condition=Complete job/backup-to-s3 -n s3-test --timeout=300s
-  kubectl logs job/backup-to-s3 -n s3-test | tail -3
-
-[private]
-_s3-copy:
-  kubectl apply -f s3-pod-identity/jobs/copy.yaml
-  kubectl wait --for=condition=Complete job/rclone-copy -n s3-test --timeout=120s
-  kubectl logs job/rclone-copy -n s3-test
