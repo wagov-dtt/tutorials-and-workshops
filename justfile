@@ -287,39 +287,30 @@ codeql: prereqs
   uvx --from sarif-tools sarif csv
 
 # --- GOOSE + BEDROCK ---
-
-# Goose/LiteLLM configuration - these env vars configure Goose to use the LiteLLM proxy
-# The proxy translates OpenAI-compatible API calls to AWS Bedrock format
-# These can be overridden by setting environment variables before running 'just goose'
-GOOSE_PROVIDER := env_var_or_default("GOOSE_PROVIDER", "litellm")
-GOOSE_MODEL := env_var_or_default("GOOSE_MODEL", "bedrock")
 GOOSE_DISABLE_KEYRING := env_var_or_default("GOOSE_DISABLE_KEYRING", "true")
-BEDROCK_MODEL := env_var_or_default("BEDROCK_MODEL", "global.anthropic.claude-sonnet-4-5-20250929-v1:0")
-LITELLM_HOST := env_var_or_default("LITELLM_HOST", "http://127.0.0.1:54000")
-LITELLM_API_KEY := env_var_or_default("LITELLM_API_KEY", "fake")
-DIR := env_var_or_default("DIR", justfile_directory())  # Working directory for Goose
+LITELLM_CONFIG := justfile_directory() / "litellm_goose.yaml"
 
-# Start LiteLLM proxy for Bedrock (optional - for manual control)
-# Runs a local proxy that translates OpenAI API → Bedrock API
-# Uses AWS credentials from environment (aws sso login)
-# Logs to /tmp/litellm.log
+# Start LiteLLM proxy server (for manual use or debugging)
+# Starts a local proxy that translates OpenAI API → AWS Bedrock API
+# Uses AWS credentials from environment (requires: aws sso login)
+# Config: litellm_goose.yaml defines 4 Bedrock models
+# Access: http://127.0.0.1:54000 (OpenAI-compatible endpoint)
 [group('goose')]
-litellm : _awslogin
-  -uvx --with boto3 litellm[proxy] --model bedrock/{{BEDROCK_MODEL}} --alias {{GOOSE_MODEL}} \
-    --host 127.0.0.1 --port 54000 > /tmp/litellm.log 2>&1
+litellm: _awslogin
+  @echo "Starting LiteLLM with config: {{LITELLM_CONFIG}}"
+  uvx --with boto3 litellm[proxy] --config {{LITELLM_CONFIG}} --host 127.0.0.1 --port 54000
 
-# Start Goose with auto-managed LiteLLM proxy (recommended)
-# 1. Starts LiteLLM in background
-# 2. Waits for proxy to be ready
-# 3. Runs Goose in specified directory (use DIR=/path to change)
-# 4. Accepts variadic args to override goose command (e.g., just goose --help)
-# 5. Cleans up proxy on exit
-# Default: goose session --with-builtin "developer,computercontroller,chatrecall"
+# Install Goose configuration to ~/.config/goose/config.yaml
+# Sets up Goose to use local LiteLLM proxy with claude-sonnet-4-5 as default
+# Enables: developer, chatrecall, extensionmanager, todo, skills, computercontroller
+# Run this once after installing Goose, then start LiteLLM and run Goose manually
 [group('goose')]
-goose *ARGS="session --with-builtin developer,computercontroller,chatrecall":
-  just litellm & sleep 5
-  -cd {{DIR}} && goose {{ARGS}}
-  pkill -f 54000
+configure-goose:
+  @mkdir -p ~/.config/goose
+  @cp -i goose-config.yaml ~/.config/goose/config.yaml
+  @echo "Goose configured ✓"
+  @echo "Config: ~/.config/goose/config.yaml"
+  @echo "Next: Start LiteLLM proxy with 'just litellm', then run 'goose session' in another terminal"
 
 # --- UTILITIES ---
 
