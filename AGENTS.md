@@ -97,7 +97,7 @@ some-recipe:
 - **Multi-line scripts**: Use `#!/usr/bin/env bash` shebang for complex logic
 - **No `&&` chains**: One command per line for readability
 - **Section dividers**: Use `# --- SECTION NAME ---` between logical groups
-- **Environment variables**: Define as constants at top (e.g., `GOOSE_PROVIDER := "litellm"`)
+- **Environment variables**: Define as constants at top (e.g., `default_cluster := "training01"`)
 - **Background processes**: Use `&` for background + `pkill -f <port>` for cleanup
 
 ## EKS Auto Mode Notes

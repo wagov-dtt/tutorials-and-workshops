@@ -286,31 +286,16 @@ codeql: prereqs
   gh codeql database analyze --download --format=sarif-latest --threads=0 --output=javascript_results.sarif codeql-db/javascript codeql/javascript-queries
   uvx --from sarif-tools sarif csv
 
-# --- GOOSE + BEDROCK ---
-GOOSE_DISABLE_KEYRING := env_var_or_default("GOOSE_DISABLE_KEYRING", "true")
-LITELLM_CONFIG := justfile_directory() / "litellm_goose.yaml"
+# --- LLMs ---
 
-# Start LiteLLM proxy server (for manual use or debugging)
-# Starts a local proxy that translates OpenAI API → AWS Bedrock API
-# Uses AWS credentials from environment (requires: aws sso login)
-# Config: litellm_goose.yaml defines 4 Bedrock models
-# Access: http://127.0.0.1:54000 (OpenAI-compatible endpoint)
-[group('goose')]
-litellm: _awslogin
-  @echo "Starting LiteLLM with config: {{LITELLM_CONFIG}}"
-  uvx --with boto3 litellm[proxy] --config {{LITELLM_CONFIG}} --host 127.0.0.1 --port 54000
-
-# Install Goose configuration to ~/.config/goose/config.yaml
-# Sets up Goose to use local LiteLLM proxy with claude-sonnet-4-5 as default
-# Enables: developer, chatrecall, extensionmanager, todo, skills, computercontroller
-# Run this once after installing Goose, then start LiteLLM and run Goose manually
-[group('goose')]
-configure-goose:
-  @mkdir -p ~/.config/goose
-  @cp -i goose-config.yaml ~/.config/goose/config.yaml
-  @echo "Goose configured ✓"
-  @echo "Config: ~/.config/goose/config.yaml"
-  @echo "Next: Start LiteLLM proxy with 'just litellm', then run 'goose session' in another terminal"
+# Run OpenCode AI agent with AWS Bedrock (in any directory)
+# Uses native Bedrock support - no proxy required
+# Auto-installs OpenCode globally via mise if not found
+# Use /models command to select a Bedrock model (e.g., Claude Sonnet 4.5)
+[group('llms')]
+opencode DIR=".": _awslogin
+  @which opencode >/dev/null || mise use -g opencode
+  cd {{DIR}} && opencode
 
 # --- UTILITIES ---
 

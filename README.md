@@ -18,7 +18,7 @@ This creates a local Kubernetes cluster with databases. No cloud account needed.
 
 | What you want | Command | Cloud needed? |
 |---------------|---------|---------------|
-| AI agent (Goose + Bedrock) | `just configure-goose` + `just litellm` | Yes (Bedrock) |
+| AI agent (OpenCode + Bedrock) | `just opencode ~/myproject` | Yes (Bedrock) |
 | Local K8s cluster | `just deploy-local` | No |
 | Analytics demo | `just ducklake-test` | No |
 | S3 filesystem mount | `just rclone-test` | No |
@@ -75,51 +75,17 @@ just argocd-ui      # ArgoCD UI URL
 just destroy-eks    # IMPORTANT: Destroy when done!
 ```
 
-## Goose AI Agent
+## OpenCode AI Agent
 
-Run [Goose](https://block.github.io/goose/) with AWS Bedrock models via LiteLLM proxy.
-
-### Quick Start
+Run [OpenCode](https://opencode.ai/) with AWS Bedrock.
 
 ```bash
 # 1. Enable Bedrock model access (AWS Console → Bedrock → Model access)
-# 2. Configure AWS credentials
-aws configure sso && aws sso login
-
-# 3. Install Goose config (one-time setup)
-just configure-goose
-
-# 4. Start LiteLLM proxy in one terminal
-just litellm
-
-# 5. Run Goose in another terminal
-goose session
+# 2. Run OpenCode (auto-installs, handles AWS SSO login)
+just opencode ~/myproject
 ```
 
-### How It Works
-
-1. **LiteLLM proxy** (`just litellm`) runs on `localhost:54000`, translating OpenAI API calls to AWS Bedrock
-2. **Goose config** (`goose-config.yaml`) configures Goose to use the proxy with `claude-sonnet-4-5` as default
-3. **Extensions enabled**: developer, chatrecall, extensionmanager, todo, skills, computercontroller
-
-### Available Models
-
-Configured in [`litellm_goose.yaml`](litellm_goose.yaml) - 4 models using global INFERENCE_PROFILE endpoints:
-
-| Model Name | Description | Input/Output Cost |
-|------------|-------------|-------------------|
-| `claude-sonnet-4-5` | Default - best for coding | $3.00 / $15.00 per M tokens |
-| `claude-opus-4-5` | Most capable - complex reasoning | $15.00 / $75.00 per M tokens |
-| `amazon-nova-2-lite` | Fastest - NEW Nov 2025 | $0.06 / $0.24 per M tokens |
-| `claude-haiku-4-5` | Fast - quick edits | $0.80 / $4.00 per M tokens |
-
-**Switch models** in Goose: Type `/config` in session, then change `GOOSE_MODEL` value (e.g., `claude-haiku-4-5`)
-
-**Cost estimate**: ~$0.03-0.75/session with Sonnet (10-50K tokens)
-
-### Use in Other Projects
-
-Refer to [`litellm_goose.yaml`](litellm_goose.yaml) and [`goose-config.yaml`](goose-config.yaml) to setup other projects or dev environments.
+Use `/models` in OpenCode to select a Bedrock model (e.g., Claude Sonnet 4.5). See [OpenCode Bedrock docs](https://opencode.ai/docs/providers/#amazon-bedrock) for advanced configuration.
 
 ## Validation
 
@@ -152,7 +118,7 @@ Each example directory has its own README with detailed explanations.
 
 ## Links
 
-- [Goose AI](https://block.github.io/goose/) - Agentic AI assistant ([Agentic AI Foundation](https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation) under Linux Foundation)
+- [OpenCode](https://opencode.ai/) - Open source AI coding agent with native Bedrock support
 - [DevSecOps Induction](https://soc.cyber.wa.gov.au/training/devsecops-induction/) - Structured training course
 - [Just command runner](https://github.com/casey/just) - How the justfile works
 - [Kustomize docs](https://kubectl.docs.kubernetes.io/guides/introduction/kustomize/) - Base/overlay pattern
