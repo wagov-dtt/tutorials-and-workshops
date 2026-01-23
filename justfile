@@ -299,6 +299,18 @@ opencode DIR=".": _awslogin
 
 # --- UTILITIES ---
 
+# Analyse website information architecture
+[group('util')]
+analyse-ia URL DEPTH="3" MAX_PAGES="500" CONCURRENCY="10":
+  uv run --project analyse-site-ia analyse-site-ia/crawl.py {{URL}} --depth {{DEPTH}} --max-pages {{MAX_PAGES}} --concurrency {{CONCURRENCY}}
+  @echo "Reports: analyse-site-ia/reports/"
+
+# Full site crawl (no page limit)
+[group('util')]
+analyse-ia-full URL DEPTH="4" CONCURRENCY="10":
+  uv run --project analyse-site-ia analyse-site-ia/crawl.py {{URL}} --depth {{DEPTH}} --max-pages 99999 --concurrency {{CONCURRENCY}}
+  @echo "Reports: analyse-site-ia/reports/"
+
 # Load test a URL (640 req/s for 10s)
 [group('util')]
 vegeta URL:

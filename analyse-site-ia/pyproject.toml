@@ -1,0 +1,14 @@
+[project]
+name = "analyse-site-ia"
+version = "0.3.0"
+description = "Crawl and map website information architecture"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.9",
+    "selectolax>=0.3",
+    "openpyxl>=3.1",
+    "diskcache>=5.6",
+]
+
+[dependency-groups]
+dev = []
