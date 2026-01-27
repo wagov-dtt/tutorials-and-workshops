@@ -44,6 +44,12 @@ resource "aws_iam_role_policy" "eks_s3_test" {
           aws_s3_bucket.test.arn,
           "${aws_s3_bucket.test.arn}/*"
         ]
+      },
+      {
+        # Required by rclone CSI driver for mount operations
+        Effect   = "Allow"
+        Action   = "s3:ListAllMyBuckets"
+        Resource = "*"
       }
     ]
   })

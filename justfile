@@ -264,6 +264,17 @@ validate-aws: _awslogin _terraform-validate
   just eks-access
   just s3-test
   just s3-restore
+  @echo ""
+  @echo "=== Manual inspection pause ==="
+  @echo "Cluster: $(kubectl config current-context)"
+  @echo "S3 bucket: test-$(just _account)"
+  @echo ""
+  @echo "Open a new terminal and run:"
+  @echo "  just -c k9s                              # Interactive cluster UI"
+  @echo "  just -c 'aws s3 ls s3://test-$(just _account)/'  # List bucket contents"
+  @echo "  just -c 'aws s3 ls s3://test-$(just _account)/backup1/'  # List backups"
+  @echo ""
+  @read -p "Press Enter to destroy resources (Ctrl+C to abort)..."
   just s3-cleanup
   just destroy-eks
   @echo "AWS validation passed ✓"

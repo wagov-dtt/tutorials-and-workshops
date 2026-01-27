@@ -30,6 +30,24 @@ just deploy         # Deploy kustomize manifests
 just destroy-eks    # IMPORTANT: destroys everything
 ```
 
+## Full Validation with Inspection Pause
+
+The `validate-aws` recipe runs the full test suite and pauses before destruction so you can manually inspect resources:
+
+```bash
+just validate-aws   # Creates cluster, runs tests, pauses for inspection, then destroys
+```
+
+During the pause, open another terminal and use `just -c` to run commands with AWS credentials loaded:
+
+```bash
+just -c k9s                                           # Interactive cluster UI
+just -c 'aws s3 ls s3://test-$(just _account)/'       # List S3 bucket
+just -c 'kubectl get pods -A'                         # List all pods
+```
+
+Press Enter to continue with destruction, or Ctrl+C to abort and keep resources running.
+
 ## What Terraform Creates
 
 | Resource | Purpose |

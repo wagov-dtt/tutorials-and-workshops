@@ -86,7 +86,22 @@ flowchart TB
 - **rclone server-side copy**: Copying between S3 prefixes without downloading locally
 - **CSI S3 mounts**: Mounting S3 buckets into pods for debugging and inspection
 
-## Debug Pod
+## Debugging
+
+### Interactive Cluster UI
+
+```bash
+just -c k9s  # Opens k9s with AWS credentials loaded
+```
+
+### S3 Bucket Inspection
+
+```bash
+just -c 'aws s3 ls s3://test-$(just _account)/'         # List bucket root
+just -c 'aws s3 ls s3://test-$(just _account)/backup1/' # List backup contents
+```
+
+### Debug Pod
 
 ```bash
 kubectl exec -it debug -n s3-test -- sh
@@ -94,6 +109,16 @@ ls /mnt/s3  # S3 bucket contents via rclone CSI
 ```
 
 Uses the [veloxpack rclone CSI driver](https://github.com/veloxpack/csi-driver-rclone) to mount S3 as a filesystem.
+
+### CSI Driver Logs
+
+If S3 mounts fail, check the CSI driver logs:
+
+```bash
+kubectl logs -n veloxpack -l app=csi-rclone-node --tail=50
+```
+
+Common issue: 403 errors on `ListBuckets` indicate the Pod Identity IAM role is missing `s3:ListAllMyBuckets` permission.
 
 ## Key Patterns
 
