@@ -167,11 +167,17 @@ just secrets-test
 
 ---
 
-## Level 3: GitOps (Advanced)
+## Level 3: GitOps (Optional)
 
 ### 3.1 ArgoCD
 
+> **Requires AWS Identity Center.** Skip if Identity Center isn't configured.
+
 ```bash
+# First enable ArgoCD
+cd eksauto/terraform && terraform apply -var="enable_argocd=true"
+
+# Then use ArgoCD
 just argocd-ui
 just argocd-deploy
 ```

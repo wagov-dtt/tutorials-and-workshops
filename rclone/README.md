@@ -84,7 +84,6 @@ stringData:
 ## See Also
 
 - [LEARNING_PATH.md](../LEARNING_PATH.md#13-csi-volumes-with-rclone) - Step-by-step walkthrough
-- [GLOSSARY.md](../GLOSSARY.md#csi-container-storage-interface) - CSI definition
-- [GLOSSARY.md](../GLOSSARY.md#rclone) - rclone definition
+- [GLOSSARY.md](../GLOSSARY.md) - Definitions (CSI, rclone)
 - [s3-pod-identity/](../s3-pod-identity/) - CSI mounts with real AWS S3 and Pod Identity
 - [rclone documentation](https://rclone.org/) - Official rclone docs

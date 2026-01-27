@@ -70,7 +70,6 @@ kubectl port-forward svc/postgres 5432:5432 -n databases  # Access Postgres
 ## See Also
 
 - [LEARNING_PATH.md](../LEARNING_PATH.md#12-ducklake-analytics) - Step-by-step walkthrough
-- [GLOSSARY.md](../GLOSSARY.md#duckdb) - DuckDB definition
-- [GLOSSARY.md](../GLOSSARY.md#olap-online-analytical-processing) - OLAP explanation
+- [GLOSSARY.md](../GLOSSARY.md) - Definitions (DuckDB, OLAP)
 - [rclone/](../rclone/) - More rclone CSI examples
 - [DuckDB documentation](https://duckdb.org/) - Official DuckDB docs

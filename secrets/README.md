@@ -94,7 +94,6 @@ ESO syncs changes within the refresh interval (default: 1 hour, configured to 5 
 ## See Also
 
 - [LEARNING_PATH.md](../LEARNING_PATH.md#23-external-secrets) - Step-by-step walkthrough
-- [GLOSSARY.md](../GLOSSARY.md#secrets-manager) - Secrets Manager definition
-- [GLOSSARY.md](../GLOSSARY.md#pod-identity) - Pod Identity definition
+- [GLOSSARY.md](../GLOSSARY.md) - Definitions (Secrets Manager, Pod Identity)
 - [eksauto/](../eksauto/) - Terraform that creates the IAM role and secret
 - [External Secrets Operator docs](https://external-secrets.io/) - Official ESO documentation

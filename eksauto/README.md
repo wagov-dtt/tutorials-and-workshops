@@ -80,26 +80,9 @@ Press Enter to continue with destruction, or Ctrl+C to abort and keep resources 
 - **terraform-aws-modules**: Using community modules for VPC and EKS
 - **Managed observability**: CloudWatch Container Insights vs self-hosted Prometheus
 
-## ArgoCD Capability
+## ArgoCD (Optional)
 
-[EKS Capability for ArgoCD](https://docs.aws.amazon.com/eks/latest/userguide/argocd-comparison.html) is enabled by default. Terraform auto-discovers your Identity Center instance.
-
-If Identity Center isn't configured, Terraform fails with clear guidance—either configure it or disable ArgoCD:
-
-```bash
-terraform apply -var="enable_argocd=false"
-```
-
-To add yourself as ArgoCD admin:
-
-```bash
-# Get your user ID
-STORE_ID=$(aws sso-admin list-instances --query 'Instances[0].IdentityStoreId' --output text)
-aws identitystore list-users --identity-store-id $STORE_ID
-
-# Apply with admin user
-terraform apply -var="idc_admin_user_id=YOUR_USER_ID"
-```
+ArgoCD EKS Capability requires AWS Identity Center and is disabled by default. See [argocd/README.md](../argocd/) for setup if needed.
 
 ## Observability
 
@@ -141,10 +124,7 @@ If destroy fails, check for:
 ## See Also
 
 - [LEARNING_PATH.md](../LEARNING_PATH.md#21-create-an-eks-cluster) - Step-by-step walkthrough
-- [GLOSSARY.md](../GLOSSARY.md#eks-elastic-kubernetes-service) - EKS definition
-- [GLOSSARY.md](../GLOSSARY.md#eks-auto-mode) - Auto Mode explanation
-- [GLOSSARY.md](../GLOSSARY.md#terraform) - Terraform definition
-- [argocd/](../argocd/) - GitOps with ArgoCD
+- [GLOSSARY.md](../GLOSSARY.md) - Definitions (EKS, Auto Mode, Terraform, Pod Identity)
 - [s3-pod-identity/](../s3-pod-identity/) - Pod Identity examples
 - [secrets/](../secrets/) - External Secrets examples
-- [terraform-aws-modules/eks](https://github.com/terraform-aws-modules/terraform-aws-eks) - EKS module documentation
+- [terraform-aws-modules/eks](https://github.com/terraform-aws-modules/terraform-aws-eks) - EKS module docs

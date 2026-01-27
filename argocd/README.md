@@ -30,13 +30,18 @@ Login to the UI with your Identity Center credentials.
 
 ## How It Works
 
-ArgoCD is enabled by default via Terraform. When you run `just setup-eks`:
+ArgoCD EKS Capability is **disabled by default** (requires Identity Center). To enable:
 
-1. Terraform auto-discovers the Identity Center instance
-2. Creates the ArgoCD EKS Capability (AWS-managed)
-3. Prints the ArgoCD UI URL
+```bash
+# Enable during cluster creation
+cd eksauto/terraform
+terraform apply -var="enable_argocd=true"
 
-If Identity Center isn't configured, Terraform fails with clear guidance.
+# Or create capability after cluster exists
+just argocd-create
+```
+
+If Identity Center isn't configured, capability creation will fail.
 
 ## What Gets Deployed
 
@@ -66,25 +71,19 @@ argocd/
 
 ## Adding an Admin User
 
-By default, ArgoCD is created without RBAC mappings (anyone in Identity Center can view). To add an admin:
+By default, anyone in Identity Center can view ArgoCD. To add yourself as admin:
 
 ```bash
-# Get the Identity Center user ID
-STORE_ID=$(aws sso-admin list-instances --query 'Instances[0].IdentityStoreId' --output text)
-aws identitystore list-users --identity-store-id $STORE_ID
-
-# Recreate with admin user
-cd eksauto/terraform
-terraform apply -var="idc_admin_user_id=YOUR_USER_ID"
+just argocd-ui   # Auto-adds current SSO user as admin and prints URL
 ```
 
 ## Disabling ArgoCD
 
-To disable ArgoCD (no Identity Center or not needed):
+ArgoCD is disabled by default. If you enabled it and want to disable:
 
 ```bash
-just setup-eks ARGOCD=false
-# Or directly:
+just argocd-delete
+# Or via Terraform:
 cd eksauto/terraform && terraform apply -var="enable_argocd=false"
 ```
 

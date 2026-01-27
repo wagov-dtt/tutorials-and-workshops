@@ -82,7 +82,6 @@ After you're comfortable with local examples:
 | 1 | `just setup-eks` | Terraform, EKS Auto Mode |
 | 2 | `just s3-test` | Pod Identity, IAM roles |
 | 3 | `just secrets-deploy` | External Secrets Operator |
-| 4 | `just argocd-ui` | GitOps with ArgoCD |
 
 **Cost warning**: EKS costs ~$80-100/month. Always run `just destroy-eks` when done!
 
@@ -105,8 +104,6 @@ spec:
     - name: web
       image: nginx
 ```
-
-See [GLOSSARY.md](GLOSSARY.md) for more Kubernetes terms.
 
 ### What is Kustomize?
 
@@ -170,8 +167,7 @@ ddev logs -s web  # View errors
 
 - Run `just` to list all available commands with descriptions
 - Each directory has a README.md explaining that example
-- Check [GLOSSARY.md](GLOSSARY.md) for term definitions
-- See [LEARNING_PATH.md](LEARNING_PATH.md) for the recommended order
+- See [GLOSSARY.md](GLOSSARY.md) and [LEARNING_PATH.md](LEARNING_PATH.md) for reference
 
 ## Cleanup
 

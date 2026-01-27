@@ -25,7 +25,7 @@ This creates a local Kubernetes cluster with databases. No cloud account needed.
 | Local Drupal CMS | `just drupal-setup` | No |
 | AWS EKS cluster | `just setup-eks` | Yes |
 | S3 backup demo | `just s3-test` | Yes |
-| GitOps with ArgoCD | `just argocd-ui` | Yes |
+| GitOps with ArgoCD | `just argocd-ui` | Yes (+ Identity Center) |
 
 Run `just` to see all available commands.
 
@@ -71,7 +71,6 @@ just setup-eks      # Create EKS cluster (~15 min)
 just deploy         # Deploy base manifests
 just s3-test        # S3 Pod Identity demo
 just secrets-deploy # External Secrets demo
-just argocd-ui      # ArgoCD UI URL
 just destroy-eks    # IMPORTANT: Destroy when done!
 ```
 
