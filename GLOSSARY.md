@@ -27,6 +27,16 @@ An identity for pods. When a pod needs to access the Kubernetes API or external 
 
 ## AWS Concepts
 
+### IAM (Identity and Access Management)
+AWS service for managing access to resources. IAM roles define what actions are allowed; IAM policies attach to roles, users, or groups. Pod Identity uses IAM roles to grant pods AWS access without storing credentials.
+
+**Used in**: [eksauto/](eksauto/), [s3-pod-identity/](s3-pod-identity/), [secrets/](secrets/)
+
+### VPC (Virtual Private Cloud)
+An isolated network in AWS where you launch resources. VPCs contain subnets (public/private), route tables, and security groups. EKS clusters run inside VPCs.
+
+**Used in**: [eksauto/](eksauto/)
+
 ### EKS (Elastic Kubernetes Service)
 AWS's managed Kubernetes offering. AWS handles the control plane (API server, etcd, scheduler), you manage the workloads.
 
@@ -69,6 +79,11 @@ Workloads focused on complex queries over large datasets - aggregations, reporti
 **Used in**: [ducklake/](ducklake/)
 
 ## Tools
+
+### ADOT (AWS Distro for OpenTelemetry)
+AWS-supported distribution of OpenTelemetry for collecting metrics, traces, and logs. Used by the CloudWatch Observability addon in EKS.
+
+**Used in**: [eksauto/](eksauto/)
 
 ### DuckDB
 An embedded analytical database (like SQLite, but for analytics). Runs in-process, no server needed. Excellent for querying Parquet files, CSV, and other formats directly.

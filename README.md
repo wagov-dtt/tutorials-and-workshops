@@ -37,6 +37,7 @@ Run `just` to see all available commands.
 | [ducklake/](ducklake/) | DuckDB analytics with S3 storage | ⭐ Beginner |
 | [rclone/](rclone/) | Mount S3 as filesystem (CSI driver) | ⭐⭐ Intermediate |
 | [drupal/](drupal/) | PHP development with DDEV | ⭐⭐ Intermediate |
+| [analyse-site-ia/](analyse-site-ia/) | Website IA crawler and reporting | ⭐⭐ Intermediate |
 | [s3-pod-identity/](s3-pod-identity/) | EKS Pod Identity, MySQL backups | ⭐⭐⭐ Advanced |
 | [secrets/](secrets/) | External Secrets with AWS Secrets Manager | ⭐⭐⭐ Advanced |
 | [argocd/](argocd/) | GitOps with ArgoCD | ⭐⭐⭐ Advanced |
@@ -64,7 +65,7 @@ just drupal-setup   # Drupal CMS
 
 ## AWS Examples
 
-**Cost warning**: EKS clusters cost ~$80-100/month. Always destroy when done!
+**Cost warning**: EKS clusters cost money—see [eksauto/](eksauto/) for details. Always destroy when done!
 
 ```bash
 just setup-eks      # Create EKS cluster (~15 min)

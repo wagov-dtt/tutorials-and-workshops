@@ -100,7 +100,7 @@ ddev drush user:login   # Get admin login link
 
 ## Level 2: AWS Basics (Requires AWS Account)
 
-**Cost warning**: These examples cost money. Budget ~$80-100/month for EKS. Always destroy resources when done.
+**Cost warning**: EKS clusters cost money—see [eksauto/README.md](eksauto/) for cost breakdown. Always destroy when done.
 
 ### 2.1 Create an EKS Cluster
 

@@ -39,6 +39,15 @@ just prereqs
 just deploy-local
 ```
 
+**Success looks like:**
+```
+INFO[0000] Creating cluster 'tutorials'
+INFO[0003] Cluster 'tutorials' created successfully!
+namespace/databases created
+deployment.apps/postgres created
+...
+```
+
 This creates a local [k3d](https://k3d.io/) cluster (Kubernetes in Docker) with PostgreSQL, MySQL, MongoDB, and Elasticsearch running.
 
 ## Explore What You Built
@@ -83,41 +92,11 @@ After you're comfortable with local examples:
 | 2 | `just s3-test` | Pod Identity, IAM roles |
 | 3 | `just secrets-deploy` | External Secrets Operator |
 
-**Cost warning**: EKS costs ~$80-100/month. Always run `just destroy-eks` when done!
+**Cost warning**: EKS clusters cost money—see [eksauto/](eksauto/) for details. Always run `just destroy-eks` when done!
 
 Once you've completed this guide, continue with [LEARNING_PATH.md](LEARNING_PATH.md) for detailed walkthroughs of each example.
 
 ## Key Concepts
-
-### What is Kubernetes?
-
-Kubernetes (K8s) runs containers across multiple machines. You describe what you want in YAML manifests, and Kubernetes makes it happen.
-
-```yaml
-# A simple pod - one container running nginx
-apiVersion: v1
-kind: Pod
-metadata:
-  name: my-app
-spec:
-  containers:
-    - name: web
-      image: nginx
-```
-
-### What is Kustomize?
-
-[Kustomize](https://kustomize.io/) lets you customize Kubernetes YAML without templates. Instead of `{{ .Values.replicas }}` placeholders, you write patches:
-
-```yaml
-# kustomization.yaml - combines resources and patches
-resources:
-  - deployment.yaml
-patches:
-  - patch-replicas.yaml
-```
-
-It's built into kubectl: `kubectl apply -k ./my-directory/`
 
 ### What is Just?
 
@@ -127,6 +106,8 @@ It's built into kubectl: `kubectl apply -k ./my-directory/`
 just              # List all recipes
 just deploy-local # Run a specific recipe
 ```
+
+For definitions of Kubernetes, Kustomize, and other terms, see [GLOSSARY.md](GLOSSARY.md).
 
 ## Troubleshooting
 

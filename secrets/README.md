@@ -7,7 +7,7 @@
 Secrets don't belong in git, but Kubernetes Secrets need to exist in the cluster. External Secrets Operator bridges this gap:
 
 1. **Secrets stay in Secrets Manager**: Single source of truth with proper access controls and audit logging
-2. **Auto-sync to Kubernetes**: ESO creates and updates K8s Secrets from external sources
+2. **Auto-sync to Kubernetes**: The operator (ESO) creates and updates K8s Secrets from external sources
 3. **Rotation works**: Update a secret in AWS, and ESO syncs it (configurable interval)
 4. **No credentials in cluster**: Uses Pod Identity—no AWS keys stored anywhere
 

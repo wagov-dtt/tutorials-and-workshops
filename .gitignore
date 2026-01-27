@@ -11,3 +11,8 @@ __pycache__/
 .mnt
 .codeql/
 .aider*
+
+# DDEV boilerplate (auto-generated on ddev start)
+drupal/.ddev/**/*.example
+drupal/.ddev/**/README*.txt
+drupal/.ddev/.homeadditions/
