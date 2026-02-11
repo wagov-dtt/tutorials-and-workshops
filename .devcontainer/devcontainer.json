@@ -1,12 +1,12 @@
 {
-	"name": "wagov-dtt devcontainer-base",
-	"image": "ghcr.io/wagov-dtt/devcontainer-base",
-	"privileged": true,
-	"runArgs": [
-		"--cgroupns=host"
-	],
-	"mounts": [
-		"source=dind-var-lib-docker,target=/var/lib/docker,type=volume"
-	],
-	"remoteUser": "vscode"
+  "name": "tutorials-and-workshops",
+  "image": "ghcr.io/wagov-dtt/devcontainer-base",
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+  "onCreateCommand": "docker-init.sh && mise install",
+  "remoteEnv": {
+    "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+  },
+  "remoteUser": "vscode"
 }
