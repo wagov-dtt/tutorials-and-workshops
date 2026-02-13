@@ -33,17 +33,23 @@ spec:
       containers:
       - name: mysqlsh-restore
         image: container-registry.oracle.com/mysql/community-operator:9.5
+        env:
+        - name: MYSQL_PWD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_ROOT_PASSWORD
         command: ["sh", "-c"]
         args:
         - |
           echo "Creating target database sbtest_restored..."
-          mysqlsh --uri root:testpass@mysql --sql -e "CREATE DATABASE IF NOT EXISTS sbtest_restored;"
+          mysqlsh --uri root@mysql --sql -e "CREATE DATABASE IF NOT EXISTS sbtest_restored;"
           
           echo "Restoring dump to sbtest_restored..."
-          mysqlsh --js --uri root:testpass@mysql -e "util.loadDump('/backup', {schema: 'sbtest_restored', ignoreExistingObjects: true, threads: 2})"
+          mysqlsh --js --uri root@mysql -e "util.loadDump('/backup', {schema: 'sbtest_restored', ignoreExistingObjects: true, threads: 2})"
           
           echo "Verifying restore..."
-          mysqlsh --uri root:testpass@mysql --sql -e "SHOW TABLES FROM sbtest_restored; SELECT COUNT(*) AS row_count FROM sbtest_restored.sbtest1;"
+          mysqlsh --uri root@mysql --sql -e "SHOW TABLES FROM sbtest_restored; SELECT COUNT(*) AS row_count FROM sbtest_restored.sbtest1;"
         volumeMounts:
         - name: backup
           mountPath: /backup

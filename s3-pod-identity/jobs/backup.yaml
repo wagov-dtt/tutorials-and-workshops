@@ -15,10 +15,16 @@ spec:
       initContainers:
       - name: mysqlsh-dump
         image: container-registry.oracle.com/mysql/community-operator:9.5
+        env:
+        - name: MYSQL_PWD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_ROOT_PASSWORD
         command: ["sh", "-c"]
         args:
         - |
-          mysqlsh --js --uri root:testpass@mysql -e "util.dumpInstance('/backup', {threads: 2, compression: 'zstd'})"
+          mysqlsh --js --uri root@mysql -e "util.dumpInstance('/backup', {threads: 2, compression: 'zstd'})"
           echo "Backup complete: $(du -sh /backup)"
         volumeMounts:
         - name: backup

@@ -74,11 +74,23 @@ spec:
       initContainers:
       - name: wait-mysql
         image: percona:8.0
-        command: ["sh", "-c", "until mysqladmin ping -h mysql -u root -ptestpass; do sleep 2; done"]
+        env:
+        - name: MYSQL_PWD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_ROOT_PASSWORD
+        command: ["sh", "-c", "until mysqladmin ping -h mysql -u root; do sleep 2; done"]
       containers:
       - name: sysbench
         image: perconalab/sysbench:1.1
+        env:
+        - name: MYSQL_PWD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_ROOT_PASSWORD
         command: ["sysbench"]
         args: ["--db-driver=mysql", "--mysql-host=mysql", "--mysql-user=root", 
-               "--mysql-password=testpass", "--mysql-db=sbtest", 
+               "--mysql-db=sbtest", 
                "--tables=2", "--table-size=1000", "oltp_read_write", "prepare"]
