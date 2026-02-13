@@ -15,7 +15,7 @@ spec:
         repoURL: https://github.com/wagov-dtt/tutorials-and-workshops.git
         revision: HEAD
         directories:
-          - path: kustomize-argocd/apps/*
+          - path: argocd/apps/*
   template:
     metadata:
       # App name = directory name

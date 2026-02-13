@@ -55,7 +55,7 @@ Press Enter to continue with destruction, or Ctrl+C to abort and keep resources 
 | S3 bucket `tfstate-<account>` | Terraform state with native S3 locking (auto-created) |
 | VPC + subnets | Network infrastructure (3 AZs) |
 | EKS cluster | Auto Mode enabled, latest K8s version (auto-detected) |
-| EKS addons | snapshot-controller, CloudWatch Observability, EFS CSI |
+| EKS addons | snapshot-controller, CloudWatch Observability |
 | IAM role `eks-s3-test` | S3 access for Pod Identity |
 | IAM role `eks-secrets-manager` | Secrets Manager access for External Secrets Operator |
 | S3 bucket `test-<account>` | Backup storage for examples |

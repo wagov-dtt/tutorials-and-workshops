@@ -12,6 +12,13 @@ spec:
       labels:
         app: serves3
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: rclone
         image: rclone/rclone:1.72
@@ -20,6 +27,10 @@ spec:
         volumeMounts:
         - {name: data, mountPath: /data}
         command: ["rclone", "serve", "s3", "/data", "--addr=0.0.0.0:8080"]
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
       volumes:
       - {name: data, emptyDir: {}}
 ---
@@ -61,6 +72,13 @@ spec:
       labels:
         app: filebrowser
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: filebrowser
         image: filebrowser/filebrowser:v2.32.0
@@ -69,6 +87,10 @@ spec:
         volumeMounts:
         - name: s3-data
           mountPath: /srv
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
       volumes:
         - name: s3-data
           csi:

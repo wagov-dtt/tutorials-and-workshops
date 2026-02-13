@@ -29,7 +29,7 @@ That's it! Everything else (kubectl, k3d, terraform, etc.) is installed automati
 
 ```bash
 # Clone the repo
-git clone https://github.com/wagov/tutorials-and-workshops
+git clone https://github.com/wagov-dtt/tutorials-and-workshops
 cd tutorials-and-workshops
 
 # Install all tools
