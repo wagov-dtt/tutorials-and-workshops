@@ -1,12 +1,8 @@
-# AGENTS.md
+# Contributing
 
 This repo contains concise, self-contained examples for DevOps and Kubernetes workflows. Examples here are referenced from other projects.
 
 **Note**: This is a training/examples repo. Local `just` recipes matter more than CI automation. No GitHub Actions workflows are needed—validation happens locally via `just lint`.
-
-## About AGENTS.md
-
-This file follows the [AGENTS.md standard](http://agents.md/) from OpenAI, now part of the [Agentic AI Foundation (AAIF)](https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation) under the Linux Foundation. It provides project-specific guidance for AI coding agents like [Goose](https://block.github.io/goose), Cursor, Copilot, and others.
 
 ## Philosophy: Grug-Brained Development
 
@@ -39,7 +35,6 @@ This repo follows ["grug-brained"](https://grugbrain.dev) principles. The goal i
 - Keep examples minimal and document *why* decisions were made (not just how)
 - Use `kubectl kustomize <dir>` to validate manifests before committing
 - Test locally with `just deploy-local` (k3d) before deploying to EKS
-- **Agent workflow**: Agents can run local recipes (k3d, DDEV, `just lint`, `just validate-local`) but should NOT run recipes that use credentials against remote targets (AWS, EKS, terraform apply)
 
 ## Structure
 
