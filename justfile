@@ -207,7 +207,7 @@ secrets-cleanup:
 
 # --- DRUPAL ---
 
-# Setup Drupal CMS with FrankenPHP
+# Setup Drupal CMS with FrankenPHP (DDEV)
 [group('drupal')]
 [working-directory('drupal')]
 drupal-setup:
@@ -222,7 +222,7 @@ drupal-setup:
   ddev drush recipe ../recipes/drupal_cms_search
   ddev drush recipe ../recipes/drupal_cms_news
 
-# Run search performance tests
+# Run search performance tests (DDEV)
 [group('drupal')]
 [working-directory('drupal')]
 drupal-test:
@@ -237,14 +237,43 @@ drupal-test:
 drupal-reset:
   -ddev delete -O -y
 
+# Build Drupal CMS image locally (wagov-dtt/drupal-container-images approach)
+[group('drupal')]
+drupal-build:
+  docker build -t drupal-cms:local drupal/
+
+# Deploy Drupal CMS to k3d with rclone CSI S3
+[group('drupal')]
+drupal-k3d: _k3d _rclone deploy-local
+  kubectl apply -k drupal/kustomize --server-side
+  kubectl wait --for=condition=Ready pod -l app=drupal -n drupal-perf --timeout=180s
+  @echo "Drupal deployed ✓"
+  @just drupal-k3d-url
+
+# Get Drupal k3d URL
+[group('drupal')]
+drupal-k3d-url:
+  @echo "Drupal URL: http://$$(kubectl get svc drupal -n drupal-perf -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
+
+# Cleanup Drupal k3d resources
+[group('drupal')]
+drupal-k3d-clean:
+  -kubectl delete -k drupal/kustomize
+
 # --- VALIDATION ---
 
 # Validate kustomize + terraform + trivy + caddyfile
 [group('validate')]
 lint:
   @echo "Validating kustomize..." && \
-    kubectl kustomize kustomize/overlays/local kustomize/overlays/training01 ducklake/overlays/local \
-      s3-pod-identity argocd secrets rclone/base drupal/kustomize >/dev/null && \
+    kubectl kustomize kustomize/overlays/local >/dev/null && \
+    kubectl kustomize kustomize/overlays/training01 >/dev/null && \
+    kubectl kustomize ducklake/overlays/local >/dev/null && \
+    kubectl kustomize s3-pod-identity >/dev/null && \
+    kubectl kustomize argocd >/dev/null && \
+    kubectl kustomize secrets >/dev/null && \
+    kubectl kustomize rclone/base >/dev/null && \
+    kubectl kustomize drupal/kustomize >/dev/null && \
     echo "Kustomize valid ✓"
   @echo "Validating terraform..." && \
     cd eksauto/terraform && terraform fmt -check -recursive && terraform init -backend=false -upgrade && terraform validate && \
@@ -253,7 +282,7 @@ lint:
     trivy config --exit-code 1 --ignorefile eksauto/terraform/.trivyignore --skip-dirs .terraform eksauto/terraform && \
     trivy config --exit-code 1 --ignorefile .trivyignore kustomize argocd ducklake s3-pod-identity secrets rclone drupal/kustomize && \
     echo "Trivy passed ✓"
-  @echo "Validating Caddyfile..." && caddy fmt --diff drupal/Caddyfile && echo "Caddyfile valid ✓"
+  @echo "Validating Caddyfile..." && caddy fmt --diff drupal/conf/Caddyfile && echo "Caddyfile valid ✓"
   @echo "All validations passed ✓"
 
 # Full AWS validation (creates EKS, runs tests, destroys)
@@ -307,6 +336,14 @@ codeql: prereqs
 opencode DIR=".": _awslogin
   @which opencode >/dev/null || mise use -g opencode
   cd {{DIR}} && opencode
+
+# Security audit: Analyse codebase against OWASP ASVS 5.0 and grugbrain.dev principles
+# Default model: Claude Opus 4.6 via Bedrock with high reasoning effort
+# Creates/updates succinct, prioritised ISSUES.md in the target directory
+[group('security')]
+audit DIR="." MODEL="amazon-bedrock/global.anthropic.claude-opus-4-6-v1" VARIANT="high": _awslogin
+  @which opencode >/dev/null || mise use -g opencode
+  cd {{DIR}} && OPENCODE_YOLO=true opencode run -m {{MODEL}} --variant {{VARIANT}} "Analyse codebase against OWASP ASVS 5.0 and grugbrain.dev. Update ISSUES.md with: prioritised table (Critical→Low), file:line references, OWASP IDs with URLs, grugbrain principles, actionable fixes. Skip .env files. Max 10-15 exploitable issues only. No filler."
 
 # --- UTILITIES ---
 
@@ -365,6 +402,7 @@ _sso-role-arn:
 _k3d:
   @which k3d > /dev/null || just prereqs
   k3d cluster create tutorials || k3d cluster start tutorials
+  kubectl config use-context k3d-tutorials
 
 [private]
 _ducklake: _k3d
@@ -404,12 +442,7 @@ _validate-ddev: drupal-setup
   @echo "DDEV working ✓"
 
 [private]
-_validate-k3d: deploy-local rclone-test _drupal-csi
+_validate-k3d: deploy-local rclone-test drupal-k3d
   @echo "k3d validation passed ✓"
 
-[private]
-_drupal-csi: _rclone
-  kubectl apply -k drupal/kustomize
-  kubectl wait --for=condition=Ready pod/drupal-s3-test -n drupal-perf --timeout=120s
-  kubectl exec drupal-s3-test -n drupal-perf -- ls -la /srv
-  @echo "Drupal CSI working ✓"
+
