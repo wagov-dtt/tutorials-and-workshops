@@ -20,6 +20,7 @@ COPY Caddyfile /etc/caddy/Caddyfile
 ENV SERVER_NAME=:8080
 ENV SERVER_ROOT=/var/www/html/web
 
+USER www-data
 EXPOSE 8080
 
 CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]

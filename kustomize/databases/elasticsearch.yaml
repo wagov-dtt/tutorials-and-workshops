@@ -37,8 +37,6 @@ spec:
         env:
         - name: discovery.type
           value: single-node
-        - name: xpack.security.enabled
-          value: "false"
         - name: ES_JAVA_OPTS
           value: "-Xms256m -Xmx256m"
         envFrom:

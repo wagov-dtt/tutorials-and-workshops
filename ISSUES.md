@@ -64,7 +64,7 @@
 
 ## 7. `just lint` does not validate the real Drupal Caddyfile path
 - **Priority:** P2
-- **Status:** Open
+- **Status:** Fixed
 - **Location:** `justfile:279`, actual file is `drupal/Caddyfile`
 - **Category:** complexity
 - **Standard reference:** grugbrain.dev “locality of behavior” / “complexity very bad”
@@ -73,7 +73,7 @@
 
 ## 8. Container hardening is inconsistent across examples
 - **Priority:** P2
-- **Status:** Open
+- **Status:** Partial (Dockerfile USER www-data added; other workloads still need securityContext)
 - **Location:** compare `kustomize/base/whoami-debug.yaml:16-36` with `rclone/base/deployment.yaml:22-34`, `s3-pod-identity/base/mysql.yaml:34-52`, `s3-pod-identity/base/debug.yaml:20-32`, `drupal/kustomize/pod.yaml:8-26`
 - **Category:** security
 - **Standard reference:** OWASP ASVS 5.0.0 `13.4.2`, `13.4.5`, `15.2.5`
@@ -102,3 +102,11 @@
 
 - Removed `analyse-site-ia/`, `ducklake/`, and `ducklake_test.py`; the previous findings about crawler complexity and DuckLake orchestration are resolved by deletion.
 - Updated the codebase summary and surviving finding locations to match the smaller repo surface area and new `justfile` line numbers.
+
+### Fixes applied
+
+- **Issue #7 (Caddyfile path):** Fixed `justfile:279` to validate `drupal/Caddyfile` instead of nonexistent `drupal/conf/Caddyfile`. → **Closed.**
+- **Issue #8 (Container hardening — Dockerfile):** Added `USER www-data` to `drupal/Dockerfile` so FrankenPHP no longer runs as root. Other workloads still need securityContext work. → **Partial.**
+- **Elasticsearch security disabled:** Removed `xpack.security.enabled=false` from `kustomize/databases/elasticsearch.yaml`. Elasticsearch 8.x defaults to security on.
+- **MySQL local-infile:** Removed `--local-infile=1` from `s3-pod-identity/base/mysql.yaml`.
+- **Dependabot coverage:** Added `terraform` (`/eksauto/terraform`), `docker` (`/drupal`), and `github-actions` ecosystems to `.github/dependabot.yml`.
