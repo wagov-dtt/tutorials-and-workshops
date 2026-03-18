@@ -326,25 +326,6 @@ codeql: prereqs
   gh codeql database analyze --download --format=sarif-latest --threads=0 --output=javascript_results.sarif codeql-db/javascript codeql/javascript-queries
   uvx --from sarif-tools sarif csv
 
-# --- LLMs ---
-
-# Run OpenCode AI agent with AWS Bedrock (in any directory)
-# Uses native Bedrock support - no proxy required
-# Auto-installs OpenCode globally via mise if not found
-# Use /models command to select a Bedrock model (e.g., Claude Sonnet 4.5)
-[group('llms')]
-opencode DIR=".": _awslogin
-  @which opencode >/dev/null || mise use -g opencode
-  cd {{DIR}} && opencode
-
-# Security audit: Analyse codebase against OWASP ASVS 5.0 and grugbrain.dev principles
-# Default model: Claude Opus 4.6 via Bedrock with high reasoning effort
-# Creates/updates succinct, prioritised ISSUES.md in the target directory
-[group('security')]
-audit DIR="." MODEL="amazon-bedrock/global.anthropic.claude-opus-4-6-v1" VARIANT="high": _awslogin
-  @which opencode >/dev/null || mise use -g opencode
-  cd {{DIR}} && OPENCODE_YOLO=true opencode run -m {{MODEL}} --variant {{VARIANT}} "Analyse codebase against OWASP ASVS 5.0 and grugbrain.dev. Update ISSUES.md with: prioritised table (Critical→Low), file:line references, OWASP IDs with URLs, grugbrain principles, actionable fixes. Skip .env files. Max 10-15 exploitable issues only. No filler."
-
 # --- UTILITIES ---
 
 # Analyse website information architecture

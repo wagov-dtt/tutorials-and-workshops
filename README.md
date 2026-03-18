@@ -18,7 +18,8 @@ This creates a local Kubernetes cluster with databases. No cloud account needed.
 
 | What you want | Command | Cloud needed? |
 |---------------|---------|---------------|
-| AI agent (OpenCode + Bedrock) | `just opencode ~/myproject` | Yes (Bedrock) |
+| AI assistant (`oy`) | `oy "review this repo and suggest simplifications"` | Yes (provider creds) |
+| Code audit (`ISSUES.md`) | `oy audit` | Yes (provider creds) |
 | Local K8s cluster | `just deploy-local` | No |
 | Analytics demo | `just ducklake-test` | No |
 | S3 filesystem mount | `just rclone-test` | No |
@@ -75,17 +76,37 @@ just secrets-deploy # External Secrets demo
 just destroy-eks    # IMPORTANT: Destroy when done!
 ```
 
-## OpenCode AI Agent
+## Oy AI Assistant
 
-Run [OpenCode](https://opencode.ai/) with AWS Bedrock.
+`just prereqs` installs [`oy-cli`](https://pypi.org/project/oy-cli/) via `mise`, so you can use `oy` directly:
 
 ```bash
-# 1. Enable Bedrock model access (AWS Console → Bedrock → Model access)
-# 2. Run OpenCode (auto-installs, handles AWS SSO login)
-just opencode ~/myproject
+oy "review this repo and suggest simplifications"
+cd ~/myproject && oy "fix the failing tests"
 ```
 
-Use `/models` in OpenCode to select a Bedrock model (e.g., Claude Sonnet 4.5). See [OpenCode Bedrock docs](https://opencode.ai/docs/providers/#amazon-bedrock) for advanced configuration.
+`oy` works well with existing provider auth, including AWS Bedrock via your configured AWS profile and region.
+
+If you want `oy` outside this repo, install it from PyPI:
+
+```bash
+uv tool install oy-cli   # preferred
+# or: pip install oy-cli
+```
+
+## Code Auditing
+
+Run `oy audit` in the repo you want to inspect:
+
+```bash
+cd ~/myproject
+oy audit
+oy audit "focus on authentication"
+```
+
+This creates or refreshes `ISSUES.md` with prioritised findings based on OWASP ASVS and grugbrain.dev.
+
+`oy audit` works nicely with existing provider auth, including AWS Bedrock credentials from your current AWS profile and region.
 
 ## Validation
 
@@ -112,13 +133,12 @@ colima start --cpu 4 --memory 12 --vz-rosetta
 | [GETTING_STARTED.md](GETTING_STARTED.md) | First-time setup, beginner concepts |
 | [LEARNING_PATH.md](LEARNING_PATH.md) | Suggested order for examples |
 | [GLOSSARY.md](GLOSSARY.md) | Definitions of key terms |
-| [AGENTS.md](AGENTS.md) | For AI agents and contributors |
 
 Each example directory has its own README with detailed explanations.
 
 ## Links
 
-- [OpenCode](https://opencode.ai/) - Open source AI coding agent with native Bedrock support
+- [oy-cli](https://pypi.org/project/oy-cli/) - Small standalone CLI for coding help and `oy audit`
 - [DevSecOps Induction](https://soc.cyber.wa.gov.au/training/devsecops-induction/) - Structured training course
 - [Just command runner](https://github.com/casey/just) - How the justfile works
 - [Kustomize docs](https://kubectl.docs.kubernetes.io/guides/introduction/kustomize/) - Base/overlay pattern

@@ -221,4 +221,3 @@ Verify in AWS Console that:
 
 - [GETTING_STARTED.md](GETTING_STARTED.md) - First-time setup instructions
 - [GLOSSARY.md](GLOSSARY.md) - Definitions of key terms
-- [AGENTS.md](AGENTS.md) - For AI agents and contributors

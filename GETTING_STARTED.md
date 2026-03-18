@@ -71,6 +71,17 @@ In k9s: press `0` to see all namespaces, arrow keys to navigate, `d` to describe
 
 The configuration lives in `kustomize/overlays/local/kustomization.yaml`—it combines base manifests with local-specific settings.
 
+## Optional: Use oy Directly
+
+`just prereqs` also installs [`oy-cli`](https://pypi.org/project/oy-cli/) via `mise`, so you can use `oy` directly from your shell:
+
+```bash
+oy "summarise this repo and suggest next steps"
+oy audit
+```
+
+`oy audit` creates or refreshes `ISSUES.md`. It works with existing provider auth, including AWS Bedrock via your configured AWS profile and region.
+
 ## Next Steps
 
 ### Beginner Path (No AWS Required)
