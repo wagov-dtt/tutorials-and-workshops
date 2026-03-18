@@ -60,4 +60,3 @@ kubectl exec -it whoami -n default -- sh       # Debug shell
 - [LEARNING_PATH.md](../LEARNING_PATH.md#11-deploy-local-databases) - Step-by-step walkthrough
 - [GLOSSARY.md](../GLOSSARY.md#kustomize) - Kustomize definition
 - [Kustomize documentation](https://kustomize.io/) - Official docs
-- [ducklake/](../ducklake/) - Uses these database deployments

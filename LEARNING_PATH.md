@@ -27,27 +27,7 @@ just deploy-local
 
 ---
 
-### 1.2 DuckLake Analytics
-
-```bash
-just ducklake-test
-```
-
-**What you learn**: DuckDB for analytics workloads, S3-compatible storage with rclone, and Python integration with Kubernetes services.
-
-**Detailed guide**: [ducklake/README.md](ducklake/README.md)
-
-**Files to study**:
-- `ducklake_test.py` - How to connect to K8s services from Python
-- `ducklake/databases/rclone-s3.yaml` - Running rclone as an S3 server
-
-**Exercises**:
-1. Modify `ducklake_test.py` to run a different query
-2. Port-forward and explore: `kubectl port-forward svc/rclone-s3 8080:80 -n databases`
-
----
-
-### 1.3 CSI Volumes with rclone
+### 1.2 CSI Volumes with rclone
 
 ```bash
 just rclone-test
@@ -67,7 +47,7 @@ just rclone-test
 
 ---
 
-### 1.4 Drupal CMS
+### 1.3 Drupal CMS
 
 ```bash
 just drupal-setup

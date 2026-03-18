@@ -21,7 +21,6 @@ This creates a local Kubernetes cluster with databases. No cloud account needed.
 | AI assistant (`oy`) | `oy "review this repo and suggest simplifications"` | Yes (provider creds) |
 | Code audit (`ISSUES.md`) | `oy audit` | Yes (provider creds) |
 | Local K8s cluster | `just deploy-local` | No |
-| Analytics demo | `just ducklake-test` | No |
 | S3 filesystem mount | `just rclone-test` | No |
 | Local Drupal CMS | `just drupal-setup` | No |
 | AWS EKS cluster | `just setup-eks` | Yes |
@@ -35,10 +34,8 @@ Run `just` to see all available commands.
 | Directory | What it teaches | Difficulty |
 |-----------|-----------------|------------|
 | [kustomize/](kustomize/) | Base K8s manifests, overlays pattern | ⭐ Beginner |
-| [ducklake/](ducklake/) | DuckDB analytics with S3 storage | ⭐ Beginner |
 | [rclone/](rclone/) | Mount S3 as filesystem (CSI driver) | ⭐⭐ Intermediate |
 | [drupal/](drupal/) | PHP development with DDEV | ⭐⭐ Intermediate |
-| [analyse-site-ia/](analyse-site-ia/) | Website IA crawler and reporting | ⭐⭐ Intermediate |
 | [s3-pod-identity/](s3-pod-identity/) | EKS Pod Identity, MySQL backups | ⭐⭐⭐ Advanced |
 | [secrets/](secrets/) | External Secrets with AWS Secrets Manager | ⭐⭐⭐ Advanced |
 | [argocd/](argocd/) | GitOps with ArgoCD | ⭐⭐⭐ Advanced |
@@ -59,7 +56,6 @@ Everything else is installed automatically by `just prereqs`.
 
 ```bash
 just deploy-local   # K8s cluster with databases
-just ducklake-test  # DuckLake analytics demo
 just rclone-test    # S3 filesystem mount demo
 just drupal-setup   # Drupal CMS
 ```

@@ -40,7 +40,7 @@ This repo follows ["grug-brained"](https://grugbrain.dev) principles. The goal i
 
 | Directory | Purpose |
 |-----------|---------|
-| `argocd/`, `ducklake/`, `rclone/`, `s3-pod-identity/`, `secrets/` | Kubernetes examples |
+| `argocd/`, `rclone/`, `s3-pod-identity/`, `secrets/` | Kubernetes examples |
 | `kustomize/` | Shared base manifests |
 | `eksauto/` | EKS Terraform configuration |
 | `drupal/` | Drupal DDEV example |

@@ -73,24 +73,10 @@ Managing infrastructure through configuration files rather than manual processes
 
 **Used in**: [eksauto/](eksauto/)
 
-### OLAP (Online Analytical Processing)
-Workloads focused on complex queries over large datasets - aggregations, reporting, business intelligence. Contrast with OLTP (transactional processing) which handles individual record operations. Columnar storage formats like Parquet are optimized for OLAP.
-
-**Used in**: [ducklake/](ducklake/)
-
-## Tools
-
 ### ADOT (AWS Distro for OpenTelemetry)
 AWS-supported distribution of OpenTelemetry for collecting metrics, traces, and logs. Used by the CloudWatch Observability addon in EKS.
 
 **Used in**: [eksauto/](eksauto/)
-
-### DuckDB
-An embedded analytical database (like SQLite, but for analytics). Runs in-process, no server needed. Excellent for querying Parquet files, CSV, and other formats directly.
-
-**Used in**: [ducklake/](ducklake/)
-
-**Official docs**: <https://duckdb.org/>
 
 ### Helm
 A package manager for Kubernetes. Helm charts bundle related manifests with configurable values. Great for installing third-party software; for your own apps, Kustomize is often simpler.
@@ -117,7 +103,7 @@ A polyglot tool version manager (successor to asdf). Manages versions of kubectl
 ### rclone
 "rsync for cloud storage." Syncs files to/from 40+ cloud storage providers. Also provides `rclone serve s3` (expose local storage as S3 API) and CSI drivers for Kubernetes.
 
-**Used in**: [rclone/](rclone/), [s3-pod-identity/](s3-pod-identity/), [ducklake/](ducklake/)
+**Used in**: [rclone/](rclone/), [s3-pod-identity/](s3-pod-identity/)
 
 **Official docs**: <https://rclone.org/>
 

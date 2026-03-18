@@ -17,11 +17,6 @@ default:
 deploy-local: _k3d
   kubectl apply -k kustomize/overlays/local --server-side
 
-# DuckLake demo (Postgres + DuckDB + S3)
-[group('local')]
-ducklake-test: _ducklake
-  uv run ducklake_test.py
-
 # rclone CSI demo (S3 mount + filebrowser)
 [group('local')]
 rclone-test: _rclone
@@ -268,7 +263,6 @@ lint:
   @echo "Validating kustomize..." && \
     kubectl kustomize kustomize/overlays/local >/dev/null && \
     kubectl kustomize kustomize/overlays/training01 >/dev/null && \
-    kubectl kustomize ducklake/overlays/local >/dev/null && \
     kubectl kustomize s3-pod-identity >/dev/null && \
     kubectl kustomize argocd >/dev/null && \
     kubectl kustomize secrets >/dev/null && \
@@ -280,7 +274,7 @@ lint:
     echo "Terraform valid ✓"
   @echo "Running trivy..." && \
     trivy config --exit-code 1 --ignorefile eksauto/terraform/.trivyignore --skip-dirs .terraform eksauto/terraform && \
-    trivy config --exit-code 1 --ignorefile .trivyignore kustomize argocd ducklake s3-pod-identity secrets rclone drupal/kustomize && \
+    trivy config --exit-code 1 --ignorefile .trivyignore kustomize argocd s3-pod-identity secrets rclone drupal/kustomize && \
     echo "Trivy passed ✓"
   @echo "Validating Caddyfile..." && caddy fmt --diff drupal/conf/Caddyfile && echo "Caddyfile valid ✓"
   @echo "All validations passed ✓"
@@ -328,18 +322,6 @@ codeql: prereqs
 
 # --- UTILITIES ---
 
-# Analyse website information architecture
-[group('util')]
-analyse-ia URL DEPTH="3" MAX_PAGES="500" CONCURRENCY="10":
-  uv run --project analyse-site-ia analyse-site-ia/crawl.py {{URL}} --depth {{DEPTH}} --max-pages {{MAX_PAGES}} --concurrency {{CONCURRENCY}}
-  @echo "Reports: analyse-site-ia/reports/"
-
-# Full site crawl (no page limit)
-[group('util')]
-analyse-ia-full URL DEPTH="4" CONCURRENCY="10":
-  uv run --project analyse-site-ia analyse-site-ia/crawl.py {{URL}} --depth {{DEPTH}} --max-pages 99999 --concurrency {{CONCURRENCY}}
-  @echo "Reports: analyse-site-ia/reports/"
-
 # Load test a URL (640 req/s for 10s)
 [group('util')]
 vegeta URL:
@@ -384,10 +366,6 @@ _k3d:
   @which k3d > /dev/null || just prereqs
   k3d cluster create tutorials || k3d cluster start tutorials
   kubectl config use-context k3d-tutorials
-
-[private]
-_ducklake: _k3d
-  kubectl apply -k ducklake/overlays/local --server-side
 
 [private]
 _rclone: _k3d

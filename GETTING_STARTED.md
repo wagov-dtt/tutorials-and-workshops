@@ -89,9 +89,8 @@ oy audit
 | Order | Command | What You Learn |
 |-------|---------|----------------|
 | 1 | `just deploy-local` | Kubernetes basics, Kustomize |
-| 2 | `just ducklake-test` | DuckDB analytics, S3-compatible storage |
-| 3 | `just rclone-test` | Mounting cloud storage as filesystems |
-| 4 | `just drupal-setup` | Local PHP development with DDEV |
+| 2 | `just rclone-test` | Mounting cloud storage as filesystems |
+| 3 | `just drupal-setup` | Local PHP development with DDEV |
 
 ### Intermediate Path (Requires AWS)
 
