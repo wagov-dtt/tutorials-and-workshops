@@ -1,6 +1,5 @@
 [tools]
 awscli = { version = "latest", symlink_bins = "true" }
-"ubi:ddev/ddev" = "latest"
 helm = "latest"
 k3d = "latest"
 k9s = "latest"
@@ -11,3 +10,4 @@ uv = "latest"
 "ubi:tsenart/vegeta" = "latest"
 mkcert = "latest"
 trivy = "latest"
+"github:ddev/ddev" = "latest"
