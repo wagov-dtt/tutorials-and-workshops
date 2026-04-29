@@ -73,9 +73,11 @@ The configuration lives in `kustomize/overlays/local/kustomization.yaml`—it co
 
 ## Optional: Use oy Directly
 
-`just prereqs` also installs [`oy-cli`](https://pypi.org/project/oy-cli/) via `mise`, so you can use `oy` directly from your shell:
+Install [`oy-cli`](https://crates.io/crates/oy-cli) from crates.io with mise's Cargo backend to use `oy` directly from your shell:
 
 ```bash
+mise use -g cargo-binstall
+mise use -g cargo:oy-cli
 oy "summarise this repo and suggest next steps"
 oy audit
 ```

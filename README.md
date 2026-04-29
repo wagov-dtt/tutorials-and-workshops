@@ -77,7 +77,7 @@ just destroy-eks    # IMPORTANT: Destroy when done!
 
 ## Oy AI Assistant
 
-`just prereqs` installs [`oy-cli`](https://pypi.org/project/oy-cli/) via `mise`, so you can use `oy` directly:
+Install [`oy-cli`](https://crates.io/crates/oy-cli) from crates.io with mise's Cargo backend:
 
 ```bash
 oy "review this repo and suggest simplifications"
@@ -86,11 +86,11 @@ cd ~/myproject && oy "fix the failing tests"
 
 `oy` works well with existing provider auth, including AWS Bedrock via your configured AWS profile and region.
 
-If you want `oy` outside this repo, install it from PyPI:
+If you want `oy` available outside this repo, use mise's global Cargo backend. If `cargo-binstall` is available, mise will use it automatically for faster binary installs:
 
 ```bash
-uv tool install oy-cli   # preferred
-# or: pip install oy-cli
+mise use -g cargo-binstall
+mise use -g cargo:oy-cli
 ```
 
 ## Code Auditing
@@ -150,7 +150,7 @@ Each example directory has its own README with detailed explanations.
 
 ## Links
 
-- [oy-cli](https://pypi.org/project/oy-cli/) - Small standalone CLI for coding help and `oy audit`
+- [oy-cli](https://crates.io/crates/oy-cli) - Small standalone CLI for coding help and `oy audit`
 - [DevSecOps Induction](https://soc.cyber.wa.gov.au/training/devsecops-induction/) - Structured training course
 - [Just command runner](https://github.com/casey/just) - How the justfile works
 - [Kustomize docs](https://kubectl.docs.kubernetes.io/guides/introduction/kustomize/) - Base/overlay pattern
