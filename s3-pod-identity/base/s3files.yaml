@@ -1,0 +1,32 @@
+# Shared S3 configuration for the EKS demo
+# - rclone-env: env vars for jobs that use rclone's S3 API client (envFrom)
+# - s3files-s3 StorageClass: provisions PVCs backed by AWS S3 Files via the EFS CSI driver
+#
+# ${AWS_REGION} and ${S3FILES_FILE_SYSTEM_ID} substituted via envsubst
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rclone-env
+  namespace: s3-test
+data:
+  RCLONE_CONFIG_S3_TYPE: "s3"
+  RCLONE_CONFIG_S3_PROVIDER: "AWS"
+  RCLONE_CONFIG_S3_ENV_AUTH: "true"
+  RCLONE_CONFIG_S3_REGION: "${AWS_REGION}"
+  RCLONE_CONFIG_S3_NO_CHECK_BUCKET: "true"
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: s3files-s3
+provisioner: efs.csi.aws.com
+parameters:
+  provisioningMode: s3files-ap
+  fileSystemId: "${S3FILES_FILE_SYSTEM_ID}"
+  directoryPerms: "700"
+  basePath: "/"
+  subPathPattern: "${.PVC.namespace}/${.PVC.name}"
+  ensureUniqueDirectory: "true"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate

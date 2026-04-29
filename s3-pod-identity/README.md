@@ -1,6 +1,6 @@
 # s3-pod-identity/
 
-> Demo of EKS Pod Identity with MySQL backup/restore via rclone. No credentials stored in the cluster.
+> Demo of EKS Pod Identity with MySQL backup/restore via rclone and an AWS S3 Files CSI debug mount. No credentials stored in the cluster.
 
 ## Why Pod Identity?
 
@@ -18,8 +18,10 @@
 
 Terraform pre-creates:
 - S3 bucket: `test-<ACCOUNT_ID>`
-- IAM role: `eks-s3-test` with S3FullAccess
-- Pod Identity associations for `s3-test` and `veloxpack` namespaces
+- IAM role: `eks-s3-test` scoped to the test bucket
+- AWS S3 Files file system backed by the test bucket
+- EFS CSI driver addon with Pod Identity associations in `kube-system`
+- Pod Identity association for the `s3-test` namespace
 
 ## Quick Start
 
@@ -40,7 +42,7 @@ flowchart TB
             Backup["backup-to-s3<br/>Job"]
             Copy["rclone-copy<br/>Job"]
             Restore["restore-from-s3<br/>Job"]
-            Debug["debug pod<br/>(S3 CSI mount)"]
+            Debug["debug pod<br/>(AWS S3 Files CSI mount)"]
             SA["ServiceAccount<br/>s3-access"]
         end
         PIA["Pod Identity Agent"]
@@ -50,6 +52,7 @@ flowchart TB
         IAM["IAM Role<br/>eks-s3-test"]
         S3B1["S3: backup1/"]
         S3B2["S3: backup2/"]
+        S3Files["S3 Files file system"]
     end
     
     Sysbench -->|"prepare test data"| MySQL
@@ -59,12 +62,13 @@ flowchart TB
     Copy -->|"server-side copy"| S3B2
     S3B2 -->|"mysqlsh load"| Restore
     Restore -->|"restore to sbtest_restored"| MySQL
-    Debug -->|"CSI mount"| S3B2
+    S3B2 --- S3Files
+    Debug -->|"EFS CSI mount"| S3Files
     
     SA -.->|"binds to"| PIA
     PIA -.->|"assumes"| IAM
-    IAM -.->|"S3FullAccess"| S3B1
-    IAM -.->|"S3FullAccess"| S3B2
+    IAM -.->|"scoped S3 access"| S3B1
+    IAM -.->|"scoped S3 access"| S3B2
 ```
 
 ## What's Here
@@ -72,9 +76,9 @@ flowchart TB
 | File | Purpose |
 |------|---------|
 | [base/namespace.yaml](base/namespace.yaml) | Namespace and ServiceAccount |
-| [base/rclone.yaml](base/rclone.yaml) | Shared rclone config (env vars, CSI secret, StorageClass) |
+| [base/s3files.yaml](base/s3files.yaml) | Shared rclone env vars and AWS S3 Files StorageClass |
 | [base/mysql.yaml](base/mysql.yaml) | MySQL deployment and sysbench data prep |
-| [base/debug.yaml](base/debug.yaml) | Debug pod with S3 CSI mount |
+| [base/debug.yaml](base/debug.yaml) | Debug pod with AWS S3 Files CSI mount |
 | [jobs/backup.yaml](jobs/backup.yaml) | mysqlsh dump → S3 backup1/ |
 | [jobs/copy.yaml](jobs/copy.yaml) | rclone server-side copy backup1/ → backup2/ |
 | [jobs/restore.yaml](jobs/restore.yaml) | S3 backup2/ → mysqlsh load |
@@ -84,7 +88,7 @@ flowchart TB
 - **EKS Pod Identity**: How pods assume IAM roles without static credentials
 - **mysqlsh for backups**: Using MySQL Shell's `util.dumpSchemas()` and `util.loadDump()`
 - **rclone server-side copy**: Copying between S3 prefixes without downloading locally
-- **CSI S3 mounts**: Mounting S3 buckets into pods for debugging and inspection
+- **AWS S3 Files CSI mounts**: Mounting S3-backed file systems into pods with the EFS CSI driver for debugging and inspection
 
 ## Debugging
 
@@ -105,20 +109,21 @@ just -c 'aws s3 ls s3://test-$(just _account)/backup1/' # List backup contents
 
 ```bash
 kubectl exec -it debug -n s3-test -- sh
-ls /mnt/s3  # S3 bucket contents via rclone CSI
+ls /mnt/s3  # S3 bucket contents via AWS S3 Files / EFS CSI
 ```
 
-Uses the [veloxpack rclone CSI driver](https://github.com/veloxpack/csi-driver-rclone) to mount S3 as a filesystem.
+Uses [AWS S3 Files with the Amazon EFS CSI driver](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files-mounting-eks.html) for the filesystem mount. The `rclone/` directory still uses veloxpack rclone CSI for local k3d clusters only.
 
 ### CSI Driver Logs
 
-If S3 mounts fail, check the CSI driver logs:
+If S3 mounts fail, check the EFS CSI driver logs:
 
 ```bash
-kubectl logs -n veloxpack -l app=csi-rclone-node --tail=50
+kubectl logs -n kube-system -l app=efs-csi-controller --tail=50
+kubectl logs -n kube-system -l app=efs-csi-node --tail=50
 ```
 
-Common issue: 403 errors on `ListBuckets` indicate the Pod Identity IAM role is missing `s3:ListAllMyBuckets` permission.
+Common issue: pods stuck in `ContainerCreating` can indicate a missing S3 Files mount target or NFS/2049 security group rule for the node subnet.
 
 ## Key Patterns
 
@@ -133,4 +138,5 @@ Common issue: 403 errors on `ListBuckets` indicate the Pod Identity IAM role is 
 - [GLOSSARY.md](../GLOSSARY.md#pod-identity) - Pod Identity definition
 - [rclone/](../rclone/) - rclone CSI examples on local k3d
 - [eksauto/](../eksauto/) - EKS cluster configuration and cost info
+- [Mounting S3 file systems on Amazon EKS](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files-mounting-eks.html) - Official AWS S3 Files pattern
 - [EKS Pod Identity docs](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html) - Official AWS documentation

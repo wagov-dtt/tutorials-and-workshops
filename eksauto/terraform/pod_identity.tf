@@ -14,12 +14,24 @@ resource "aws_eks_pod_identity_association" "s3_test" {
   }
 }
 
-# veloxpack namespace - used by rclone CSI driver
-resource "aws_eks_pod_identity_association" "veloxpack_csi" {
+# kube-system namespace - used by the EFS CSI driver for AWS S3 Files mounts
+resource "aws_eks_pod_identity_association" "efs_csi_controller" {
   cluster_name    = module.eks.cluster_name
-  namespace       = "veloxpack"
-  service_account = "csi-rclone-node-sa"
-  role_arn        = aws_iam_role.eks_s3_test.arn
+  namespace       = "kube-system"
+  service_account = "efs-csi-controller-sa"
+  role_arn        = aws_iam_role.efs_csi_controller.arn
+
+  tags = {
+    Terraform   = "true"
+    Environment = "training"
+  }
+}
+
+resource "aws_eks_pod_identity_association" "efs_csi_node" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "kube-system"
+  service_account = "efs-csi-node-sa"
+  role_arn        = aws_iam_role.efs_csi_node.arn
 
   tags = {
     Terraform   = "true"

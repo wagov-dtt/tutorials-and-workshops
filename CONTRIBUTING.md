@@ -40,7 +40,7 @@ This repo follows ["grug-brained"](https://grugbrain.dev) principles. The goal i
 
 | Directory | Purpose |
 |-----------|---------|
-| `argocd/`, `rclone/`, `s3-pod-identity/`, `secrets/` | Kubernetes examples |
+| `argocd/`, `bookstack-kanboard/`, `rclone/`, `s3-pod-identity/`, `secrets/` | Kubernetes examples |
 | `kustomize/` | Shared base manifests |
 | `eksauto/` | EKS Terraform configuration |
 | `drupal/` | Drupal DDEV example |
@@ -98,10 +98,35 @@ some-recipe:
 ## EKS Auto Mode Notes
 
 - Cluster is managed by Terraform in `eksauto/terraform/`
-- Pod Identity associations are pre-created by Terraform for s3-test and veloxpack namespaces
+- Pod Identity associations are pre-created by Terraform for s3-test, kube-system EFS CSI, and external-secrets namespaces
 - Use `just setup-eks` to create, `just destroy-eks` to tear down
 - Pods must be restarted after association creation to pick up credentials
 - CSI drivers need their own Pod Identity association (separate namespace/SA)
+- On EKS, POSIX-style S3 mounts use AWS S3 Files through the EFS CSI driver (`s3files-s3` StorageClass)
+- Keep veloxpack rclone CSI limited to local k3d/dev examples (`rclone/`, `just rclone-test`, Drupal k3d)
+
+## Quality Checks
+
+Run the cheapest relevant checks before committing:
+
+```bash
+just --list
+just --dry-run s3-test
+just --dry-run s3-restore
+just --dry-run --yes validate-aws
+terraform -chdir=eksauto/terraform fmt -check -diff
+AWS_PROFILE=<profile> AWS_REGION=<region> terraform -chdir=eksauto/terraform validate
+```
+
+For S3 Files changes, also render the manifest with explicit substitutions:
+
+```bash
+export AWS_REGION=us-east-1 S3FILES_FILE_SYSTEM_ID=fs-12345678
+kubectl kustomize s3-pod-identity | envsubst '$AWS_REGION $S3FILES_FILE_SYSTEM_ID' >/tmp/s3-pod-identity.yaml
+grep -E 'provisioner:|fileSystemId:|storageClassName:|rclone.csi.veloxpack.io' /tmp/s3-pod-identity.yaml
+```
+
+Expected: `provisioner: efs.csi.aws.com`, `fileSystemId` substituted, PVCs use `storageClassName: s3files-s3`, and no `rclone.csi.veloxpack.io` in EKS manifests.
 
 ## See Also
 

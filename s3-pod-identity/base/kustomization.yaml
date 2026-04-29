@@ -4,6 +4,6 @@ kind: Kustomization
 # Base resources - applied first via envsubst
 resources:
 - namespace.yaml
-- rclone.yaml
+- s3files.yaml
 - mysql.yaml
 - debug.yaml

@@ -1,4 +1,4 @@
-# Debug pod with S3 mounted via rclone CSI
+# Debug pod with S3 mounted via AWS S3 Files (EFS CSI driver)
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -7,7 +7,7 @@ metadata:
   namespace: s3-test
 spec:
   accessModes: [ReadWriteMany]
-  storageClassName: rclone-s3
+  storageClassName: s3files-s3
   resources:
     requests:
       storage: 10Gi

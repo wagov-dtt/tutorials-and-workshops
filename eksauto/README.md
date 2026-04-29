@@ -55,12 +55,15 @@ Press Enter to continue with destruction, or Ctrl+C to abort and keep resources 
 | S3 bucket `tfstate-<account>` | Terraform state with native S3 locking (auto-created) |
 | VPC + subnets | Network infrastructure (3 AZs) |
 | EKS cluster | Auto Mode enabled, latest K8s version (auto-detected) |
-| EKS addons | snapshot-controller, CloudWatch Observability |
+| EKS addons | snapshot-controller, CloudWatch Observability, EFS CSI driver for AWS S3 Files |
 | IAM role `eks-s3-test` | S3 access for Pod Identity |
+| IAM roles `eks-efs-csi-*` | EFS CSI access for AWS S3 Files mounts |
+| IAM role `eks-s3files-service` | S3 Files service access to synchronize the test bucket |
 | IAM role `eks-secrets-manager` | Secrets Manager access for External Secrets Operator |
 | S3 bucket `test-<account>` | Backup storage for examples |
+| S3 Files file system + mount targets | POSIX-style S3 mount for EKS examples |
 | Secrets Manager `training/db-credentials` | Example secret for ESO demo |
-| Pod Identity associations | Pre-created for s3-test, veloxpack, external-secrets namespaces |
+| Pod Identity associations | Pre-created for s3-test, kube-system EFS CSI, external-secrets namespaces |
 
 ## Terraform Files
 
@@ -68,6 +71,7 @@ Press Enter to continue with destruction, or Ctrl+C to abort and keep resources 
 |------|---------|
 | [terraform/main.tf](terraform/main.tf) | VPC, EKS cluster, and addons |
 | [terraform/iam.tf](terraform/iam.tf) | IAM role and S3 bucket |
+| [terraform/s3files.tf](terraform/s3files.tf) | AWS S3 Files file system, mount targets, and CSI IAM roles |
 | [terraform/pod_identity.tf](terraform/pod_identity.tf) | Pod Identity associations |
 | [terraform/outputs.tf](terraform/outputs.tf) | Cluster info and kubectl command |
 

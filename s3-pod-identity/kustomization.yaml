@@ -4,7 +4,7 @@ kind: Kustomization
 # S3 Pod Identity Demo
 # 
 # Structure:
-#   base/     - namespace, SA, rclone config, MySQL, debug pod
+#   base/     - namespace, SA, S3 config, MySQL, debug pod
 #   jobs/     - backup, copy, restore (applied separately after MySQL ready)
 #
 # Usage:

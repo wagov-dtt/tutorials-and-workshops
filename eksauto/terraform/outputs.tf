@@ -24,6 +24,11 @@ output "s3_role_arn" {
   value       = aws_iam_role.eks_s3_test.arn
 }
 
+output "s3files_file_system_id" {
+  description = "S3 Files file system ID used by the EFS CSI StorageClass"
+  value       = aws_s3files_file_system.test.id
+}
+
 output "configure_kubectl" {
   description = "Command to configure kubectl"
   value       = "aws eks update-kubeconfig --name ${module.eks.cluster_name}"

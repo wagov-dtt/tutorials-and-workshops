@@ -47,7 +47,28 @@ just rclone-test
 
 ---
 
-### 1.3 Drupal CMS
+### 1.3 BookStack and Kanboard
+
+```bash
+just bookstack-kanboard
+```
+
+**What you learn**: Running web apps as Kubernetes Deployments, connecting an app to a database service, and using `kubectl port-forward` for local-only access.
+
+**Detailed guide**: [bookstack-kanboard/README.md](bookstack-kanboard/README.md)
+
+**Files to study**:
+- `bookstack-kanboard/apps.yaml` - BookStack and Kanboard Deployments and Services
+- `bookstack-kanboard/mariadb.yaml` - Database Deployment for BookStack
+
+**Exercises**:
+1. Port-forward both services and log in with the demo credentials
+2. Create a BookStack page and a Kanboard task
+3. Delete a pod and observe what happens to `emptyDir` demo data
+
+---
+
+### 1.4 Drupal CMS
 
 ```bash
 just drupal-setup
@@ -109,19 +130,21 @@ just setup-eks
 just s3-test
 ```
 
-**What you learn**: EKS Pod Identity (credential-free AWS access), MySQL Shell for backups, and rclone for S3 operations.
+**What you learn**: EKS Pod Identity (credential-free AWS access), MySQL Shell for backups, rclone for S3 object operations, and AWS S3 Files/EFS CSI for POSIX-style S3 inspection on EKS.
 
 **Detailed guide**: [s3-pod-identity/README.md](s3-pod-identity/README.md)
 
 **Files to study**:
 - `s3-pod-identity/base/namespace.yaml` - ServiceAccount setup
+- `s3-pod-identity/base/s3files.yaml` - AWS S3 Files StorageClass rendered for EFS CSI
 - `s3-pod-identity/jobs/backup.yaml` - Multi-container job pattern
 - `eksauto/terraform/pod_identity.tf` - How Pod Identity is configured
+- `eksauto/terraform/s3files.tf` - S3 Files file system, mount targets, and CSI IAM roles
 
 **Exercises**:
 1. Run `just s3-restore` to test the restore flow
 2. Check S3 bucket contents in AWS Console
-3. Explore the CSI mount: `kubectl exec -it debug -n s3-test -- sh`
+3. Explore the AWS S3 Files mount: `kubectl exec -it debug -n s3-test -- sh`
 
 ---
 

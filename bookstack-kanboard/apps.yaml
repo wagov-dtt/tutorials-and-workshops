@@ -1,0 +1,153 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstack
+  template:
+    metadata:
+      labels:
+        app: bookstack
+    spec:
+      containers:
+        - name: bookstack
+          image: lscr.io/linuxserver/bookstack:latest
+          ports:
+            - containerPort: 80
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: Etc/UTC
+            - name: APP_URL
+              value: http://localhost:6875
+            - name: DB_HOST
+              value: bookstack-db
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: bookstack-db
+                  key: MYSQL_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bookstack-db
+                  key: MYSQL_PASSWORD
+            - name: DB_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: bookstack-db
+                  key: MYSQL_DATABASE
+            - name: APP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bookstack-app
+                  key: APP_KEY
+          volumeMounts:
+            - name: config
+              mountPath: /config
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /login
+              port: 80
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: 80
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: config
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstack
+spec:
+  selector:
+    app: bookstack
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kanboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kanboard
+  template:
+    metadata:
+      labels:
+        app: kanboard
+    spec:
+      containers:
+        - name: kanboard
+          image: kanboard/kanboard:latest
+          ports:
+            - containerPort: 80
+          env:
+            # Keep plugin installation disabled for the demo.
+            - name: PLUGIN_INSTALLER
+              value: "false"
+          volumeMounts:
+            - name: data
+              mountPath: /var/www/app/data
+            - name: plugins
+              mountPath: /var/www/app/plugins
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /healthcheck.php
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: data
+          emptyDir: {}
+        - name: plugins
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kanboard
+spec:
+  selector:
+    app: kanboard
+  ports:
+    - port: 80
+      targetPort: 80

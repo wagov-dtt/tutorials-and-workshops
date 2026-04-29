@@ -21,10 +21,11 @@ This creates a local Kubernetes cluster with databases. No cloud account needed.
 | AI assistant (`oy`) | `oy "review this repo and suggest simplifications"` | Yes (provider creds) |
 | Code audit (`ISSUES.md`) | `oy audit` | Yes (provider creds) |
 | Local K8s cluster | `just deploy-local` | No |
-| S3 filesystem mount | `just rclone-test` | No |
+| Local S3 filesystem mount (rclone CSI) | `just rclone-test` | No |
+| BookStack + Kanboard | `just bookstack-kanboard` | No |
 | Local Drupal CMS | `just drupal-setup` | No |
 | AWS EKS cluster | `just setup-eks` | Yes |
-| S3 backup demo | `just s3-test` | Yes |
+| EKS S3 backup + AWS S3 Files mount | `just s3-test` | Yes |
 | GitOps with ArgoCD | `just argocd-ui` | Yes (+ Identity Center) |
 
 Run `just` to see all available commands.
@@ -35,6 +36,7 @@ Run `just` to see all available commands.
 |-----------|-----------------|------------|
 | [kustomize/](kustomize/) | Base K8s manifests, overlays pattern | ⭐ Beginner |
 | [rclone/](rclone/) | Mount S3 as filesystem (CSI driver) | ⭐⭐ Intermediate |
+| [bookstack-kanboard/](bookstack-kanboard/) | Run BookStack and Kanboard containers on K8s | ⭐ Beginner |
 | [drupal/](drupal/) | PHP development with DDEV | ⭐⭐ Intermediate |
 | [s3-pod-identity/](s3-pod-identity/) | EKS Pod Identity, MySQL backups | ⭐⭐⭐ Advanced |
 | [secrets/](secrets/) | External Secrets with AWS Secrets Manager | ⭐⭐⭐ Advanced |
@@ -55,9 +57,10 @@ Everything else is installed automatically by `just prereqs`.
 ## Local Development (No Cloud)
 
 ```bash
-just deploy-local   # K8s cluster with databases
-just rclone-test    # S3 filesystem mount demo
-just drupal-setup   # Drupal CMS
+just deploy-local          # K8s cluster with databases
+just rclone-test           # S3 filesystem mount demo
+just bookstack-kanboard    # BookStack wiki + Kanboard task board
+just drupal-setup          # Drupal CMS
 ```
 
 ## AWS Examples
@@ -110,6 +113,19 @@ This creates or refreshes `ISSUES.md` with prioritised findings based on OWASP A
 just lint           # Validate manifests (kustomize + terraform + trivy)
 just validate-local # Run all local tests
 ```
+
+For EKS/S3 work, validate the recipe shape before touching a live cluster:
+
+```bash
+just --list
+just --dry-run s3-test
+just --dry-run s3-restore
+just --dry-run --yes validate-aws
+export AWS_REGION=us-east-1 S3FILES_FILE_SYSTEM_ID=fs-12345678
+kubectl kustomize s3-pod-identity | envsubst '$AWS_REGION $S3FILES_FILE_SYSTEM_ID' >/tmp/s3-pod-identity.yaml
+```
+
+Expected S3 mount pattern for EKS: `s3-pod-identity` renders `provisioner: efs.csi.aws.com`, `storageClassName: s3files-s3`, and no `rclone.csi.veloxpack.io`. The `rclone/` demo remains for local k3d/dev clusters only.
 
 ## Environment Setup
 

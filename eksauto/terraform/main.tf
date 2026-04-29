@@ -1,4 +1,5 @@
 data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 data "aws_availability_zones" "available" {}
 
 # Get latest EKS version
@@ -45,30 +46,33 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.18"
 
-  cluster_name    = var.cluster_name
-  cluster_version = local.eks_version
+  name               = var.cluster_name
+  kubernetes_version = local.eks_version
 
-  cluster_endpoint_public_access = true
+  endpoint_public_access = true
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
   # EKS Auto Mode
-  cluster_compute_config = {
+  compute_config = {
     enabled    = true
     node_pools = ["general-purpose", "system"]
   }
 
   # CloudWatch logging (all control plane logs)
-  cluster_enabled_log_types = ["audit", "api", "authenticator", "controllerManager", "scheduler"]
+  enabled_log_types = ["audit", "api", "authenticator", "controllerManager", "scheduler"]
 
   # Access managed via `just eks-access` (SSO roles can't be imported to TF state)
 
   # Addons - all use latest versions
-  # Note: We use rclone CSI for S3 mounts, not EFS CSI
-  cluster_addons = {
+  # EFS CSI v3+ mounts AWS S3 Files for POSIX-style S3 access on EKS.
+  addons = {
     snapshot-controller             = { most_recent = true }
     amazon-cloudwatch-observability = { most_recent = true }
+    aws-efs-csi-driver = {
+      most_recent = true
+    }
   }
 
   tags = {
