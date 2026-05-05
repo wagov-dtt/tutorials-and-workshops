@@ -5,7 +5,7 @@ metadata:
   name: elasticsearch-secret
 type: Opaque
 stringData:
-  ELASTIC_PASSWORD: changeme
+  ELASTIC_PASSWORD: local-demo-not-a-secret
 ---
 apiVersion: apps/v1
 kind: Deployment

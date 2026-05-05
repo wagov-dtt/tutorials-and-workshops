@@ -27,8 +27,10 @@ rclone-test: _rclone
 
 # Deploy Apps SSO to local k3d
 [group('local')]
-apps-sso: _k3d
-    kubectl apply -k apps-sso --server-side
+apps-sso: _k3d _apps-sso-secrets
+    APPS_SSO_OAUTH2_CLIENT_SECRET="$(kubectl get secret oauth2-proxy -n apps-sso -o jsonpath='{.data.client-secret}' | base64 -d)" \
+    APPS_SSO_AUDITOR_PASSWORD="$(kubectl get secret keycloak-user -n apps-sso -o jsonpath='{.data.password}' | base64 -d)" \
+      kubectl kustomize apps-sso | envsubst '$APPS_SSO_OAUTH2_CLIENT_SECRET $APPS_SSO_AUDITOR_PASSWORD' | kubectl apply --server-side -f -
     kubectl wait --for=condition=Available deploy/bookstack-db -n apps-sso --timeout=120s
     kubectl wait --for=condition=Available deploy/bookstack -n apps-sso --timeout=180s
     kubectl wait --for=condition=Available deploy/kanboard -n apps-sso --timeout=120s
@@ -46,6 +48,53 @@ apps-sso: _k3d
 [group('local')]
 apps-sso-clean:
     -kubectl delete -k apps-sso
+
+[private]
+_apps-sso-secrets:
+    kubectl apply -f apps-sso/namespace.yaml
+    @rand() { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c "${1:-32}"; }; \
+    b64() { head -c "${1:-32}" /dev/urandom | base64 | tr -d '\n'; }; \
+    if ! kubectl get secret bookstack-db -n apps-sso >/dev/null 2>&1; then \
+      kubectl create secret generic bookstack-db -n apps-sso \
+        --from-literal=MYSQL_ROOT_PASSWORD="$(rand 32)" \
+        --from-literal=MYSQL_DATABASE=bookstack \
+        --from-literal=MYSQL_USER=bookstack \
+        --from-literal=MYSQL_PASSWORD="$(rand 32)" \
+        --dry-run=client -o yaml | kubectl apply -f -; \
+    fi
+    @if ! kubectl get secret bookstack-app -n apps-sso >/dev/null 2>&1; then \
+      kubectl create secret generic bookstack-app -n apps-sso \
+        --from-literal=APP_KEY="base64:$(head -c 32 /dev/urandom | base64 | tr -d '\n')" \
+        --dry-run=client -o yaml | kubectl apply -f -; \
+    fi
+    @rand() { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c "${1:-32}"; }; \
+    if ! kubectl get secret keycloak-admin -n apps-sso >/dev/null 2>&1; then \
+      kubectl create secret generic keycloak-admin -n apps-sso \
+        --from-literal=username=admin \
+        --from-literal=password="$(rand 32)" \
+        --dry-run=client -o yaml | kubectl apply -f -; \
+    fi
+    @rand() { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c "${1:-32}"; }; \
+    if ! kubectl get secret keycloak-user -n apps-sso >/dev/null 2>&1; then \
+      kubectl create secret generic keycloak-user -n apps-sso \
+        --from-literal=password="$(rand 32)" \
+        --dry-run=client -o yaml | kubectl apply -f -; \
+    fi
+    @rand() { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c "${1:-32}"; }; \
+    if ! kubectl get secret oauth2-proxy -n apps-sso >/dev/null 2>&1; then \
+      kubectl create secret generic oauth2-proxy -n apps-sso \
+        --from-literal=client-secret="$(rand 32)" \
+        --from-literal=cookie-secret="$(head -c 32 /dev/urandom | base64 | tr -d '\n')" \
+        --dry-run=client -o yaml | kubectl apply -f -; \
+    fi
+    @rand() { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c "${1:-32}"; }; \
+    if ! kubectl get secret woodpecker -n apps-sso >/dev/null 2>&1; then \
+      kubectl create secret generic woodpecker -n apps-sso \
+        --from-literal=github-client=local-demo-placeholder \
+        --from-literal=github-secret="$(rand 32)" \
+        --from-literal=agent-secret="$(rand 32)" \
+        --dry-run=client -o yaml | kubectl apply -f -; \
+    fi
 
 # --- EKS (requires AWS) ---
 

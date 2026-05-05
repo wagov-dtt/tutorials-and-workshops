@@ -6,7 +6,7 @@ metadata:
   name: mysql-secret
   namespace: s3-test
 stringData:
-  MYSQL_ROOT_PASSWORD: testpass
+  MYSQL_ROOT_PASSWORD: local-demo-not-a-secret
   MYSQL_DATABASE: sbtest
 ---
 apiVersion: apps/v1

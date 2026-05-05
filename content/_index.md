@@ -1,15 +1,28 @@
 ---
-title: "DevSecOps Induction"
-description: "Concise induction for secure cloud-native delivery aligned to DTT ADRs."
+title: "Getting Started"
+description: "First-time setup, local Kubernetes, and secure delivery habits for the tutorials."
 weight: 1
-icon: "graduation-cap"
+icon: "rocket"
 ---
 
-Use this page as the starting point for the repository. The goal is not to finish every tutorial; it is to produce evidence that you can deliver, secure, and operate a small cloud-native workload.
+New to DevOps or Kubernetes? Start here. The goal is not to finish every tutorial; it is to produce evidence that you can deliver, secure, and operate a small cloud-native workload.
 
 **Evidence beats course completion.** For each section, produce one artefact: a pull request, diagram, runbook, threat model, test, or short demo.
 
-## 1. Operating Rules
+## What You'll Learn
+
+This repo teaches modern infrastructure patterns through hands-on examples:
+
+- **Kubernetes basics**: Deploying apps, databases, and services.
+- **Kustomize**: Managing configuration without templating.
+- **S3 and cloud storage**: Backups, mounts, and object storage.
+- **GitOps**: Automated deployments with ArgoCD.
+- **Infrastructure as Code**: Creating cloud resources with Terraform.
+- **Secure delivery**: Trust boundaries, validation, least privilege, and reviewable automation.
+
+See [GLOSSARY.md](glossary.md) for definitions of these terms.
+
+## Operating Rules
 
 | Rule | What good looks like |
 |------|----------------------|
@@ -18,17 +31,64 @@ Use this page as the starting point for the repository. The goal is not to finis
 | Validate early | Run format, tests, Trivy/IaC checks, and focused security review before merge or deploy. |
 | Keep humans accountable | Automation and AI can assist, but people approve consequential changes. |
 
-Start here:
+## Prerequisites
+
+You need these installed:
+
+| Tool | What it does | Install |
+|------|--------------|---------|
+| [mise](https://mise.jdx.dev/) | Manages tool versions | `curl https://mise.run \| sh` |
+| [Docker](https://docs.docker.com/get-docker/) | Runs containers | Follow Docker docs |
+
+Everything else, including kubectl, k3d, Helm, Terraform, Hugo, and Sass, is installed through `mise`.
+
+## Your First Commands
 
 ```bash
+# Clone the repo
+git clone https://github.com/wagov-dtt/tutorials-and-workshops
+cd tutorials-and-workshops
+
+# Install all tools
 just prereqs
+
+# Create a local Kubernetes cluster and deploy databases
 just deploy-local
-just docs-serve
 ```
 
-Then follow the [learning path](learning-path.md).
+**Success looks like:**
 
-## 2. ADR-Aligned Delivery Checklist
+```text
+INFO[0000] Creating cluster 'tutorials'
+INFO[0003] Cluster 'tutorials' created successfully!
+namespace/databases created
+deployment.apps/postgres created
+...
+```
+
+This creates a local [k3d](https://k3d.io/) cluster with PostgreSQL, MySQL, MongoDB, and Elasticsearch running in Docker.
+
+## Explore What You Built
+
+```bash
+# See all running pods
+kubectl get pods -A
+
+# Open k9s, a terminal UI for Kubernetes
+k9s
+```
+
+In k9s: press `0` to see all namespaces, arrow keys to navigate, `d` to describe a pod, `l` for logs, and `q` to quit.
+
+## What Just Happened?
+
+1. `just prereqs` installed kubectl, k3d, Helm, and other tools via `mise`.
+2. `just deploy-local` created a k3d cluster called `tutorials`.
+3. Kubernetes manifests from `kustomize/` were applied to deploy databases.
+
+The configuration lives in `kustomize/overlays/local/kustomization.yaml`. It combines base manifests with local-specific settings.
+
+## ADR-Aligned Delivery Checklist
 
 The repository examples are intentionally small, but the habits should match DTT architecture decisions.
 
@@ -39,7 +99,44 @@ The repository examples are intentionally small, but the habits should match DTT
 | Workloads | [ADR 002](https://adr.dtt.digital.wa.gov.au/operations/002-workloads.html): use CNCF-certified Kubernetes; prefer AWS EKS Auto Mode for cloud workloads; keep durable state in managed services where practical. | Learn locally with k3d, then compare with `eksauto/`. Note where demo databases use cluster storage and where production would use managed database, object, or shared file services. |
 | AI governance | [ADR 011](https://adr.dtt.digital.wa.gov.au/security/011-ai-governance.html): start with low-risk, non-sensitive tasks; set explicit workspace/tool/model boundaries; require human approval for production, release, customer, or high-impact actions. | Use `oy` for repository explanation, coding help, and audits. Do not give AI broad credentials, sensitive data, or autonomous deploy authority. Keep prompts, outputs, tool calls, and approvals reviewable. |
 
-## 3. Core Skills to Build
+## Optional: Use oy Directly
+
+Install [`oy-cli`](https://crates.io/crates/oy-cli) from crates.io with mise's Cargo backend to use `oy` directly from your shell:
+
+```bash
+mise use -g cargo-binstall
+mise use -g cargo:oy-cli
+oy "summarise this repo and suggest next steps"
+oy audit
+```
+
+`oy audit` creates or refreshes `ISSUES.md`. It works with existing provider auth, including AWS Bedrock via your configured AWS profile and region.
+
+## Hands-On Path
+
+### Beginner Path, no AWS required
+
+| Order | Command | What you learn |
+|-------|---------|----------------|
+| 1 | `just deploy-local` | Kubernetes basics, Kustomize |
+| 2 | `just rclone-test` | Mounting cloud storage as filesystems |
+| 3 | `just drupal-setup` | Local PHP development with DDEV |
+
+### Intermediate Path, requires AWS
+
+After you're comfortable with local examples:
+
+| Order | Command | What you learn |
+|-------|---------|----------------|
+| 1 | `just setup-eks` | Terraform, EKS Auto Mode |
+| 2 | `just s3-test` | Pod Identity, IAM roles |
+| 3 | `just secrets-deploy` | External Secrets Operator |
+
+**Cost warning**: EKS clusters cost money. See [eksauto/](examples/eksauto.md) for details and always run `just destroy-eks` when done.
+
+For detailed walkthroughs of each example, continue with [LEARNING_PATH.md](learning-path.md).
+
+## Core Skills to Build
 
 | Skill | Learn | Prove it |
 |------|-------|----------|
@@ -49,29 +146,18 @@ The repository examples are intentionally small, but the habits should match DTT
 | Infrastructure as Code | Terraform plan/apply/destroy, state, drift, tagging. | Read `eksauto/terraform` and run `terraform fmt -check`. |
 | Secure delivery | Trust boundaries, validation, least privilege, audit evidence. | Add one focused test or scan for a change. |
 
-Useful references:
+## Key Concepts
 
-- [GitHub learning resources](https://docs.github.com/en/get-started/start-your-journey/git-and-github-learning-resources)
-- [Kubernetes basics](https://kubernetes.io/docs/tutorials/kubernetes-basics/)
-- [Terraform language](https://developer.hashicorp.com/terraform/language)
-- [OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/)
-- [ACSC ISM](https://www.cyber.gov.au/resources-business-and-government/essential-cyber-security/ism)
+### What is Just?
 
-## 4. Hands-On Path
+[Just](https://github.com/casey/just) is a command runner. The `justfile` contains all recipes:
 
-1. [Getting started](getting-started.md) - local tools and first cluster.
-2. [Kustomize](examples/kustomize.md) - base Kubernetes resources and overlays.
-3. [rclone CSI](examples/rclone.md) - local object-storage-style filesystem mount.
-4. [Apps SSO](examples/apps-sso.md) - apps behind Keycloak, oauth2-proxy, and Traefik.
-5. [Drupal Hugo/DDEV](examples/drupal.md) - local PHP/Drupal workflow.
-6. [EKS Auto Mode](examples/eksauto.md) - managed Kubernetes with Terraform.
-7. [S3 Pod Identity](examples/s3-pod-identity.md) - credential-free AWS access from pods.
-8. [External Secrets](examples/secrets.md) - sync cloud secrets into Kubernetes.
-9. [ArgoCD](examples/argocd.md) - GitOps reconciliation.
+```bash
+just              # List all recipes
+just deploy-local # Run a specific recipe
+```
 
-Cost warning: AWS labs create billable resources. Destroy them when finished.
-
-## 5. Baseline Commands
+## Baseline Commands
 
 ```bash
 just lint       # local validation, including docs build
@@ -80,12 +166,74 @@ oy audit        # AI-assisted review; keep outputs human-reviewed
 
 When adding a security control, name the trust boundary, validate near that boundary, fail closed, and add a focused test.
 
-## 6. Optional Learning Resources
+## Troubleshooting
+
+### "command not found: kubectl"
+
+Run `just prereqs` to install tools, then restart your shell or run `source ~/.bashrc`.
+
+### "Cannot connect to the Docker daemon"
+
+Start Docker Desktop, or on Linux: `sudo systemctl start docker`.
+
+### k3d cluster won't start
+
+```bash
+k3d cluster delete tutorials
+just deploy-local
+```
+
+### Pods stuck in "Pending"
+
+Usually waiting for resources. Check events:
+
+```bash
+kubectl describe pod <pod-name> -n <namespace>
+```
+
+### "Drupal site won't load"
+
+```bash
+cd drupal
+ddev status       # Check if running
+ddev start        # Start if stopped
+ddev logs -s web  # View errors
+```
+
+## Getting Help
+
+- Run `just` to list all available commands with descriptions.
+- Each directory has a README.md explaining that example.
+- See [GLOSSARY.md](glossary.md) and [LEARNING_PATH.md](learning-path.md) for reference.
+
+## Cleanup
+
+```bash
+# Stop local cluster, preserving data
+k3d cluster stop tutorials
+
+# Delete local cluster completely
+k3d cluster delete tutorials
+
+# Stop Drupal, using DDEV directly
+cd drupal && ddev stop
+```
+
+## Optional Learning Resources
 
 Keep optional resources purposeful:
 
-- [Obsidian](https://obsidian.md/) or plain Markdown for notes.
-- [Bloom's taxonomy](https://en.wikipedia.org/wiki/Bloom%27s_taxonomy) to self-check understanding.
+- [GitHub learning resources](https://docs.github.com/en/get-started/start-your-journey/git-and-github-learning-resources)
+- [Kubernetes basics](https://kubernetes.io/docs/tutorials/kubernetes-basics/)
+- [Terraform language](https://developer.hashicorp.com/terraform/language)
+- [OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/)
+- [ACSC ISM](https://www.cyber.gov.au/resources-business-and-government/essential-cyber-security/ism)
 - [SANS SEC540](https://www.sans.org/cyber-security-courses/cloud-security-devops-automation/) for cloud security and DevSecOps depth.
 - [SANS SEC522](https://www.sans.org/cyber-security-courses/application-security-securing-web-apps-api-microservices/) for web/API security.
 - [CKA, CKAD, or CKS](https://training.linuxfoundation.org/certification/) when Kubernetes certification is useful evidence.
+
+## See Also
+
+- [LEARNING_PATH.md](learning-path.md) - Detailed walkthrough of each example.
+- [GLOSSARY.md](glossary.md) - Definitions of key terms.
+- [kustomize/](examples/kustomize.md) - The base manifests deployed by `just deploy-local`.

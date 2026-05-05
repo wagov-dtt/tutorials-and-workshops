@@ -6,7 +6,7 @@ metadata:
 type: Opaque
 stringData:
   MONGO_INITDB_ROOT_USERNAME: mongo
-  MONGO_INITDB_ROOT_PASSWORD: changeme
+  MONGO_INITDB_ROOT_PASSWORD: local-demo-not-a-secret
 ---
 apiVersion: apps/v1
 kind: Deployment

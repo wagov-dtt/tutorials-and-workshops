@@ -163,7 +163,6 @@ Each example directory has its own README with detailed explanations.
 ## Links
 
 - [oy-cli](https://crates.io/crates/oy-cli) - Small standalone CLI for coding help and `oy audit`
-- [DevSecOps Induction](https://soc.cyber.wa.gov.au/training/devsecops-induction/) - Structured training course
 - [Just command runner](https://github.com/casey/just) - How the justfile works
 - [Kustomize docs](https://kubectl.docs.kubernetes.io/guides/introduction/kustomize/) - Base/overlay pattern
 

@@ -14,18 +14,25 @@ just apps-sso
 
 | App | URL | SSO login |
 |-----|-----|-----------|
-| BookStack | <http://bookstack.apps-sso.localtest.me:30080/> | Keycloak user `auditor` / `change-me-auditor-password` |
-| Kanboard | <http://kanboard.apps-sso.localtest.me:30080/> | Keycloak user `auditor` / `change-me-auditor-password` |
-| Woodpecker | <http://woodpecker.apps-sso.localtest.me:30080/> | Keycloak user `auditor` / `change-me-auditor-password`; Woodpecker also needs real forge OAuth for native login |
-| Keycloak admin | <http://keycloak.apps-sso.localtest.me:30080/> | `admin` / `change-me-keycloak-admin` |
+| BookStack | <http://bookstack.apps-sso.localtest.me:30080/> | Keycloak user `auditor`; retrieve the generated password with the command below |
+| Kanboard | <http://kanboard.apps-sso.localtest.me:30080/> | Keycloak user `auditor`; retrieve the generated password with the command below |
+| Woodpecker | <http://woodpecker.apps-sso.localtest.me:30080/> | Keycloak user `auditor`; retrieve the generated password with the command below; Woodpecker also needs real forge OAuth for native login |
+| Keycloak admin | <http://keycloak.apps-sso.localtest.me:30080/> | `admin`; retrieve the generated password with the command below |
 | oauth2-proxy callback | <http://oauth2.apps-sso.localtest.me:30080/oauth2/callback> | OIDC callback endpoint |
+
+Retrieve generated local credentials when you need an interactive login:
+
+```bash
+kubectl get secret keycloak-user -n apps-sso -o jsonpath='{.data.password}' | base64 -d; echo
+kubectl get secret keycloak-admin -n apps-sso -o jsonpath='{.data.password}' | base64 -d; echo
+```
 
 ## What's Here
 
 | File | Purpose |
 |------|---------|
 | `namespace.yaml` | Isolates both apps in `apps-sso` |
-| `secrets.yaml` | Demo-only BookStack, oauth2-proxy, Keycloak, and Woodpecker secrets |
+| generated Secrets | Created by `just apps-sso`; not committed to source |
 | `mariadb.yaml` | MariaDB for BookStack |
 | `apps.yaml` | BookStack and Kanboard Deployments and Services |
 | `woodpecker.yaml` | Woodpecker CI Deployment and Service |
@@ -42,7 +49,7 @@ just apps-sso
 - **Per-app domains stay separate**: BookStack, Kanboard, Woodpecker, Keycloak, and oauth2-proxy each get their own `*.apps-sso.localtest.me:30080` host.
 - **Forwarded identity headers are explicit**: Traefik forwards `X-Auth-Request-User`, `X-Auth-Request-Email`, `X-Auth-Request-Preferred-Username`, `X-Auth-Request-Groups`, and `X-Auth-Request-Access-Token` from oauth2-proxy to the upstream request.
 - **Traefik is the trust boundary**. Do not expose the app Services directly if you depend on forwarded identity or groups; only the local Traefik edge should be allowed to set these headers.
-- **Secrets are demo values**, base64-encoded or plain `stringData` only for local readability. Generate real values outside a local lab.
+- **Secrets are generated per local deployment** by `just apps-sso`. Generate new values and use an external secret source outside a local lab.
 - **`emptyDir` volumes keep the YAML short**. Data is lost when pods are recreated; use PVCs for anything you care about.
 
 ## SSO Pattern

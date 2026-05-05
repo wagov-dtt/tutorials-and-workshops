@@ -110,15 +110,25 @@ The ExternalSecret uses ClusterSecretStore (AWS SM backend) which authenticates 
 ### Creating Secrets in AWS
 
 ```bash
-# Create a secret (JSON format)
+# Create a secret (JSON format) with a generated password
+SECRET_JSON=$(jq -n \
+  --arg username training-user \
+  --arg password "$(openssl rand -base64 24)" \
+  '{username: $username, password: $password}')
+
 aws secretsmanager create-secret \
   --name training/db-credentials \
-  --secret-string '{"username":"admin","password":"changeme"}'
+  --secret-string "$SECRET_JSON"
 
-# Update existing secret
+# Update existing secret with a newly generated password
+SECRET_JSON=$(jq -n \
+  --arg username training-user \
+  --arg password "$(openssl rand -base64 24)" \
+  '{username: $username, password: $password}')
+
 aws secretsmanager put-secret-value \
   --secret-id training/db-credentials \
-  --secret-string '{"username":"admin","password":"newpassword"}'
+  --secret-string "$SECRET_JSON"
 ```
 
 ESO syncs changes within the refresh interval (default: 1 hour, configured to 5 minutes in this example).

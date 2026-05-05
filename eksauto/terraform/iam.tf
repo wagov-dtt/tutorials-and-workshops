@@ -137,7 +137,13 @@ resource "aws_iam_role_policy" "secrets_manager_read" {
   })
 }
 
-# Example secret for External Secrets demo
+# Example secret for External Secrets demo. The generated value is stored in
+# Secrets Manager and Terraform state, not committed to source.
+resource "random_password" "db_credentials" {
+  length  = 24
+  special = true
+}
+
 resource "aws_secretsmanager_secret" "db_credentials" {
   name                    = "training/db-credentials"
   recovery_window_in_days = 0 # Allow immediate deletion for training
@@ -151,7 +157,7 @@ resource "aws_secretsmanager_secret" "db_credentials" {
 resource "aws_secretsmanager_secret_version" "db_credentials" {
   secret_id = aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
-    username = "admin"
-    password = "training-password-change-me"
+    username = "training-user"
+    password = random_password.db_credentials.result
   })
 }

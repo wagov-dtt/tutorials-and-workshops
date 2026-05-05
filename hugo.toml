@@ -1,6 +1,7 @@
 baseURL = "/"
-title = "Tutorials and Workshops"
-copyright = "© :YEAR: WA Government DTT. Built with [Hinode](https://gethinode.com/)."
+relativeURLs = true
+canonifyURLs = false
+title = "Cloud Native Tutorials"
 enableEmoji = true
 enableGitInfo = true
 enableInlineShortcodes = true
@@ -129,7 +130,7 @@ timeout = "180s"
 [params]
   [params.main]
     separator = "-"
-    description = "Hands-on DevOps and Kubernetes examples."
+    description = "Hands-on cloud-native and secure delivery tutorials."
     enableLanguageSelectionStorage = false
     canonifyAssetsURLs = false
     footerBelowFold = false
@@ -199,7 +200,7 @@ timeout = "180s"
     name = "WA Government DTT"
     locale = "en-AU"
     github = "https://github.com/wagov-dtt/tutorials-and-workshops"
-    section = "induction"
+    section = "tutorials"
     [params.schema.author]
       name = "WA Government DTT"
       github = "https://github.com/wagov-dtt"
@@ -207,8 +208,3 @@ timeout = "180s"
   [params.opengraph]
     locale = "en_AU"
 
-[menu]
-  [[menu.main]]
-    name = "GitHub"
-    url = "https://github.com/wagov-dtt/tutorials-and-workshops"
-    weight = 10

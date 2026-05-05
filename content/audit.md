@@ -19,8 +19,8 @@ icon: "shield-halved"
 - **Location:** `kustomize/databases/postgres.yaml:3-10`, `kustomize/databases/mysql.yaml:3-9`, `kustomize/databases/mongodb.yaml:3-9`, `kustomize/databases/elasticsearch.yaml:3-8`, `s3-pod-identity/base/mysql.yaml:3-10`, `eksauto/terraform/iam.tf:157-162`, `justfile:208-215`, `rclone/README.md:22-27`
 - **Category:** security
 - **Standard reference:** OWASP ASVS 5.0.0 `13.2.3`, `13.3.1`, `13.3.2`
-- **Finding:** The repo still teaches and embeds multiple real-looking defaults: `changeme`, `testpass`, `training-password-change-me`, and `admin/admin`. For a training repo this is understandable in isolated local flows, but it is too easy to copy these values into long-lived k3d, EKS, or demo environments.
-- **Recommendation:** Keep at most one clearly labeled insecure-local example, but generate per-run credentials everywhere else. Make scripts fail fast when placeholders remain, move shared/AWS examples to generated secrets or external secret sources, and stop documenting `admin/admin` as a normal path.
+- **Finding:** The repo still teaches and embeds multiple real-looking defaults: fixed demo passwords and admin defaults. For a training repo this is understandable in isolated local flows, but it is too easy to copy these values into long-lived k3d, EKS, or demo environments.
+- **Recommendation:** Keep at most one clearly labeled insecure-local example, but generate per-run credentials everywhere else. Make scripts fail fast when placeholders remain, move shared/AWS examples to generated secrets or external secret sources, and stop documenting fixed admin credentials as a normal path.
 
 ## 2. Default EKS control plane access is public and unrestricted
 - **Priority:** P1

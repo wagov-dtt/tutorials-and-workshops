@@ -5,7 +5,7 @@ metadata:
   name: mysql-secret
 type: Opaque
 stringData:
-  MYSQL_ROOT_PASSWORD: changeme
+  MYSQL_ROOT_PASSWORD: local-demo-not-a-secret
   MYSQL_DATABASE: testdb
 ---
 apiVersion: apps/v1

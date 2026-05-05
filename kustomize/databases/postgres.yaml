@@ -6,7 +6,7 @@ metadata:
 type: Opaque
 stringData:
   POSTGRES_USER: postgres
-  POSTGRES_PASSWORD: changeme
+  POSTGRES_PASSWORD: local-demo-not-a-secret
   POSTGRES_DB: postgres
 ---
 apiVersion: apps/v1

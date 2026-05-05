@@ -121,5 +121,5 @@ HashiCorp's Infrastructure as Code tool. You declare what resources you want (VP
 
 ## See Also
 
-- [GETTING_STARTED.md](getting-started.md) - First-time setup guide
+- [GETTING_STARTED.md](_index.md) - First-time setup guide
 - [LEARNING_PATH.md](learning-path.md) - Suggested order for examples

@@ -4,7 +4,6 @@ kind: Kustomization
 namespace: apps-sso
 resources:
   - namespace.yaml
-  - secrets.yaml
   - mariadb.yaml
   - apps.yaml
   - woodpecker.yaml

@@ -5,7 +5,7 @@ weight: 20
 icon: "route"
 ---
 
-A suggested order for working through the examples, from beginner to advanced. Each section links to the corresponding example README for detailed instructions. For broader self-study resources and security validation habits, see [DevSecOps Induction](_index.md).
+A suggested order for working through the examples, from beginner to advanced. Each section links to the corresponding example README for detailed instructions. For setup steps and security validation habits, see [Getting Started](_index.md).
 
 ## Level 1: Local Kubernetes (No Cloud Required)
 
@@ -232,5 +232,5 @@ Verify in AWS Console that:
 
 ## See Also
 
-- [GETTING_STARTED.md](getting-started.md) - First-time setup instructions
+- [GETTING_STARTED.md](_index.md) - First-time setup instructions
 - [GLOSSARY.md](glossary.md) - Definitions of key terms

@@ -23,7 +23,7 @@ Access filebrowser (after LoadBalancer is ready):
 
 ```bash
 kubectl get svc filebrowser  # Get external IP
-# Open in browser, default login: admin/admin
+# Open in browser; this local demo image uses its own upstream default login
 ```
 
 ## What's Here

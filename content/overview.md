@@ -32,8 +32,7 @@ This creates a local Kubernetes cluster with databases. No cloud account is need
 
 ## Helpful references
 
-- [Getting started](getting-started.md)
-- [DevSecOps induction](_index.md)
+- [Getting Started](_index.md)
 - [Learning path](learning-path.md)
 - [Glossary](glossary.md)
 - [Code audit](audit.md)
