@@ -1,0 +1,201 @@
+# Local/demo Keycloak realm for oauth2-proxy. Replace demo passwords and secrets outside labs.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm
+  labels:
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/part-of: apps-sso
+data:
+  realm.json: |
+    {
+      "realm": "apps",
+      "enabled": true,
+      "registrationAllowed": false,
+      "loginWithEmailAllowed": true,
+      "roles": {
+        "realm": [
+          { "name": "bookstack-user" },
+          { "name": "kanboard-user" },
+          { "name": "woodpecker-user" }
+        ]
+      },
+      "groups": [
+        { "name": "bookstack-users" },
+        { "name": "kanboard-users" },
+        { "name": "woodpecker-users" }
+      ],
+      "clients": [
+        {
+          "clientId": "apps-sso",
+          "name": "Apps SSO oauth2-proxy",
+          "enabled": true,
+          "publicClient": false,
+          "protocol": "openid-connect",
+          "standardFlowEnabled": true,
+          "directAccessGrantsEnabled": false,
+          "serviceAccountsEnabled": false,
+          "fullScopeAllowed": true,
+          "redirectUris": [
+            "http://oauth2.apps-sso.localtest.me:30080/oauth2/callback"
+          ],
+          "webOrigins": [
+            "http://bookstack.apps-sso.localtest.me:30080",
+            "http://kanboard.apps-sso.localtest.me:30080",
+            "http://woodpecker.apps-sso.localtest.me:30080"
+          ],
+          "secret": "change-me-oauth2-client-secret",
+          "protocolMappers": [
+            {
+              "name": "audience-apps-sso",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-audience-mapper",
+              "consentRequired": false,
+              "config": {
+                "included.client.audience": "apps-sso",
+                "id.token.claim": "true",
+                "access.token.claim": "true"
+              }
+            }
+          ]
+        }
+      ],
+      "users": [
+        {
+          "username": "auditor",
+          "email": "auditor@example.test",
+          "firstName": "Audit",
+          "lastName": "User",
+          "enabled": true,
+          "emailVerified": true,
+          "credentials": [
+            {
+              "type": "password",
+              "value": "change-me-auditor-password",
+              "temporary": false
+            }
+          ],
+          "groups": [
+            "/bookstack-users",
+            "/kanboard-users",
+            "/woodpecker-users"
+          ],
+          "realmRoles": [
+            "bookstack-user",
+            "kanboard-user",
+            "woodpecker-user"
+          ]
+        }
+      ],
+      "clientScopes": [
+        {
+          "name": "groups",
+          "description": "Expose Keycloak group membership in the groups claim",
+          "protocol": "openid-connect",
+          "attributes": {
+            "include.in.token.scope": "true",
+            "display.on.consent.screen": "true"
+          },
+          "protocolMappers": [
+            {
+              "name": "groups",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-group-membership-mapper",
+              "consentRequired": false,
+              "config": {
+                "claim.name": "groups",
+                "full.path": "true",
+                "id.token.claim": "true",
+                "access.token.claim": "true",
+                "userinfo.token.claim": "true"
+              }
+            }
+          ]
+        }
+      ],
+      "defaultDefaultClientScopes": [
+        "profile",
+        "email",
+        "roles",
+        "groups"
+      ]
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/part-of: apps-sso
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.0
+          args:
+            - start-dev
+            - --import-realm
+            - --hostname=http://keycloak.apps-sso.localtest.me:30080
+            - --hostname-strict=false
+            - --proxy-headers=xforwarded
+          env:
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-admin
+                  key: username
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-admin
+                  key: password
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: realm
+              mountPath: /opt/keycloak/data/import
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /realms/apps
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: realm
+          configMap:
+            name: keycloak-realm
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  labels:
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/part-of: apps-sso
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

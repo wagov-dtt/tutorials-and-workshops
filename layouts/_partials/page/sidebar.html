@@ -1,0 +1,61 @@
+{{- $menu := .Scratch.Get "sidebar" -}}
+{{- if $menu -}}
+    {{- $page := . -}}
+    {{- $current := strings.TrimSuffix "/" $page.RelPermalink -}}
+    {{- if eq $current "" }}{{ $current = "/" }}{{ end -}}
+    <nav class="sidebar flex-shrink-0 ps-1" aria-label="Site navigation">
+        <ul class="list-unstyled ps-0">
+            {{- range $index, $item := $menu -}}
+                {{- $href := $item.link | default "#" -}}
+                {{- $hrefNorm := strings.TrimSuffix "/" $href -}}
+                {{- if eq $hrefNorm "" }}{{ $hrefNorm = "/" }}{{ end -}}
+                {{- $active := eq $current $hrefNorm -}}
+                {{- if $item.pages -}}
+                    {{- $sectionActive := and (ne $hrefNorm "/") (strings.HasPrefix $page.RelPermalink $href) -}}
+                    <li class="mb-1">
+                        <div class="d-flex w-100 p-0 sidebar-item-group">
+                            <div class="text-start flex-grow-1">
+                                <a href="{{ $href }}" class="sidebar-item text-decoration-none rounded w-100{{ if or $active $sectionActive }} active{{ end }}">
+                                    {{- with $item.pre }}{{ partial "assets/icon.html" (dict "icon" . "class" "fa-fw me-1" "spacing" false) }}{{ end -}}
+                                    {{- $item.title -}}
+                                </a>
+                            </div>
+                            <button class="btn btn-toggle-group d-inline-flex align-items-center rounded border-0{{ if not $sectionActive }} collapsed{{ end }}"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#sidebar-section-{{ $index }}"
+                                    aria-expanded="{{ cond $sectionActive "true" "false" }}"
+                                    aria-label="Toggle {{ $item.title }} section"></button>
+                        </div>
+                        <div class="collapse{{ if $sectionActive }} show{{ end }}" id="sidebar-section-{{ $index }}">
+                            <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+                                {{- range $child := $item.pages -}}
+                                    {{- $childHref := $child.link | default "#" -}}
+                                    {{- $childNorm := strings.TrimSuffix "/" $childHref -}}
+                                    {{- $childActive := eq $current $childNorm -}}
+                                    <li>
+                                        <a href="{{ $childHref }}" class="sidebar-item text-decoration-none rounded small w-100{{ if $childActive }} active{{ end }}">
+                                            {{- with $child.pre }}{{ partial "assets/icon.html" (dict "icon" . "class" "fa-fw me-1" "spacing" false) }}{{ end -}}
+                                            {{- $child.title -}}
+                                        </a>
+                                    </li>
+                                {{- end -}}
+                            </ul>
+                        </div>
+                    </li>
+                {{- else -}}
+                    <li class="mt-1 mb-1"></li>
+                    <li>
+                        <ul class="btn-toggle-nav list-unstyled pb-1">
+                            <li>
+                                <a href="{{ $href }}" class="sidebar-item text-decoration-none rounded w-100{{ if $active }} active{{ end }}">
+                                    {{- with $item.pre }}{{ partial "assets/icon.html" (dict "icon" . "class" "fa-fw me-1" "spacing" false) }}{{ end -}}
+                                    {{- $item.title -}}
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                {{- end -}}
+            {{- end -}}
+        </ul>
+    </nav>
+{{- end -}}

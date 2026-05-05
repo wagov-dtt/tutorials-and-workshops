@@ -1,0 +1,118 @@
+# Shared oauth2-proxy instance for Apps SSO.
+# Trust boundary: only the local Traefik edge should call /oauth2/auth and pass identity headers upstream.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oauth2-proxy
+  labels:
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/part-of: apps-sso
+data:
+  oauth2_proxy.cfg: |
+    provider = "keycloak-oidc"
+    provider_display_name = "Keycloak"
+    oidc_issuer_url = "http://keycloak.apps-sso.localtest.me:30080/realms/apps"
+    skip_oidc_discovery = true
+    login_url = "http://keycloak.apps-sso.localtest.me:30080/realms/apps/protocol/openid-connect/auth"
+    redeem_url = "http://keycloak/realms/apps/protocol/openid-connect/token"
+    profile_url = "http://keycloak/realms/apps/protocol/openid-connect/userinfo"
+    oidc_jwks_url = "http://keycloak/realms/apps/protocol/openid-connect/certs"
+    scope = "openid profile email groups"
+    oidc_groups_claim = "groups"
+
+    email_domains = [ "*" ]
+    allowed_groups = [ "/bookstack-users", "/kanboard-users", "/woodpecker-users" ]
+
+    http_address = "0.0.0.0:4180"
+    reverse_proxy = true
+    trusted_ips = [ "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16" ]
+    redirect_url = "http://oauth2.apps-sso.localtest.me:30080/oauth2/callback"
+    whitelist_domains = [ ".apps-sso.localtest.me" ]
+    cookie_domains = [ ".apps-sso.localtest.me" ]
+    cookie_secure = false
+    cookie_samesite = "lax"
+
+    pass_user_headers = true
+    pass_basic_auth = false
+    pass_access_token = true
+    set_xauthrequest = true
+    skip_auth_strip_headers = true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-proxy
+  labels:
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/part-of: apps-sso
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oauth2-proxy
+  template:
+    metadata:
+      labels:
+        app: oauth2-proxy
+    spec:
+      containers:
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.8.1
+          args:
+            - --config=/etc/oauth2-proxy/oauth2_proxy.cfg
+          env:
+            - name: OAUTH2_PROXY_CLIENT_ID
+              value: apps-sso
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy
+                  key: client-secret
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy
+                  key: cookie-secret
+          ports:
+            - containerPort: 4180
+          volumeMounts:
+            - name: config
+              mountPath: /etc/oauth2-proxy
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 4180
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: config
+          configMap:
+            name: oauth2-proxy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth2-proxy
+  labels:
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/part-of: apps-sso
+spec:
+  selector:
+    app: oauth2-proxy
+  ports:
+    - name: http
+      port: 80
+      targetPort: 4180

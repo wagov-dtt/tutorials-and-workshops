@@ -1,0 +1,34 @@
+- title: Induction
+  link: /
+  pre: fas graduation-cap
+- title: Examples
+  link: /examples/
+  pre: fas code
+  pages:
+    - title: Kustomize
+      link: /examples/kustomize/
+      pre: fas diagram-project
+    - title: rclone CSI
+      link: /examples/rclone/
+      pre: fas folder-open
+    - title: Apps SSO
+      link: /examples/apps-sso/
+      pre: fas right-to-bracket
+    - title: Drupal Hugo/DDEV
+      link: /examples/drupal/
+      pre: fas language
+    - title: EKS Auto Mode
+      link: /examples/eksauto/
+      pre: fas cloud
+    - title: S3 Pod Identity
+      link: /examples/s3-pod-identity/
+      pre: fas database
+    - title: External Secrets
+      link: /examples/secrets/
+      pre: fas key
+    - title: ArgoCD
+      link: /examples/argocd/
+      pre: fas sync
+- title: Learning path
+  link: /learning-path/
+  pre: fas route

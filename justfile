@@ -25,20 +25,27 @@ rclone-test: _rclone
     kubectl exec deploy/filebrowser -- ls -la /srv
     @echo "rclone CSI working ✓"
 
-# Deploy BookStack wiki and Kanboard task board to local k3d
+# Deploy Apps SSO to local k3d
 [group('local')]
-bookstack-kanboard: _k3d
-    kubectl apply -k bookstack-kanboard --server-side
-    kubectl wait --for=condition=Available deploy/bookstack-db -n bookstack-kanboard --timeout=120s
-    kubectl wait --for=condition=Available deploy/bookstack -n bookstack-kanboard --timeout=180s
-    kubectl wait --for=condition=Available deploy/kanboard -n bookstack-kanboard --timeout=120s
-    @echo "BookStack: kubectl -n bookstack-kanboard port-forward svc/bookstack 6875:80"
-    @echo "Kanboard:  kubectl -n bookstack-kanboard port-forward svc/kanboard 8080:80"
+apps-sso: _k3d
+    kubectl apply -k apps-sso --server-side
+    kubectl wait --for=condition=Available deploy/bookstack-db -n apps-sso --timeout=120s
+    kubectl wait --for=condition=Available deploy/bookstack -n apps-sso --timeout=180s
+    kubectl wait --for=condition=Available deploy/kanboard -n apps-sso --timeout=120s
+    kubectl wait --for=condition=Available deploy/woodpecker -n apps-sso --timeout=120s
+    kubectl wait --for=condition=Available deploy/keycloak -n apps-sso --timeout=240s
+    kubectl wait --for=condition=Available deploy/oauth2-proxy -n apps-sso --timeout=120s
+    kubectl wait --for=condition=Available deploy/traefik -n apps-sso --timeout=120s
+    @echo "Apps SSO deployed via static Traefik NodePort 30080:"
+    @echo "BookStack:  http://bookstack.apps-sso.localtest.me:30080"
+    @echo "Kanboard:   http://kanboard.apps-sso.localtest.me:30080"
+    @echo "Woodpecker: http://woodpecker.apps-sso.localtest.me:30080"
+    @echo "Keycloak:   http://keycloak.apps-sso.localtest.me:30080"
 
-# Cleanup BookStack and Kanboard demo
+# Cleanup Apps SSO demo
 [group('local')]
-bookstack-kanboard-clean:
-    -kubectl delete -k bookstack-kanboard
+apps-sso-clean:
+    -kubectl delete -k apps-sso
 
 # --- EKS (requires AWS) ---
 
@@ -261,6 +268,23 @@ drupal-k3d-url:
 drupal-k3d-clean:
     -kubectl delete -k drupal/kustomize
 
+# --- DOCS ---
+
+# Serve the Hugo/Hinode site locally
+[group('docs')]
+docs-serve:
+    mise exec -- hugo server --disableFastRender --bind 127.0.0.1 --baseURL http://127.0.0.1:1313/
+
+# Build the Hugo/Hinode site
+[group('docs')]
+docs-build:
+    mise exec -- hugo --minify
+
+# Remove generated Hugo site output
+[group('docs')]
+docs-clean:
+    rm -rf public resources .hugo_build.lock
+
 # --- VALIDATION ---
 
 # Check required tools
@@ -271,7 +295,7 @@ prereqs:
 
 # Validate kustomize + terraform + trivy + caddyfile
 [group('validate')]
-lint: _lint-kustomize _lint-terraform _lint-trivy _lint-caddy
+lint: _lint-kustomize _lint-terraform _lint-trivy _lint-caddy _lint-docs
     @echo "All validations passed ✓"
 
 # Validate all local examples
@@ -311,7 +335,7 @@ _lint-kustomize:
     kubectl kustomize argocd >/dev/null
     kubectl kustomize secrets >/dev/null
     kubectl kustomize rclone/base >/dev/null
-    kubectl kustomize bookstack-kanboard >/dev/null
+    kubectl kustomize apps-sso >/dev/null
     kubectl kustomize drupal/kustomize >/dev/null
     @echo "Kustomize valid ✓"
 
@@ -328,7 +352,7 @@ _lint-terraform:
 _lint-trivy:
     @echo "Running trivy..."
     trivy config --exit-code 1 --ignorefile eksauto/terraform/.trivyignore --skip-dirs .terraform eksauto/terraform
-    trivy config --exit-code 1 --ignorefile .trivyignore kustomize argocd s3-pod-identity secrets rclone bookstack-kanboard drupal/kustomize
+    trivy config --exit-code 1 --ignorefile .trivyignore kustomize argocd s3-pod-identity secrets rclone apps-sso drupal/kustomize
     @echo "Trivy passed ✓"
 
 [private]
@@ -336,6 +360,12 @@ _lint-caddy:
     @echo "Validating Caddyfile..."
     caddy fmt --diff drupal/Caddyfile
     @echo "Caddyfile valid ✓"
+
+[private]
+_lint-docs:
+    @echo "Building docs site..."
+    mise exec -- hugo --minify
+    @echo "Docs site valid ✓"
 
 # Run SAST analysis (semgrep + CodeQL)
 [group('validate')]
@@ -397,7 +427,7 @@ _sso-role-arn:
 [private]
 _k3d:
     @which k3d > /dev/null || just prereqs
-    k3d cluster create tutorials || k3d cluster start tutorials
+    k3d cluster create tutorials --api-port 127.0.0.1:6443 -p "80:80@loadbalancer" -p "443:443@loadbalancer" || k3d cluster start tutorials
     kubectl config use-context k3d-tutorials
 
 [private]

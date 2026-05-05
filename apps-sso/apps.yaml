@@ -25,7 +25,7 @@ spec:
             - name: TZ
               value: Etc/UTC
             - name: APP_URL
-              value: http://localhost:6875
+              value: http://bookstack.apps-sso.localtest.me:30080
             - name: DB_HOST
               value: bookstack-db
             - name: DB_PORT

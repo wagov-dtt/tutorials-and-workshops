@@ -16,3 +16,9 @@ __pycache__/
 drupal/.ddev/**/*.example
 drupal/.ddev/**/README*.txt
 drupal/.ddev/.homeadditions/
+
+# Hugo build output
+/public/
+/resources/
+/hugo_stats.json
+.hugo_build.lock

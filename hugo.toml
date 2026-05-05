@@ -1,0 +1,214 @@
+baseURL = "/"
+title = "Tutorials and Workshops"
+copyright = "© :YEAR: WA Government DTT. Built with [Hinode](https://gethinode.com/)."
+enableEmoji = true
+enableGitInfo = true
+enableInlineShortcodes = true
+enableRobotsTXT = true
+locale = "en-AU"
+defaultContentLanguage = "en"
+defaultContentLanguageInSubdir = false
+timeout = "180s"
+
+[build]
+  writeStats = true
+
+[pagination]
+  pagerSize = 12
+
+[taxonomies]
+  tag = "tags"
+
+[markup]
+  defaultMarkdownHandler = "goldmark"
+  [markup.highlight]
+    codeFences = true
+    guessSyntax = true
+    noClasses = false
+    tabWidth = 2
+  [markup.tableOfContents]
+    startLevel = 2
+    endLevel = 3
+  [markup.goldmark]
+    [markup.goldmark.extensions]
+      definitionList = true
+      footnote = true
+      linkify = true
+      strikethrough = true
+      table = true
+      taskList = true
+      typographer = true
+    [markup.goldmark.parser]
+      autoHeadingID = true
+      autoHeadingIDType = "github"
+      wrapStandAloneImageWithinParagraph = false
+      [markup.goldmark.parser.attribute]
+        block = true
+    [markup.goldmark.renderer]
+      unsafe = false
+
+[outputFormats]
+  [outputFormats.llmstxt]
+    mediaType = "text/plain"
+    baseName = "llms"
+    isPlainText = true
+    notAlternative = true
+    rel = "alternate"
+    root = true
+
+  [outputFormats.markdown]
+    mediaType = "text/markdown"
+    baseName = "index"
+    isPlainText = true
+    isHTML = false
+    noUgly = false
+    rel = "alternate"
+
+  [outputFormats.llmscomponents]
+    mediaType = "application/json"
+    baseName = "llms-components"
+    isPlainText = true
+    notAlternative = true
+    root = true
+
+[outputs]
+  home = ["HTML", "RSS", "llmstxt", "markdown", "llmscomponents"]
+  page = ["HTML", "markdown"]
+  section = ["HTML", "markdown"]
+
+[minify]
+  [minify.tdewolff.js]
+    keepVarNames = true
+    precision = 0
+    version = 2022
+  [minify.tdewolff.html]
+    keepWhitespace = true
+
+[privacy]
+  [privacy.vimeo]
+    disabled = false
+    simple = true
+  [privacy.x]
+    disabled = false
+    enableDNT = true
+    simple = true
+  [privacy.instagram]
+    disabled = false
+    simple = true
+  [privacy.youtube]
+    disabled = false
+    privacyEnhanced = true
+
+[services]
+  [services.instagram]
+    disableInlineCSS = true
+  [services.x]
+    disableInlineCSS = true
+
+[module]
+  [module.hugoVersion]
+    extended = true
+    min = "0.161.1"
+  [[module.mounts]]
+    source = "content"
+    target = "content"
+  [[module.mounts]]
+    source = "layouts"
+    target = "layouts"
+  [[module.mounts]]
+    source = "assets"
+    target = "assets"
+  [[module.mounts]]
+    source = "static"
+    target = "static"
+  [[module.imports]]
+    path = "github.com/gethinode/mod-llm"
+  [[module.imports]]
+    path = "github.com/gethinode/hinode/v2"
+
+[params]
+  [params.main]
+    separator = "-"
+    description = "Hands-on DevOps and Kubernetes examples."
+    enableLanguageSelectionStorage = false
+    canonifyAssetsURLs = false
+    footerBelowFold = false
+    loading = "lazy"
+    titleCase = false
+    [params.main.colorMode]
+      enabled = true
+      modes = ["light", "dark"]
+      toggle = true
+    [params.main.internalLinks]
+      validate = false
+      pretty = false
+    [params.main.externalLinks]
+      cue = true
+      tab = true
+    [params.main.build]
+      transpiler = "dartsass"
+      silenceDeprecations = true
+
+  [params.debugging]
+    showJS = false
+    showSCSS = false
+    purgeHTMLComments = true
+
+  [params.docs]
+    basePath = "_vendor/github.com/gethinode/hinode/v2"
+    github = "https://github.com/wagov-dtt/tutorials-and-workshops"
+    checkVersion = false
+
+  [params.navigation]
+    anchor = true
+    color = "body"
+    fixed = true
+    offset = "5.5rem"
+    breadcrumb = true
+    toc = true
+    sidebar = true
+    size = "lg"
+    [params.navigation.search]
+      enabled = true
+      modal = false
+
+  [params.messages]
+    placement = "bottom-right"
+
+  [params.sharing]
+    enabled = false
+
+  [params.style]
+    primary = "#d43900"
+    secondary = "#6c757d"
+    success = "#198754"
+    info = "#0dcaf0"
+    warning = "#ffc107"
+    danger = "#dc3545"
+    light = "#f8f9fa"
+    dark = "#212529"
+    themeOpacity = "10"
+    darkModeShade = "20%"
+    darkModeTint = "40%"
+    themeFont = "Inter"
+    fontSizeBase = "1rem"
+    purge = false
+
+  [params.schema]
+    type = "Organization"
+    name = "WA Government DTT"
+    locale = "en-AU"
+    github = "https://github.com/wagov-dtt/tutorials-and-workshops"
+    section = "induction"
+    [params.schema.author]
+      name = "WA Government DTT"
+      github = "https://github.com/wagov-dtt"
+
+  [params.opengraph]
+    locale = "en_AU"
+
+[menu]
+  [[menu.main]]
+    name = "GitHub"
+    url = "https://github.com/wagov-dtt/tutorials-and-workshops"
+    weight = 10

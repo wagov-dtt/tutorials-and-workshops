@@ -1,0 +1,13 @@
+# Local demo: apps behind a shared Keycloak/oauth2-proxy SSO edge
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: apps-sso
+resources:
+  - namespace.yaml
+  - secrets.yaml
+  - mariadb.yaml
+  - apps.yaml
+  - woodpecker.yaml
+  - keycloak.yaml
+  - oauth2-proxy.yaml
+  - traefik.yaml

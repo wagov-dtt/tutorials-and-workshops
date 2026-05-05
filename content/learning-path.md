@@ -1,6 +1,11 @@
-# Learning Path
+---
+title: "Learning Path"
+description: "Recommended order for local, AWS, and GitOps examples."
+weight: 20
+icon: "route"
+---
 
-A suggested order for working through the examples, from beginner to advanced. Each section links to the corresponding example README for detailed instructions.
+A suggested order for working through the examples, from beginner to advanced. Each section links to the corresponding example README for detailed instructions. For broader self-study resources and security validation habits, see [DevSecOps Induction](_index.md).
 
 ## Level 1: Local Kubernetes (No Cloud Required)
 
@@ -14,7 +19,7 @@ just deploy-local
 
 **What you learn**: How k3d creates a local Kubernetes cluster, the Kustomize base/overlay pattern, and core Kubernetes resources (Pods, Deployments, Services, PVCs).
 
-**Detailed guide**: [kustomize/README.md](kustomize/README.md)
+**Detailed guide**: [Kustomize](examples/kustomize.md)
 
 **Files to study**:
 - `kustomize/overlays/local/kustomization.yaml` - How overlays work
@@ -35,7 +40,7 @@ just rclone-test
 
 **What you learn**: CSI (Container Storage Interface) drivers, mounting cloud storage as filesystems, and StorageClasses with PersistentVolumes.
 
-**Detailed guide**: [rclone/README.md](rclone/README.md)
+**Detailed guide**: [rclone CSI](examples/rclone.md)
 
 **Files to study**:
 - `rclone/base/deployment.yaml` - CSI volume in a pod spec
@@ -55,7 +60,7 @@ just apps-sso
 
 **What you learn**: Running web apps as Kubernetes Deployments, connecting apps to backing storage, and protecting multiple app domains with one Keycloak + oauth2-proxy SSO pattern behind a static Traefik edge.
 
-**Detailed guide**: [apps-sso/README.md](apps-sso/README.md)
+**Detailed guide**: [Apps SSO](examples/apps-sso.md)
 
 **Files to study**:
 - `apps-sso/apps.yaml` - BookStack and Kanboard Deployments and Services
@@ -83,7 +88,7 @@ ddev drush user:login  # Get admin login
 
 **What you learn**: DDEV for local development, FrankenPHP (modern PHP runtime), and Composer/Drush for Drupal management.
 
-**Detailed guide**: [drupal/README.md](drupal/README.md)
+**Detailed guide**: [Drupal Hugo/DDEV](examples/drupal.md)
 
 **Files to study**:
 - `drupal/Caddyfile` - Web server and PHP config in one file
@@ -106,7 +111,7 @@ ddev drush user:login   # Get admin login link
 
 ## Level 2: AWS Basics (Requires AWS Account)
 
-**Cost warning**: EKS clusters cost money—see [eksauto/README.md](eksauto/) for cost breakdown. Always destroy when done.
+**Cost warning**: EKS clusters cost money—see [eksauto/README.md](examples/eksauto.md) for cost breakdown. Always destroy when done.
 
 ### 2.1 Create an EKS Cluster
 
@@ -116,7 +121,7 @@ just setup-eks
 
 **What you learn**: Terraform basics, EKS Auto Mode (managed nodes), and AWS VPC networking.
 
-**Detailed guide**: [eksauto/README.md](eksauto/README.md)
+**Detailed guide**: [EKS Auto Mode](examples/eksauto.md)
 
 **Files to study**:
 - `eksauto/terraform/main.tf` - VPC and EKS definition
@@ -137,7 +142,7 @@ just s3-test
 
 **What you learn**: EKS Pod Identity (credential-free AWS access), MySQL Shell for backups, rclone for S3 object operations, and AWS S3 Files/EFS CSI for POSIX-style S3 inspection on EKS.
 
-**Detailed guide**: [s3-pod-identity/README.md](s3-pod-identity/README.md)
+**Detailed guide**: [S3 Pod Identity](examples/s3-pod-identity.md)
 
 **Files to study**:
 - `s3-pod-identity/base/namespace.yaml` - ServiceAccount setup
@@ -162,7 +167,7 @@ just secrets-test
 
 **What you learn**: External Secrets Operator, AWS Secrets Manager integration, and the ClusterSecretStore pattern.
 
-**Detailed guide**: [secrets/README.md](secrets/README.md)
+**Detailed guide**: [External Secrets](examples/secrets.md)
 
 **Files to study**:
 - `secrets/base/clustersecretstore.yaml` - Backend configuration
@@ -192,7 +197,7 @@ just argocd-deploy
 
 **What you learn**: GitOps workflow, ApplicationSets, and AWS Identity Center integration.
 
-**Detailed guide**: [argocd/README.md](argocd/README.md)
+**Detailed guide**: [ArgoCD](examples/argocd.md)
 
 **Files to study**:
 - `argocd/base/applicationset.yaml` - How apps are discovered
@@ -227,5 +232,5 @@ Verify in AWS Console that:
 
 ## See Also
 
-- [GETTING_STARTED.md](GETTING_STARTED.md) - First-time setup instructions
-- [GLOSSARY.md](GLOSSARY.md) - Definitions of key terms
+- [GETTING_STARTED.md](getting-started.md) - First-time setup instructions
+- [GLOSSARY.md](glossary.md) - Definitions of key terms

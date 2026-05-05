@@ -1,8 +1,13 @@
-# Contributing
+---
+title: "Contributing"
+description: "Repository conventions, justfile patterns, and validation checks."
+weight: 40
+icon: "handshake"
+---
 
 This repo contains concise, self-contained examples for DevOps and Kubernetes workflows. Examples here are referenced from other projects.
 
-**Note**: This is a training/examples repo. Local `just` recipes matter more than CI automation. No GitHub Actions workflows are needed—validation happens locally via `just lint`.
+**Note**: This is a training/examples repo. Local `just` recipes are the source of truth for validation. GitHub Actions should call the same commands rather than duplicate project logic.
 
 ## Philosophy: Grug-Brained Development
 
@@ -95,17 +100,6 @@ some-recipe:
 - **Environment variables**: Define as constants at top (e.g., `default_cluster := "training01"`)
 - **Background processes**: Use `&` for background + `pkill -f <port>` for cleanup
 
-## Documentation Site
-
-The Hugo + Hinode site lives in `content/` and is configured by `hugo.toml` and `go.mod`.
-
-```bash
-just docs-build
-just docs-serve
-```
-
-When changing root docs or example READMEs, update the matching page under `content/` so the rendered site stays current.
-
 ## EKS Auto Mode Notes
 
 - Cluster is managed by Terraform in `eksauto/terraform/`
@@ -141,6 +135,6 @@ Expected: `provisioner: efs.csi.aws.com`, `fileSystemId` substituted, PVCs use `
 
 ## See Also
 
-- [README.md](README.md) - Project overview and quick start
-- [GLOSSARY.md](GLOSSARY.md) - Definitions of key terms
-- [LEARNING_PATH.md](LEARNING_PATH.md) - Suggested order for examples
+- [Overview](overview.md) - Project overview and quick start
+- [GLOSSARY.md](glossary.md) - Definitions of key terms
+- [LEARNING_PATH.md](learning-path.md) - Suggested order for examples

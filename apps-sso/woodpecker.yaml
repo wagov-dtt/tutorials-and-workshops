@@ -1,0 +1,94 @@
+# Woodpecker CI server protected by the shared SSO edge.
+# Native Woodpecker login still requires real forge OAuth credentials outside this local demo.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: woodpecker
+  labels:
+    app.kubernetes.io/name: woodpecker
+    app.kubernetes.io/part-of: apps-sso
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: woodpecker
+  template:
+    metadata:
+      labels:
+        app: woodpecker
+    spec:
+      containers:
+        - name: woodpecker
+          image: woodpeckerci/woodpecker-server:latest
+          ports:
+            - name: http
+              containerPort: 8000
+            - name: grpc
+              containerPort: 9000
+          env:
+            - name: WOODPECKER_HOST
+              value: http://woodpecker.apps-sso.localtest.me:30080
+            - name: WOODPECKER_SERVER_ADDR
+              value: :8000
+            - name: WOODPECKER_GRPC_ADDR
+              value: :9000
+            - name: WOODPECKER_OPEN
+              value: "true"
+            - name: WOODPECKER_ADMIN
+              value: auditor
+            - name: WOODPECKER_DATABASE_DRIVER
+              value: sqlite3
+            - name: WOODPECKER_DATABASE_DATASOURCE
+              value: /var/lib/woodpecker/woodpecker.sqlite
+            - name: WOODPECKER_GITHUB
+              value: "true"
+            - name: WOODPECKER_GITHUB_CLIENT
+              valueFrom:
+                secretKeyRef:
+                  name: woodpecker
+                  key: github-client
+            - name: WOODPECKER_GITHUB_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: woodpecker
+                  key: github-secret
+            - name: WOODPECKER_AGENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: woodpecker
+                  key: agent-secret
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/woodpecker
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: woodpecker
+  labels:
+    app.kubernetes.io/name: woodpecker
+    app.kubernetes.io/part-of: apps-sso
+spec:
+  selector:
+    app: woodpecker
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+    - name: grpc
+      port: 9000
+      targetPort: grpc

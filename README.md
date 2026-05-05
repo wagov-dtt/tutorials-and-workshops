@@ -22,7 +22,7 @@ This creates a local Kubernetes cluster with databases. No cloud account needed.
 | Code audit (`ISSUES.md`) | `oy audit` | Yes (provider creds) |
 | Local K8s cluster | `just deploy-local` | No |
 | Local S3 filesystem mount (rclone CSI) | `just rclone-test` | No |
-| BookStack + Kanboard | `just bookstack-kanboard` | No |
+| Apps SSO (BookStack, Kanboard, Woodpecker) | `just apps-sso` | No |
 | Local Drupal CMS | `just drupal-setup` | No |
 | AWS EKS cluster | `just setup-eks` | Yes |
 | EKS S3 backup + AWS S3 Files mount | `just s3-test` | Yes |
@@ -36,7 +36,7 @@ Run `just` to see all available commands.
 |-----------|-----------------|------------|
 | [kustomize/](kustomize/) | Base K8s manifests, overlays pattern | ⭐ Beginner |
 | [rclone/](rclone/) | Mount S3 as filesystem (CSI driver) | ⭐⭐ Intermediate |
-| [bookstack-kanboard/](bookstack-kanboard/) | Run BookStack and Kanboard containers on K8s | ⭐ Beginner |
+| [apps-sso/](apps-sso/) | Run BookStack, Kanboard, and Woodpecker behind shared Keycloak + oauth2-proxy SSO | ⭐⭐ Intermediate |
 | [drupal/](drupal/) | PHP development with DDEV | ⭐⭐ Intermediate |
 | [s3-pod-identity/](s3-pod-identity/) | EKS Pod Identity, MySQL backups | ⭐⭐⭐ Advanced |
 | [secrets/](secrets/) | External Secrets with AWS Secrets Manager | ⭐⭐⭐ Advanced |
@@ -59,7 +59,7 @@ Everything else is installed automatically by `just prereqs`.
 ```bash
 just deploy-local          # K8s cluster with databases
 just rclone-test           # S3 filesystem mount demo
-just bookstack-kanboard    # BookStack wiki + Kanboard task board
+just apps-sso              # Apps behind Keycloak/oauth2-proxy SSO
 just drupal-setup          # Drupal CMS
 ```
 
@@ -74,6 +74,18 @@ just s3-test        # S3 Pod Identity demo
 just secrets-deploy # External Secrets demo
 just destroy-eks    # IMPORTANT: Destroy when done!
 ```
+
+## Documentation Site
+
+This repo also builds as a Hugo + Hinode site:
+
+```bash
+just docs-serve   # local preview at http://localhost:1313/
+just docs-build   # render static site into public/
+just docs-clean   # remove generated output
+```
+
+The site content lives under `content/` and mirrors the root guides plus example READMEs.
 
 ## Oy AI Assistant
 

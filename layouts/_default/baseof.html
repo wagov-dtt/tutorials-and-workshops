@@ -1,0 +1,93 @@
+{{- /* Set site-wide sidebar menu */ -}}
+{{- $version := partial "utilities/GetVersion.html" (dict "page" . "base" true) -}}
+{{- $.Scratch.Set "version" $version -}}
+{{- with site.Data.site -}}
+    {{- $.Scratch.Set "sidebar" . -}}
+    {{- $.Scratch.Set "sidebarFilename" "data/site.yml" -}}
+{{- else -}}
+    {{- with partial "utilities/GetMenu" (dict "page" . "version" $version) }}{{ $.Scratch.Set "sidebar" . }}{{ end -}}
+{{- end -}}
+
+{{- /* Validate if current version is latest */ -}}
+{{- if and site.Params.docs.checkVersion $version -}}
+    {{- if ne $version "latest" -}}
+        {{- if partial "utilities/IsOlder" (dict "current" $version) -}}
+            {{- $.Scratch.Set "pageAlertMsg" (T "newerVersionAlert" site.Title) -}}
+            {{- $.Scratch.Set "pageAlertURL" (or site.Params.docs.latestURL site.baseURL) -}}
+        {{- end -}}
+    {{- end -}}
+{{- end -}}
+
+{{- /* Initialize module configuration */ -}}
+{{- $modules := partialCached "utilities/InitModules.html" . -}}
+{{- $.Scratch.Set "modules" $modules -}}
+
+{{- $fullCover := or (or (and .IsHome .Site.Params.home.fullCover) .Page.Params.fullCover) .Site.Params.main.footerBelowFold }}
+{{- $.Scratch.Set "fullCover" $fullCover -}}
+
+{{- /* Define main breakpoint */ -}}
+{{- $.Scratch.Set "breakpoint" (partialCached "utilities/GetBreakpoint.html" .) }}
+
+{{- /* Define page metadata */ -}}
+{{- $.Scratch.Set "metadata" (partial "utilities/GetMetadata.html" .) }}
+
+{{- /* Define page sharing */ -}}
+{{- $.Scratch.Set "sharing" (partial "utilities/GetSharing.html" .) }}
+
+{{- /* Define TOC inclusion */ -}}
+{{- $.Scratch.Set "includeToc" (partial "utilities/GetIncludeToc.html" .) }}
+
+{{- /* Prepare content blocks and establish overlay mode */ -}}
+{{ $overlayMode := $.Scratch.Get "overlayMode" }}
+
+{{- /* Define base URL */ -}}
+{{ $lang := site.Language.Lang }}
+{{ $.Scratch.Set "baseURL" (strings.TrimSuffix (printf "%s/" $lang) site.Home.RelPermalink) }}
+
+<!doctype html>
+<html lang="{{ .Site.Language.Lang }}" class="no-js">
+    <head>
+        {{- partial "footer/scripts.html" (dict "page" . "type" "critical") -}}
+        {{- partial "footer/scripts.html" (dict "page" . "type" "functional") -}}
+        {{ block "head" . }}{{ end -}}
+    </head>
+
+    {{- $belowFold := site.Params.main.footerBelowFold -}}
+    {{- $navFixed  := site.Params.navigation.fixed -}}
+    {{- $bodyClasses := slice -}}
+    {{- if $belowFold }}{{ $bodyClasses = $bodyClasses | append "footer-below-fold" }}{{ end -}}
+    {{- if $navFixed  }}{{ $bodyClasses = $bodyClasses | append "navbar-fixed"      }}{{ end -}}
+    <body{{ with $bodyClasses }} class="{{ delimit . " " }}"{{ end }}>
+        {{- partial "assets/navbar.html" (dict
+            "page"        .
+            "fixed"       site.Params.navigation.fixed
+            "overlay"     site.Params.navigation.overlay
+            "overlayMode" site.Params.navigation.overlayMode
+            "transparent" site.Params.navigation.transparent
+            "color"       site.Params.navigation.color
+            "style"       (default "light" site.Params.navigation.style)
+            "breakpoint"  (default "md" site.Params.navigation.size))
+        -}}
+
+        <main id="container" class="main">
+            {{ block "main" . }}{{ end -}}
+        </main>
+        {{ if and (eq .Kind "page") (eq (len (or .Params.content_blocks slice)) 0) (eq (len .RawContent) 0)}}
+            {{- partial "utilities/LogWarn.html" (dict
+                "partial" "layouts/baseof.html" 
+                "warnid"  "warn-empty-page"
+                "msg"     "No content"
+                "details" "Page has no content or blocks defined"
+                "file"    .File
+            ) -}}
+        {{ end }}
+
+        {{- partial "footer/social.html" . -}}
+        {{- partial "footer/footer.html" . -}}
+        {{- partial "footer/toast-container.html" . -}}
+        {{- partial "assets/symbols.html" . -}}
+        {{- partial "assets/modals.html" . -}}
+        {{- partialCached "footer/scripts.html" (dict "page" .) -}}
+        {{- partial "footer/scripts.html" (dict "page" . "type" "optional") -}}
+    </body>
+</html>
