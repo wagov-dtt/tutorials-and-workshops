@@ -1,0 +1,45 @@
+{{- $baseURL := "/" | absURL -}}
+{{- $orgID := printf "%s#/schema/organization/1" $baseURL -}}
+{{- $siteID := printf "%s#/schema/website/1" $baseURL -}}
+{{- $pageID := .Permalink -}}
+{{- $breadcrumbID := printf "%s#/schema/breadcrumb/1" .Permalink -}}
+{{- $sameAs := slice -}}
+{{- with site.Params.schema.github }}{{ $sameAs = $sameAs | append . }}{{ end -}}
+{{- with site.Params.schema.linkedin }}{{ $sameAs = $sameAs | append . }}{{ end -}}
+{{- with site.Params.schema.twitter }}{{ $sameAs = $sameAs | append . }}{{ end -}}
+{{- $graph := slice
+    (dict
+        "@type" "Organization"
+        "@id" $orgID
+        "name" site.Params.schema.name
+        "url" $baseURL
+        "sameAs" $sameAs
+    )
+    (dict
+        "@type" "WebSite"
+        "@id" $siteID
+        "url" $baseURL
+        "name" site.Title
+        "description" site.Params.main.description
+        "publisher" (dict "@id" $orgID)
+    )
+    (dict
+        "@type" (cond (or (eq .Kind "taxonomy") (eq .Kind "term")) "CollectionPage" "WebPage")
+        "@id" $pageID
+        "url" .Permalink
+        "name" .Title
+        "description" .Description
+        "isPartOf" (dict "@id" $siteID)
+        "about" (dict "@id" $orgID)
+        "breadcrumb" (dict "@id" $breadcrumbID)
+        "inLanguage" site.Params.schema.locale
+        "potentialAction" (slice (dict "@type" "ReadAction" "target" (slice .Permalink)))
+    )
+    (dict
+        "@type" "BreadcrumbList"
+        "@id" $breadcrumbID
+        "name" "Breadcrumbs"
+        "itemListElement" (slice (dict "@type" "ListItem" "position" 1 "item" (dict "@id" $baseURL "name" "Home")))
+    )
+-}}
+<script type="application/ld+json">{{ dict "@context" "https://schema.org" "@graph" $graph | jsonify | safeJS }}</script>

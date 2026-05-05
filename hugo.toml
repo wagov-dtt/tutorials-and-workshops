@@ -204,7 +204,16 @@ timeout = "180s"
     [params.schema.author]
       name = "WA Government DTT"
       github = "https://github.com/wagov-dtt"
+    [params.schema.logo]
+      url = ""
+      width = 0
+      height = 0
+    [params.schema.image]
+      url = ""
+      width = 0
+      height = 0
 
   [params.opengraph]
+    images = []
     locale = "en_AU"
 
