@@ -15,7 +15,7 @@ The rclone CSI driver lets pods access S3, GCS, Azure, and 40+ other backends as
 ## Quick Start
 
 ```bash
-just rclone-test        # Deploy to k3d and verify CSI mount
+just rclone/rclone-test        # Deploy to k3d and verify CSI mount
 kubectl get pods        # Check filebrowser and rclone-serve pods
 ```
 

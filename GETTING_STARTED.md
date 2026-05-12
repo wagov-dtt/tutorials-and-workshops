@@ -36,7 +36,7 @@ cd tutorials-and-workshops
 just prereqs
 
 # Create a local Kubernetes cluster and deploy databases
-just deploy-local
+just kustomize/deploy-local
 ```
 
 **Success looks like:**
@@ -66,7 +66,7 @@ In k9s: press `0` to see all namespaces, arrow keys to navigate, `d` to describe
 ## What Just Happened?
 
 1. **`just prereqs`** installed kubectl, k3d, helm, and other tools via mise
-2. **`just deploy-local`** created a k3d cluster called "tutorials"
+2. **`just kustomize/deploy-local`** created a k3d cluster called "tutorials"
 3. Kubernetes manifests from `kustomize/` were applied to deploy databases
 
 The configuration lives in `kustomize/overlays/local/kustomization.yaml`—it combines base manifests with local-specific settings.
@@ -90,9 +90,9 @@ oy audit
 
 | Order | Command | What You Learn |
 |-------|---------|----------------|
-| 1 | `just deploy-local` | Kubernetes basics, Kustomize |
-| 2 | `just rclone-test` | Mounting cloud storage as filesystems |
-| 3 | `just drupal-setup` | Local PHP development with DDEV |
+| 1 | `just kustomize/deploy-local` | Kubernetes basics, Kustomize |
+| 2 | `just rclone/rclone-test` | Mounting cloud storage as filesystems |
+| 3 | `just drupal/drupal-setup` | Local PHP development with DDEV |
 
 ### Intermediate Path (Requires AWS)
 
@@ -100,11 +100,11 @@ After you're comfortable with local examples:
 
 | Order | Command | What You Learn |
 |-------|---------|----------------|
-| 1 | `just setup-eks` | Terraform, EKS Auto Mode |
-| 2 | `just s3-test` | Pod Identity, IAM roles |
-| 3 | `just secrets-deploy` | External Secrets Operator |
+| 1 | `just eksauto/setup-eks` | Terraform, EKS Auto Mode |
+| 2 | `just s3pi/s3-test` | Pod Identity, IAM roles |
+| 3 | `just secrets/secrets-deploy` | External Secrets Operator |
 
-**Cost warning**: EKS clusters cost money—see [eksauto/](eksauto/) for details. Always run `just destroy-eks` when done!
+**Cost warning**: EKS clusters cost money—see [eksauto/](eksauto/) for details. Always run `just eksauto/destroy-eks` when done!
 
 Once you've completed this guide, continue with [LEARNING_PATH.md](LEARNING_PATH.md) for detailed walkthroughs of each example.
 
@@ -116,7 +116,7 @@ Once you've completed this guide, continue with [LEARNING_PATH.md](LEARNING_PATH
 
 ```bash
 just              # List all recipes
-just deploy-local # Run a specific recipe
+just kustomize/deploy-local # Run a specific recipe
 ```
 
 For definitions of Kubernetes, Kustomize, and other terms, see [GLOSSARY.md](GLOSSARY.md).
@@ -136,7 +136,7 @@ Start Docker Desktop, or on Linux: `sudo systemctl start docker`
 ```bash
 # Delete and recreate
 k3d cluster delete tutorials
-just deploy-local
+just kustomize/deploy-local
 ```
 
 ### Pods stuck in "Pending"
@@ -150,7 +150,7 @@ kubectl describe pod <pod-name> -n <namespace>
 ### "Drupal site won't load"
 
 ```bash
-cd drupal
+cd drupal-hugo
 ddev status       # Check if running
 ddev start        # Start if stopped
 ddev logs -s web  # View errors
@@ -159,7 +159,7 @@ ddev logs -s web  # View errors
 ## Getting Help
 
 - Run `just` to list all available commands with descriptions
-- Each directory has a README.md explaining that example
+- Each top-level project and support directory has a README.md explaining its purpose and key files
 - See [GLOSSARY.md](GLOSSARY.md) and [LEARNING_PATH.md](LEARNING_PATH.md) for reference
 
 ## Cleanup
@@ -172,11 +172,12 @@ k3d cluster stop tutorials
 k3d cluster delete tutorials
 
 # Stop Drupal (use DDEV directly)
-cd drupal && ddev stop
+cd drupal-hugo && ddev stop
 ```
 
 ## See Also
 
 - [LEARNING_PATH.md](LEARNING_PATH.md) - Detailed walkthrough of each example
+- [README.md#directory-guide](README.md#directory-guide) - Directory-by-directory index
 - [GLOSSARY.md](GLOSSARY.md) - Definitions of key terms
-- [kustomize/](kustomize/) - The base manifests deployed by `just deploy-local`
+- [kustomize/](kustomize/) - The base manifests deployed by `just kustomize/deploy-local`

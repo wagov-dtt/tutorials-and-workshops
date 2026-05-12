@@ -1,0 +1,52 @@
+set dotenv-load := true
+set export := true
+set shell := ["bash", "-lc"]
+
+import '../shared.just'
+
+# --- BACKUP (restic) ---
+
+# Dump wagov and wagov-dtt GitHub orgs to a local folder
+[group('restic')]
+github-dump:
+    @mkdir -p github-dump
+    just _github-backup wagov
+    just _github-backup wagov-dtt
+    @echo "GitHub dump complete ✓"
+
+[private]
+_github-backup ORG:
+    uvx github-backup {{ ORG }} --token-from-gh -O -o github-dump/{{ ORG }} --all -P --lfs --attachments
+
+# Private: run restic with AWS credentials exported
+[private]
+_restic *ARGS: _awslogin
+    eval "\$(aws configure export-credentials --format env 2>/dev/null || true)" && restic {{ ARGS }}
+
+# Initialize restic repository at S3 target
+[group('restic')]
+restic-init:
+    @just _restic snapshots >/dev/null 2>&1 && { echo "Repository already initialized."; exit 0; } || true
+    @just _restic init
+    @echo "Restic repository initialized ✓"
+
+# Backup the github dump folder to S3 via restic
+[group('restic')]
+restic-backup:
+    @just _restic backup github-dump
+    @echo "Restic backup complete ✓"
+
+# List restic snapshots
+[group('restic')]
+restic-snapshots:
+    @just _restic snapshots
+
+# Check restic repository integrity
+[group('restic')]
+restic-check:
+    @just _restic check
+
+# Full backup: dump GitHub orgs then restic to S3
+[group('restic')]
+backup: github-dump restic-backup
+    @echo "Full backup complete ✓"

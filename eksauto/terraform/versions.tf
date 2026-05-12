@@ -2,7 +2,7 @@ terraform {
   required_version = ">= 1.10"
 
   # S3 backend with native locking (no DynamoDB needed)
-  # Bucket created automatically by `just setup-eks`
+  # Bucket created automatically by `just eksauto/setup-eks`
   backend "s3" {
     key          = "eksauto/terraform.tfstate"
     use_lockfile = true

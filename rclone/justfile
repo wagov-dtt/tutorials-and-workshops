@@ -1,0 +1,14 @@
+set dotenv-load := true
+set export := true
+set shell := ["bash", "-lc"]
+
+import '../shared.just'
+
+# --- rclone CSI ---
+
+# rclone CSI demo (S3 mount + filebrowser)
+[group('local')]
+rclone-test: _rclone
+    kubectl wait --for=condition=Ready pod -l app=filebrowser --timeout=120s
+    kubectl exec deploy/filebrowser -- ls -la /srv
+    @echo "rclone CSI working ✓"

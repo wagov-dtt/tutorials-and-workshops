@@ -17,13 +17,13 @@ ArgoCD is optional. For simple setups, `kubectl apply` or `helm upgrade` works f
 
 ```bash
 # ArgoCD is created automatically with the cluster
-just setup-eks
+just eksauto/setup-eks
 
 # Get ArgoCD UI URL
-just argocd-ui
+just argocd/argocd-ui
 
 # Deploy example ApplicationSet
-just argocd-deploy
+just argocd/argocd-deploy
 ```
 
 Login to the UI with your Identity Center credentials.
@@ -38,7 +38,7 @@ cd eksauto/terraform
 terraform apply -var="enable_argocd=true"
 
 # Or create capability after cluster exists
-just argocd-create
+just argocd/argocd-create
 ```
 
 If Identity Center isn't configured, capability creation will fail.
@@ -74,7 +74,7 @@ argocd/
 By default, anyone in Identity Center can view ArgoCD. To add yourself as admin:
 
 ```bash
-just argocd-ui   # Auto-adds current SSO user as admin and prints URL
+just argocd/argocd-ui   # Auto-adds current SSO user as admin and prints URL
 ```
 
 ## Disabling ArgoCD
@@ -82,7 +82,7 @@ just argocd-ui   # Auto-adds current SSO user as admin and prints URL
 ArgoCD is disabled by default. If you enabled it and want to disable:
 
 ```bash
-just argocd-delete
+just argocd/argocd-delete
 # Or via Terraform:
 cd eksauto/terraform && terraform apply -var="enable_argocd=false"
 ```

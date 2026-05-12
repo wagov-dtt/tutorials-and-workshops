@@ -16,12 +16,12 @@ Kustomize is built into `kubectl`—no extra tooling required. It excels at:
 
 **Local (k3d)**:
 ```bash
-just deploy-local
+just kustomize/deploy-local
 ```
 
 **EKS**:
 ```bash
-just setup-eks      # Create cluster (uses eksauto/)
+just eksauto/setup-eks      # Create cluster (uses eksauto/)
 just deploy         # Apply training01 overlay
 ```
 

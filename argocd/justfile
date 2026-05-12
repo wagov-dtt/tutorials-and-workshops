@@ -1,0 +1,67 @@
+set dotenv-load := true
+set export := true
+set shell := ["bash", "-lc"]
+
+import '../shared.just'
+
+# --- ARGOCD ---
+
+# Create ArgoCD EKS capability
+[group('argocd')]
+argocd-create CLUSTER=default_cluster: _awslogin (_argocd-create-inner CLUSTER `just _idc-arn` `just _account`)
+
+[private]
+_argocd-create-inner CLUSTER IDC ACCOUNT:
+    {{ assert(IDC != "null", "Identity Center not configured") }}
+    aws eks create-capability --cluster-name {{ CLUSTER }} --capability-name argocd --type ARGOCD \
+      --role-arn "arn:aws:iam::{{ ACCOUNT }}:role/eks-argocd-capability" --delete-propagation-policy RETAIN \
+      --configuration '{"argoCd":{"awsIdc":{"idcInstanceArn":"{{ IDC }}","idcRegion":"'"$AWS_REGION"'"}}}'
+    just _argocd-wait {{ CLUSTER }}
+
+[private]
+_argocd-wait CLUSTER:
+    @while true; do \
+      STATUS=`aws eks describe-capability --cluster-name {{ CLUSTER }} --capability-name argocd | jq -r '.capability.status'`; \
+      echo "Status: $STATUS"; \
+      [ "$STATUS" = "ACTIVE" ] && exit 0; \
+      sleep 10; \
+    done
+
+# Delete ArgoCD capability
+[group('argocd')]
+argocd-delete CLUSTER=default_cluster: _awslogin
+    -aws eks delete-capability --cluster-name {{ CLUSTER }} --capability-name argocd
+
+# Deploy ArgoCD ApplicationSet
+[group('argocd')]
+argocd-deploy CLUSTER=default_cluster: _awslogin (_eks-kubeconfig CLUSTER)
+    kubectl apply -k .
+    @echo "ApplicationSet deployed ✓"
+
+# Get ArgoCD UI URL (auto-adds current user as admin)
+[group('argocd')]
+argocd-ui CLUSTER=default_cluster: _awslogin (_argocd-ui-inner CLUSTER `just _username` `just _idc-store`)
+
+[private]
+_argocd-ui-inner CLUSTER USERNAME IDC_STORE:
+    @just _argocd-add-admin {{ CLUSTER }} {{ USERNAME }} {{ IDC_STORE }}
+    @aws eks describe-capability --cluster-name {{ CLUSTER }} --capability-name argocd | jq -r '.capability.configuration.argoCd.serverUrl'
+
+[private]
+_argocd-add-admin CLUSTER USERNAME IDC_STORE:
+    @USER_ID=$(aws identitystore get-user-id --identity-store-id "{{ IDC_STORE }}" \
+      --alternate-identifier '{"UniqueAttribute":{"AttributePath":"userName","AttributeValue":"{{ USERNAME }}"}}' 2>/dev/null | jq -r '.UserId // empty'); \
+    if [ -n "$USER_ID" ]; then \
+      CURRENT=$(aws eks describe-capability --cluster-name {{ CLUSTER }} --capability-name argocd | jq -r '.capability.configuration.argoCd // {}'); \
+      if ! echo "$CURRENT" | jq -e --arg id "$USER_ID" '.rbacRoleMappings[]?.identities[]?.id == $id' >/dev/null 2>&1; then \
+        echo "Adding {{ USERNAME }} as admin..."; \
+        aws eks update-capability --cluster-name {{ CLUSTER }} --capability-name argocd \
+          --configuration '{"argoCd":{"rbacRoleMappings":{"addOrUpdateRoleMappings":[{"role":"ADMIN","identities":[{"id":"'"$USER_ID"'","type":"SSO_USER"}]}]}}}' >/dev/null; \
+        sleep 3; \
+      fi; \
+    fi
+
+# Cleanup ArgoCD ApplicationSet
+[group('argocd')]
+argocd-cleanup:
+    -kubectl delete -k .

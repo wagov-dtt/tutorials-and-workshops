@@ -9,7 +9,7 @@ Start here. Everything runs on your laptop using Docker.
 ### 1.1 Deploy Local Databases
 
 ```bash
-just deploy-local
+just kustomize/deploy-local
 ```
 
 **What you learn**: How k3d creates a local Kubernetes cluster, the Kustomize base/overlay pattern, and core Kubernetes resources (Pods, Deployments, Services, PVCs).
@@ -30,7 +30,7 @@ just deploy-local
 ### 1.2 CSI Volumes with rclone
 
 ```bash
-just rclone-test
+just rclone/rclone-test
 ```
 
 **What you learn**: CSI (Container Storage Interface) drivers, mounting cloud storage as filesystems, and StorageClasses with PersistentVolumes.
@@ -50,7 +50,7 @@ just rclone-test
 ### 1.3 BookStack and Kanboard
 
 ```bash
-just bookstack-kanboard
+just bs/bookstack-kanboard
 ```
 
 **What you learn**: Running web apps as Kubernetes Deployments, connecting an app to a database service, and using `kubectl port-forward` for local-only access.
@@ -71,27 +71,26 @@ just bookstack-kanboard
 ### 1.4 Drupal CMS
 
 ```bash
-just drupal-setup
-cd drupal
+just drupal/drupal-setup
+cd drupal-hugo
 ddev drush user:login  # Get admin login
 ```
 
 **What you learn**: DDEV for local development, FrankenPHP (modern PHP runtime), and Composer/Drush for Drupal management.
 
-**Detailed guide**: [drupal/README.md](drupal/README.md)
+**Detailed guide**: [drupal-hugo/README.md](drupal-hugo/README.md)
 
 **Files to study**:
-- `drupal/Caddyfile` - Web server and PHP config in one file
-- `drupal/.ddev/config.yaml` - DDEV project settings
+- `drupal-hugo/.ddev/config.yaml` - DDEV project settings
 
 **Exercises**:
 1. Create a new article in Drupal
-2. Generate test content: `cd drupal && ddev drush php:script scripts/generate_news_content.php`
-3. Run performance test: `just drupal-test`
+2. Generate test content: `cd drupal-hugo && ddev drush php:script scripts/generate_news_content.php`
+3. Run performance test: `just drupal/drupal-test`
 
 **Daily commands** (use DDEV directly):
 ```bash
-cd drupal
+cd drupal-hugo
 ddev start              # Start environment
 ddev stop               # Stop environment
 ddev drush user:login   # Get admin login link
@@ -106,7 +105,7 @@ ddev drush user:login   # Get admin login link
 ### 2.1 Create an EKS Cluster
 
 ```bash
-just setup-eks
+just eksauto/setup-eks
 ```
 
 **What you learn**: Terraform basics, EKS Auto Mode (managed nodes), and AWS VPC networking.
@@ -127,7 +126,7 @@ just setup-eks
 ### 2.2 S3 Pod Identity
 
 ```bash
-just s3-test
+just s3pi/s3-test
 ```
 
 **What you learn**: EKS Pod Identity (credential-free AWS access), MySQL Shell for backups, rclone for S3 object operations, and AWS S3 Files/EFS CSI for POSIX-style S3 inspection on EKS.
@@ -142,7 +141,7 @@ just s3-test
 - `eksauto/terraform/s3files.tf` - S3 Files file system, mount targets, and CSI IAM roles
 
 **Exercises**:
-1. Run `just s3-restore` to test the restore flow
+1. Run `just s3pi/s3-restore` to test the restore flow
 2. Check S3 bucket contents in AWS Console
 3. Explore the AWS S3 Files mount: `kubectl exec -it debug -n s3-test -- sh`
 
@@ -151,8 +150,8 @@ just s3-test
 ### 2.3 External Secrets
 
 ```bash
-just secrets-deploy
-just secrets-test
+just secrets/secrets-deploy
+just secrets/secrets-test
 ```
 
 **What you learn**: External Secrets Operator, AWS Secrets Manager integration, and the ClusterSecretStore pattern.
@@ -181,8 +180,8 @@ just secrets-test
 cd eksauto/terraform && terraform apply -var="enable_argocd=true"
 
 # Then use ArgoCD
-just argocd-ui
-just argocd-deploy
+just argocd/argocd-ui
+just argocd/argocd-deploy
 ```
 
 **What you learn**: GitOps workflow, ApplicationSets, and AWS Identity Center integration.
@@ -207,10 +206,10 @@ When you're done learning:
 ```bash
 # Level 1 cleanup
 k3d cluster delete tutorials
-just drupal-reset
+just drupal/drupal-reset
 
 # Level 2-3 cleanup (IMPORTANT - stops AWS charges)
-just destroy-eks
+just eksauto/destroy-eks
 ```
 
 Verify in AWS Console that:
@@ -224,3 +223,4 @@ Verify in AWS Console that:
 
 - [GETTING_STARTED.md](GETTING_STARTED.md) - First-time setup instructions
 - [GLOSSARY.md](GLOSSARY.md) - Definitions of key terms
+- [README.md#directory-guide](README.md#directory-guide) - Directory-by-directory index

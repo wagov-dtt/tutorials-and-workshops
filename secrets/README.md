@@ -83,13 +83,13 @@ Secrets don't belong in git, but Kubernetes Secrets need to exist in the cluster
 ### Quick Start
 
 ```bash
-just secrets-deploy   # Install ESO and create example secret
-just secrets-test     # Verify secret sync works
+just secrets/secrets-deploy   # Install ESO and create example secret
+just secrets/secrets-test     # Verify secret sync works
 ```
 
 ### Prerequisites
 
-1. EKS cluster with Pod Identity (`just setup-eks`)
+1. EKS cluster with Pod Identity (`just eksauto/setup-eks`)
 2. Secret in AWS Secrets Manager (created by Terraform)
 
 ### What Gets Deployed

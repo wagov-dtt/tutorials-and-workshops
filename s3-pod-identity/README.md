@@ -14,7 +14,7 @@
 ## Prerequisites
 
 - AWS account with SSO configured (copy `.env.example` to `.env` and set `AWS_PROFILE` and `AWS_REGION`)
-- EKS cluster created via `just setup-eks`
+- EKS cluster created via `just eksauto/setup-eks`
 
 Terraform pre-creates:
 - S3 bucket: `test-<ACCOUNT_ID>`
@@ -26,9 +26,9 @@ Terraform pre-creates:
 ## Quick Start
 
 ```bash
-just s3-test      # Full demo: sysbench → backup → copy → debug pod
-just s3-restore   # Optional: restore backup to sbtest_restored database
-just s3-cleanup   # Remove K8s resources (S3 bucket kept)
+just s3pi/s3-test      # Full demo: sysbench → backup → copy → debug pod
+just s3pi/s3-restore   # Optional: restore backup to sbtest_restored database
+just s3pi/s3-cleanup   # Remove K8s resources (S3 bucket kept)
 ```
 
 ## Architecture

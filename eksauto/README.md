@@ -18,16 +18,16 @@
 **Always destroy when done:**
 
 ```bash
-just destroy-eks
+just eksauto/destroy-eks
 ```
 
 ## Quick Start
 
 ```bash
-just setup-eks      # Create cluster via Terraform
+just eksauto/setup-eks      # Create cluster via Terraform
 just deploy         # Deploy kustomize manifests
 # ... do your training ...
-just destroy-eks    # IMPORTANT: destroys everything
+just eksauto/destroy-eks    # IMPORTANT: destroys everything
 ```
 
 ## Full Validation with Inspection Pause
@@ -117,13 +117,13 @@ terraform destroy
 Terraform handles all cleanup:
 
 ```bash
-just destroy-eks   # Destroys VPC, EKS, IAM, S3, and all associated resources
+just eksauto/destroy-eks   # Destroys VPC, EKS, IAM, S3, and all associated resources
 ```
 
 If destroy fails, check for:
 - LoadBalancer services still running (delete them first)
 - Stuck PVCs (delete them first)
-- Then retry `just destroy-eks`
+- Then retry `just eksauto/destroy-eks`
 
 ## See Also
 

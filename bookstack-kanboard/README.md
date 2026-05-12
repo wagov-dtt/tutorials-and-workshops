@@ -7,7 +7,7 @@ This is a local lab example: one namespace, one BookStack deployment, one MariaD
 ## Quick Start
 
 ```bash
-just bookstack-kanboard
+just bs/bookstack-kanboard
 ```
 
 Open the apps with port-forwarding:
@@ -44,5 +44,5 @@ Then browse to:
 ## Cleanup
 
 ```bash
-just bookstack-kanboard-clean
+just bs/bookstack-kanboard-clean
 ```

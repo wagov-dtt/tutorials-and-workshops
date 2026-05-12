@@ -1,0 +1,22 @@
+set dotenv-load := true
+set export := true
+set shell := ["bash", "-lc"]
+
+import '../shared.just'
+
+# --- BookStack + Kanboard ---
+
+# Deploy BookStack wiki and Kanboard task board to local k3d
+[group('local')]
+bookstack-kanboard: _k3d
+    kubectl apply -k . --server-side
+    kubectl wait --for=condition=Available deploy/bookstack-db -n bookstack-kanboard --timeout=120s
+    kubectl wait --for=condition=Available deploy/bookstack -n bookstack-kanboard --timeout=180s
+    kubectl wait --for=condition=Available deploy/kanboard -n bookstack-kanboard --timeout=120s
+    @echo "BookStack: kubectl -n bookstack-kanboard port-forward svc/bookstack 6875:80"
+    @echo "Kanboard:  kubectl -n bookstack-kanboard port-forward svc/kanboard 8080:80"
+
+# Cleanup BookStack and Kanboard demo
+[group('local')]
+bookstack-kanboard-clean:
+    -kubectl delete -k .

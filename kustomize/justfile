@@ -1,0 +1,12 @@
+set dotenv-load := true
+set export := true
+set shell := ["bash", "-lc"]
+
+import '../shared.just'
+
+# --- Kustomize Deployments ---
+
+# Deploy databases to local k3d cluster
+[group('local')]
+deploy-local: _k3d
+    kubectl apply -k overlays/local --server-side

@@ -1,0 +1,54 @@
+set dotenv-load := true
+set export := true
+set shell := ["bash", "-lc"]
+
+import '../shared.just'
+
+# --- S3 Pod Identity Demo ---
+
+# S3 Pod Identity demo (MySQL → S3 → S3 Files mount → restore)
+[group('eks')]
+s3-test: _awslogin _eks-kubeconfig
+    # Cleanup previous resources
+    -kubectl delete -k jobs 2>/dev/null
+    -kubectl delete -k . 2>/dev/null
+
+    # Deploy MySQL with Pod Identity and AWS S3 Files CSI storage
+    @echo "Deploying MySQL with Pod Identity and AWS S3 Files CSI storage..."
+    kubectl kustomize . | AWS_REGION=$AWS_REGION S3FILES_FILE_SYSTEM_ID=$(just _s3files-id) envsubst '$AWS_REGION $S3FILES_FILE_SYSTEM_ID' | kubectl apply -f -
+    kubectl create configmap s3-config -n s3-test \
+      --from-literal=bucket=$(just _bucket) --from-literal=region=$AWS_REGION \
+      --dry-run=client -o yaml | kubectl apply -f -
+    kubectl wait --for=condition=Available deploy/mysql -n s3-test --timeout=120s
+    -kubectl wait --for=condition=Complete job/sysbench-prepare -n s3-test --timeout=180s
+
+    # Backup MySQL to S3
+    @echo "Backing up MySQL to S3..."
+    kubectl apply -f jobs/backup.yaml
+    kubectl wait --for=condition=Complete job/backup-to-s3 -n s3-test --timeout=300s
+    kubectl logs job/backup-to-s3 -n s3-test | tail -3
+
+    # Copy backup between S3 prefixes, then inspect through the S3 Files CSI mount
+    @echo "Testing S3 Files CSI mount..."
+    kubectl apply -f jobs/copy.yaml
+    kubectl wait --for=condition=Complete job/rclone-copy -n s3-test --timeout=120s
+    kubectl logs job/rclone-copy -n s3-test
+    kubectl wait --for=condition=Ready pod/debug -n s3-test --timeout=180s
+    kubectl exec debug -n s3-test -- ls -la /mnt/s3
+
+    @echo "S3 Pod Identity test complete ✓"
+    @echo "Run 'just s3pi/s3-restore' to test restore, 'just s3pi/s3-cleanup' when done"
+
+# Restore MySQL backup from S3
+[group('eks')]
+s3-restore: _eks-kubeconfig
+    -kubectl delete job restore-from-s3 -n s3-test
+    kubectl apply -f jobs/restore.yaml
+    kubectl wait --for=condition=Complete job/restore-from-s3 -n s3-test --timeout=300s
+    kubectl logs job/restore-from-s3 -n s3-test -c mysqlsh-restore | tail -10
+
+# Cleanup S3 Pod Identity resources
+[group('eks')]
+s3-cleanup:
+    -kubectl delete -k jobs
+    -kubectl delete -k .

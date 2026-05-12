@@ -9,7 +9,7 @@ Hands-on DevOps and Kubernetes examples. Learn by doing.
 ```bash
 # Install tools and run your first example
 just prereqs
-just deploy-local
+just kustomize/deploy-local
 ```
 
 This creates a local Kubernetes cluster with databases. No cloud account needed.
@@ -20,13 +20,13 @@ This creates a local Kubernetes cluster with databases. No cloud account needed.
 |---------------|---------|---------------|
 | AI assistant (`oy`) | `oy "review this repo and suggest simplifications"` | Yes (provider creds) |
 | Code audit (`ISSUES.md`) | `oy audit` | Yes (provider creds) |
-| Local K8s cluster | `just deploy-local` | No |
-| Local S3 filesystem mount (rclone CSI) | `just rclone-test` | No |
-| BookStack + Kanboard | `just bookstack-kanboard` | No |
-| Local Drupal CMS | `just drupal-setup` | No |
-| AWS EKS cluster | `just setup-eks` | Yes |
-| EKS S3 backup + AWS S3 Files mount | `just s3-test` | Yes |
-| GitOps with ArgoCD | `just argocd-ui` | Yes (+ Identity Center) |
+| Local K8s cluster | `just kustomize/deploy-local` | No |
+| Local S3 filesystem mount (rclone CSI) | `just rclone/rclone-test` | No |
+| BookStack + Kanboard | `just bs/bookstack-kanboard` | No |
+| Local Drupal CMS | `just drupal/drupal-setup` | No |
+| AWS EKS cluster | `just eksauto/setup-eks` | Yes |
+| EKS S3 backup + AWS S3 Files mount | `just s3pi/s3-test` | Yes |
+| GitOps with ArgoCD | `just argocd/argocd-ui` | Yes (+ Identity Center) |
 
 Run `just` to see all available commands.
 
@@ -37,13 +37,30 @@ Run `just` to see all available commands.
 | [kustomize/](kustomize/) | Base K8s manifests, overlays pattern | ⭐ Beginner |
 | [rclone/](rclone/) | Mount S3 as filesystem (CSI driver) | ⭐⭐ Intermediate |
 | [bookstack-kanboard/](bookstack-kanboard/) | Run BookStack and Kanboard containers on K8s | ⭐ Beginner |
-| [drupal/](drupal/) | PHP development with DDEV | ⭐⭐ Intermediate |
+| [drupal-hugo/](drupal-hugo/) | PHP/Drupal development with DDEV | ⭐⭐ Intermediate |
 | [s3-pod-identity/](s3-pod-identity/) | EKS Pod Identity, MySQL backups | ⭐⭐⭐ Advanced |
 | [secrets/](secrets/) | External Secrets with AWS Secrets Manager | ⭐⭐⭐ Advanced |
 | [argocd/](argocd/) | GitOps with ArgoCD | ⭐⭐⭐ Advanced |
 | [eksauto/](eksauto/) | EKS cluster via Terraform | ⭐⭐⭐ Advanced |
+| [restic/](restic/) | Encrypted GitHub org backups to S3 | ⭐⭐ Intermediate |
 
 See [LEARNING_PATH.md](LEARNING_PATH.md) for the recommended order.
+
+## Directory Guide
+
+| Directory | Purpose |
+|-----------|---------|
+| [.devcontainer/](.devcontainer/) | Ready-to-use local/devcontainer environment |
+| [.github/](.github/) | Repository maintenance automation |
+| [argocd/](argocd/) | GitOps manifests and app discovery |
+| [bookstack-kanboard/](bookstack-kanboard/) | Local BookStack and Kanboard lab |
+| [drupal-hugo/](drupal-hugo/) | Drupal CMS/DDEV example |
+| [eksauto/](eksauto/) | EKS Auto Mode walkthrough |
+| [kustomize/](kustomize/) | Kubernetes base/overlay tutorial |
+| [rclone/](rclone/) | Local rclone CSI demo |
+| [restic/](restic/) | Encrypted restic backup recipes |
+| [s3-pod-identity/](s3-pod-identity/) | EKS Pod Identity and S3 backup demo |
+| [secrets/](secrets/) | External Secrets Operator demo |
 
 ## Prerequisites
 
@@ -57,10 +74,10 @@ Everything else is installed automatically by `just prereqs`.
 ## Local Development (No Cloud)
 
 ```bash
-just deploy-local          # K8s cluster with databases
-just rclone-test           # S3 filesystem mount demo
-just bookstack-kanboard    # BookStack wiki + Kanboard task board
-just drupal-setup          # Drupal CMS
+just kustomize/deploy-local          # K8s cluster with databases
+just rclone/rclone-test           # S3 filesystem mount demo
+just bs/bookstack-kanboard        # BookStack wiki + Kanboard task board
+just drupal/drupal-setup          # Drupal CMS
 ```
 
 ## AWS Examples
@@ -68,11 +85,11 @@ just drupal-setup          # Drupal CMS
 **Cost warning**: EKS clusters cost money—see [eksauto/](eksauto/) for details. Always destroy when done!
 
 ```bash
-just setup-eks      # Create EKS cluster (~15 min)
-just deploy         # Deploy base manifests
-just s3-test        # S3 Pod Identity demo
-just secrets-deploy # External Secrets demo
-just destroy-eks    # IMPORTANT: Destroy when done!
+just eksauto/setup-eks         # Create EKS cluster (~15 min)
+just eksauto/deploy            # Deploy base manifests
+just s3pi/s3-test              # S3 Pod Identity demo
+just secrets/secrets-deploy    # External Secrets demo
+just eksauto/destroy-eks       # IMPORTANT: Destroy when done!
 ```
 
 ## Oy AI Assistant
@@ -118,8 +135,8 @@ For EKS/S3 work, validate the recipe shape before touching a live cluster:
 
 ```bash
 just --list
-just --dry-run s3-test
-just --dry-run s3-restore
+just --dry-run s3pi/s3-test
+just --dry-run s3pi/s3-restore
 just --dry-run --yes validate-aws
 export AWS_REGION=us-east-1 S3FILES_FILE_SYSTEM_ID=fs-12345678
 kubectl kustomize s3-pod-identity | envsubst '$AWS_REGION $S3FILES_FILE_SYSTEM_ID' >/tmp/s3-pod-identity.yaml
@@ -146,7 +163,7 @@ colima start --cpu 4 --memory 12 --vz-rosetta
 | [LEARNING_PATH.md](LEARNING_PATH.md) | Suggested order for examples |
 | [GLOSSARY.md](GLOSSARY.md) | Definitions of key terms |
 
-Each example directory has its own README with detailed explanations.
+Each top-level project and support directory has a README with the local purpose, key files, and validation command.
 
 ## Links
 

@@ -34,7 +34,7 @@ This repo follows ["grug-brained"](https://grugbrain.dev) principles. The goal i
 - Every example has a `just` recipe—run `just` to list all available commands
 - Keep examples minimal and document *why* decisions were made (not just how)
 - Use `kubectl kustomize <dir>` to validate manifests before committing
-- Test locally with `just deploy-local` (k3d) before deploying to EKS
+- Test locally with `just kustomize/deploy-local` (k3d) before deploying to EKS
 
 ## Structure
 
@@ -43,7 +43,7 @@ This repo follows ["grug-brained"](https://grugbrain.dev) principles. The goal i
 | `argocd/`, `bookstack-kanboard/`, `rclone/`, `s3-pod-identity/`, `secrets/` | Kubernetes examples |
 | `kustomize/` | Shared base manifests |
 | `eksauto/` | EKS Terraform configuration |
-| `drupal/` | Drupal DDEV example |
+| `drupal-hugo/` | Drupal DDEV example |
 | `justfile` | All recipes—the entry point for everything |
 
 ## Justfile Patterns
@@ -99,11 +99,11 @@ some-recipe:
 
 - Cluster is managed by Terraform in `eksauto/terraform/`
 - Pod Identity associations are pre-created by Terraform for s3-test, kube-system EFS CSI, and external-secrets namespaces
-- Use `just setup-eks` to create, `just destroy-eks` to tear down
+- Use `just eksauto/setup-eks` to create, `just eksauto/destroy-eks` to tear down
 - Pods must be restarted after association creation to pick up credentials
 - CSI drivers need their own Pod Identity association (separate namespace/SA)
 - On EKS, POSIX-style S3 mounts use AWS S3 Files through the EFS CSI driver (`s3files-s3` StorageClass)
-- Keep veloxpack rclone CSI limited to local k3d/dev examples (`rclone/`, `just rclone-test`, Drupal k3d)
+- Keep veloxpack rclone CSI limited to local k3d/dev examples (`rclone/`, `just rclone/rclone-test`)
 
 ## Quality Checks
 
@@ -111,8 +111,8 @@ Run the cheapest relevant checks before committing:
 
 ```bash
 just --list
-just --dry-run s3-test
-just --dry-run s3-restore
+just --dry-run s3pi/s3-test
+just --dry-run s3pi/s3-restore
 just --dry-run --yes validate-aws
 terraform -chdir=eksauto/terraform fmt -check -diff
 AWS_PROFILE=<profile> AWS_REGION=<region> terraform -chdir=eksauto/terraform validate
