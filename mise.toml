@@ -1,7 +1,8 @@
 [tools]
 awscli = { version = "latest", symlink_bins = "true" }
 helm = "latest"
-k3d = "latest"
+kind = "latest"
+"aqua:linkerd/linkerd2" = "latest"
 k9s = "latest"
 kubectl = "latest"
 terraform = "latest"

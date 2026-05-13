@@ -4,11 +4,24 @@ set shell := ["bash", "-lc"]
 
 import '../shared.just'
 
-# --- rclone CSI ---
-
-# rclone CSI demo (S3 mount + filebrowser)
+# rclone CSI demo on kind using Helm
 [group('local')]
-rclone-test: _rclone
-    kubectl wait --for=condition=Ready pod -l app=filebrowser --timeout=120s
-    kubectl exec deploy/filebrowser -- ls -la /srv
+rclone-test: _platform
+    helm upgrade --install csi-rclone oci://ghcr.io/veloxpack/charts/csi-driver-rclone \
+      --set feature.enableInlineVolume=true
+    kubectl rollout status deploy/csi-rclone-controller --timeout=300s
+    kubectl rollout status daemonset/csi-rclone-node --timeout=300s
+    kubectl wait --for=create csidriver/rclone.csi.veloxpack.io --timeout=60s
+    kubectl create namespace rclone --dry-run=client -o yaml | kubectl apply -f -
+    kubectl annotate namespace rclone linkerd.io/inject=enabled config.linkerd.io/default-inbound-policy=deny --overwrite
+    helm upgrade --install rclone-demo ../charts/rclone-demo -n rclone
+    kubectl rollout status deploy/filebrowser -n rclone --timeout=300s
+    kubectl exec deploy/filebrowser -n rclone -c filebrowser -- ls -la /srv
+    @echo "Run: kubectl -n rclone port-forward svc/filebrowser 8080:80"
     @echo "rclone CSI working ✓"
+
+[group('local')]
+clean:
+    -helm uninstall rclone-demo -n rclone
+    -helm uninstall csi-rclone
+    -kubectl delete namespace rclone

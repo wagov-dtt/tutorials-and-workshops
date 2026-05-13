@@ -1,176 +1,117 @@
 # tutorials-and-workshops
 
-Hands-on DevOps and Kubernetes examples. Learn by doing.
+Hands-on DevOps and Kubernetes examples. The default path is local-first: **kind**, **Helm**, **Linkerd**, and simple **Traefik static config** for browser-facing apps.
 
-## Start Here
+## First Run
 
-**New to this?** Read [GETTING_STARTED.md](GETTING_STARTED.md) first.
+Install [mise](https://mise.jdx.dev/) and Docker, then:
 
 ```bash
-# Install tools and run your first example
 just prereqs
-just kustomize/deploy-local
+just databases/deploy
 ```
 
-This creates a local Kubernetes cluster with databases. No cloud account needed.
+This creates the `tutorials` kind cluster, installs Linkerd, and deploys PostgreSQL, MySQL, MongoDB, and `whoami` with Helm.
 
-## Quick Reference
+New here? Use [GETTING_STARTED.md](GETTING_STARTED.md).
 
-| What you want | Command | Cloud needed? |
-|---------------|---------|---------------|
-| AI assistant (`oy`) | `oy "review this repo and suggest simplifications"` | Yes (provider creds) |
-| Code audit (`ISSUES.md`) | `oy audit` | Yes (provider creds) |
-| Local K8s cluster | `just kustomize/deploy-local` | No |
-| Local S3 filesystem mount (rclone CSI) | `just rclone/rclone-test` | No |
-| BookStack + Kanboard | `just bs/bookstack-kanboard` | No |
+## Repository Shape
+
+- `charts/` contains the Helm charts.
+- Wrapper directories such as `databases/`, `rclone/`, and `collaboration-stack/` contain small `just` recipes and README files.
+- `shared.just` owns shared local platform helpers: kind + Linkerd.
+- AWS examples live in `eksauto/`, `s3-pod-identity/`, and `secrets/`.
+
+Local Kubernetes examples use this pattern:
+
+```text
+kind cluster -> Linkerd mesh -> Helm chart -> optional Traefik edge
+```
+
+Internal services stay ClusterIP-only. Browser-facing stacks expose one Traefik service and document Linkerd policy between workloads.
+
+## Common Commands
+
+| Goal | Command | Cloud? |
+|------|---------|--------|
+| Install tools from `mise.toml` | `just prereqs` | No |
+| Local databases | `just databases/deploy` | No |
+| Local S3 filesystem mount | `just rclone/rclone-test` | No |
+| Collaboration stack + SSO | `just collaboration-stack/deploy` | No |
 | Local Drupal CMS | `just drupal/drupal-setup` | No |
-| AWS EKS cluster | `just eksauto/setup-eks` | Yes |
-| EKS S3 backup + AWS S3 Files mount | `just s3pi/s3-test` | Yes |
-| GitOps with ArgoCD | `just argocd/argocd-ui` | Yes (+ Identity Center) |
+| EKS cluster | `just eksauto/setup-eks` | Yes |
+| Deploy database chart to EKS | `just eksauto/deploy` | Yes |
+| EKS S3 backup + AWS S3 Files | `just s3-pod-identity/s3-test` | Yes |
+| External Secrets demo | `just secrets/secrets-deploy` | Yes |
 
-Run `just` to see all available commands.
+Run `just` to list all recipes.
 
 ## Examples
 
-| Directory | What it teaches | Difficulty |
-|-----------|-----------------|------------|
-| [kustomize/](kustomize/) | Base K8s manifests, overlays pattern | ⭐ Beginner |
-| [rclone/](rclone/) | Mount S3 as filesystem (CSI driver) | ⭐⭐ Intermediate |
-| [bookstack-kanboard/](bookstack-kanboard/) | Run BookStack and Kanboard containers on K8s | ⭐ Beginner |
-| [drupal-hugo/](drupal-hugo/) | PHP/Drupal development with DDEV | ⭐⭐ Intermediate |
-| [s3-pod-identity/](s3-pod-identity/) | EKS Pod Identity, MySQL backups | ⭐⭐⭐ Advanced |
-| [secrets/](secrets/) | External Secrets with AWS Secrets Manager | ⭐⭐⭐ Advanced |
-| [argocd/](argocd/) | GitOps with ArgoCD | ⭐⭐⭐ Advanced |
-| [eksauto/](eksauto/) | EKS cluster via Terraform | ⭐⭐⭐ Advanced |
-| [restic/](restic/) | Encrypted GitHub org backups to S3 | ⭐⭐ Intermediate |
+| Directory | What it teaches | Level |
+|-----------|-----------------|-------|
+| [databases/](databases/) | Helm deployment to kind with Linkerd baseline | Beginner |
+| [rclone/](rclone/) | rclone CSI and S3-compatible mounts | Intermediate |
+| [collaboration-stack/](collaboration-stack/) | Traefik routing, Keycloak edge SSO, Linkerd policy | Intermediate |
+| [drupal-hugo/](drupal-hugo/) | Drupal/PHP development with DDEV | Intermediate |
+| [restic/](restic/) | Encrypted GitHub org backups to S3 | Intermediate |
+| [eksauto/](eksauto/) | EKS Auto Mode cluster via Terraform | Advanced |
+| [s3-pod-identity/](s3-pod-identity/) | EKS Pod Identity, MySQL backups, AWS S3 Files | Advanced |
+| [secrets/](secrets/) | External Secrets with AWS Secrets Manager | Advanced |
+| [argocd/](argocd/) | Note on reconciling these Helm charts with ArgoCD | Reference |
 
-See [LEARNING_PATH.md](LEARNING_PATH.md) for the recommended order.
-
-## Directory Guide
-
-| Directory | Purpose |
-|-----------|---------|
-| [.devcontainer/](.devcontainer/) | Ready-to-use local/devcontainer environment |
-| [.github/](.github/) | Repository maintenance automation |
-| [argocd/](argocd/) | GitOps manifests and app discovery |
-| [bookstack-kanboard/](bookstack-kanboard/) | Local BookStack and Kanboard lab |
-| [drupal-hugo/](drupal-hugo/) | Drupal CMS/DDEV example |
-| [eksauto/](eksauto/) | EKS Auto Mode walkthrough |
-| [kustomize/](kustomize/) | Kubernetes base/overlay tutorial |
-| [rclone/](rclone/) | Local rclone CSI demo |
-| [restic/](restic/) | Encrypted restic backup recipes |
-| [s3-pod-identity/](s3-pod-identity/) | EKS Pod Identity and S3 backup demo |
-| [secrets/](secrets/) | External Secrets Operator demo |
-
-## Prerequisites
-
-| Tool | Purpose | Install |
-|------|---------|---------|
-| [mise](https://mise.jdx.dev/) | Tool version manager | `curl https://mise.run \| sh` |
-| [Docker](https://docs.docker.com/get-docker/) | Container runtime | Docker Desktop or `docker.io` |
-
-Everything else is installed automatically by `just prereqs`.
-
-## Local Development (No Cloud)
-
-```bash
-just kustomize/deploy-local          # K8s cluster with databases
-just rclone/rclone-test           # S3 filesystem mount demo
-just bs/bookstack-kanboard        # BookStack wiki + Kanboard task board
-just drupal/drupal-setup          # Drupal CMS
-```
-
-## AWS Examples
-
-**Cost warning**: EKS clusters cost money—see [eksauto/](eksauto/) for details. Always destroy when done!
-
-```bash
-just eksauto/setup-eks         # Create EKS cluster (~15 min)
-just eksauto/deploy            # Deploy base manifests
-just s3pi/s3-test              # S3 Pod Identity demo
-just secrets/secrets-deploy    # External Secrets demo
-just eksauto/destroy-eks       # IMPORTANT: Destroy when done!
-```
-
-## Oy AI Assistant
-
-Install [`oy-cli`](https://crates.io/crates/oy-cli) from crates.io with mise's Cargo backend:
-
-```bash
-oy "review this repo and suggest simplifications"
-cd ~/myproject && oy "fix the failing tests"
-```
-
-`oy` works well with existing provider auth, including AWS Bedrock via your configured AWS profile and region.
-
-If you want `oy` available outside this repo, use mise's global Cargo backend. If `cargo-binstall` is available, mise will use it automatically for faster binary installs:
-
-```bash
-mise use -g cargo-binstall
-mise use -g cargo:oy-cli
-```
-
-## Code Auditing
-
-Run `oy audit` in the repo you want to inspect:
-
-```bash
-cd ~/myproject
-oy audit
-oy audit "focus on authentication"
-```
-
-This creates or refreshes `ISSUES.md` with prioritised findings based on OWASP ASVS and grugbrain.dev.
-
-`oy audit` works nicely with existing provider auth, including AWS Bedrock credentials from your current AWS profile and region.
+Recommended order: [LEARNING_PATH.md](LEARNING_PATH.md).
 
 ## Validation
 
 ```bash
-just lint           # Validate manifests (kustomize + terraform + trivy)
-just validate-local # Run all local tests
+just lint           # Helm render/lint + Terraform validate + Trivy
+just validate-local # local kind examples plus Drupal check
 ```
 
-For EKS/S3 work, validate the recipe shape before touching a live cluster:
+Validate a chart directly:
 
 ```bash
-just --list
-just --dry-run s3pi/s3-test
-just --dry-run s3pi/s3-restore
-just --dry-run --yes validate-aws
-export AWS_REGION=us-east-1 S3FILES_FILE_SYSTEM_ID=fs-12345678
-kubectl kustomize s3-pod-identity | envsubst '$AWS_REGION $S3FILES_FILE_SYSTEM_ID' >/tmp/s3-pod-identity.yaml
+helm lint charts/databases
+helm template databases charts/databases >/tmp/databases.yaml
 ```
 
-Expected S3 mount pattern for EKS: `s3-pod-identity` renders `provisioner: efs.csi.aws.com`, `storageClassName: s3files-s3`, and no `rclone.csi.veloxpack.io`. The `rclone/` demo remains for local k3d/dev clusters only.
+For EKS/S3 work, render before touching a live cluster:
 
-## Environment Setup
-
-**Recommended**: [Debian on WSL2](https://wiki.debian.org/InstallingDebianOn/Microsoft/Windows/SubsystemForLinux), [Project Bluefin](https://projectbluefin.io/), or the included [devcontainer](.devcontainer/).
-
-**macOS (Apple Silicon)**:
 ```bash
-brew install colima docker
-softwareupdate --install-rosetta --agree-to-license
-colima start --cpu 4 --memory 12 --vz-rosetta
+helm template s3-pod-identity charts/s3-pod-identity \
+  --set aws.region=us-east-1 \
+  --set bucket=test-123456789012 \
+  --set s3files.fileSystemId=fs-12345678 >/tmp/s3-pod-identity.yaml
+```
+
+Expected EKS S3 Files pattern: `provisioner: efs.csi.aws.com`, `storageClassName: s3files-s3`, and no `rclone.csi.veloxpack.io`. The `rclone/` demo is local-only.
+
+## AWS Cost Warning
+
+EKS costs money. Destroy cloud labs when done:
+
+```bash
+just eksauto/destroy-eks
 ```
 
 ## Documentation
 
-| Document | Purpose |
-|----------|---------|
-| [GETTING_STARTED.md](GETTING_STARTED.md) | First-time setup, beginner concepts |
-| [LEARNING_PATH.md](LEARNING_PATH.md) | Suggested order for examples |
-| [GLOSSARY.md](GLOSSARY.md) | Definitions of key terms |
-
-Each top-level project and support directory has a README with the local purpose, key files, and validation command.
+| Document | Use it for |
+|----------|------------|
+| [GETTING_STARTED.md](GETTING_STARTED.md) | First local walkthrough |
+| [LEARNING_PATH.md](LEARNING_PATH.md) | Recommended order |
+| [GLOSSARY.md](GLOSSARY.md) | Terms and concepts |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Repo conventions |
+| [ISSUES.md](ISSUES.md) | Historical audit backlog |
 
 ## Links
 
-- [oy-cli](https://crates.io/crates/oy-cli) - Small standalone CLI for coding help and `oy audit`
-- [DevSecOps Induction](https://soc.cyber.wa.gov.au/training/devsecops-induction/) - Structured training course
-- [Just command runner](https://github.com/casey/just) - How the justfile works
-- [Kustomize docs](https://kubectl.docs.kubernetes.io/guides/introduction/kustomize/) - Base/overlay pattern
+- [kind](https://kind.sigs.k8s.io/)
+- [Helm](https://helm.sh/docs/)
+- [Linkerd](https://linkerd.io/2/getting-started/)
+- [Just](https://github.com/casey/just)
+- [AWS-managed ArgoCD on EKS](https://docs.aws.amazon.com/eks/latest/userguide/argocd.html)
 
 ## License
 

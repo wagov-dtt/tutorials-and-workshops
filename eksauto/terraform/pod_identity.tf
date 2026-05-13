@@ -1,7 +1,7 @@
 # Pod Identity Associations
 # Pre-created for all examples that need S3 access
 
-# s3-test namespace - used by kustomize-s3-pod-identity example
+# s3-test namespace - used by s3-pod-identity Helm chart example
 resource "aws_eks_pod_identity_association" "s3_test" {
   cluster_name    = module.eks.cluster_name
   namespace       = "s3-test"

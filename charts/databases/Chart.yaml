@@ -1,0 +1,4 @@
+apiVersion: v2
+name: databases
+version: 0.1.0
+description: Local PostgreSQL, MySQL, MongoDB, and whoami training app

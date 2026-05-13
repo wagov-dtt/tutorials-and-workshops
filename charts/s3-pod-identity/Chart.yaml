@@ -1,0 +1,4 @@
+apiVersion: v2
+name: s3-pod-identity
+version: 0.1.0
+description: EKS Pod Identity MySQL backup/restore and AWS S3 Files demo

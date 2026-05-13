@@ -1,0 +1,9 @@
+aws:
+  region: us-east-1
+bucket: test-placeholder
+s3files:
+  fileSystemId: fs-12345678
+jobs:
+  backup: false
+  copy: false
+  restore: false

@@ -19,8 +19,6 @@ setup-eks: _awslogin _terraform-init
 [group('eks')]
 [working-directory('terraform')]
 destroy-eks: _awslogin
-    -aws eks delete-capability --cluster-name training01 --capability-name argocd
-    @sleep 30
     terraform destroy -auto-approve
 
 # Add current SSO user as cluster admin
@@ -30,7 +28,7 @@ eks-access CLUSTER=default_cluster: _awslogin
     aws eks associate-access-policy --cluster-name {{ CLUSTER }} --principal-arn $(just _sso-role-arn) \
       --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy --access-scope type=cluster
 
-# Deploy core manifests to EKS
+# Deploy the databases Helm chart to EKS
 [group('eks')]
 deploy CLUSTER=default_cluster: _awslogin (_eks-kubeconfig CLUSTER)
-    kubectl apply -k "{{ root_dir }}/kustomize/overlays/{{ CLUSTER }}"
+    helm upgrade --install databases "{{ root_dir }}/charts/databases" -n databases --create-namespace

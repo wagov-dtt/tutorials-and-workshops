@@ -26,9 +26,9 @@ Terraform pre-creates:
 ## Quick Start
 
 ```bash
-just s3pi/s3-test      # Full demo: sysbench → backup → copy → debug pod
-just s3pi/s3-restore   # Optional: restore backup to sbtest_restored database
-just s3pi/s3-cleanup   # Remove K8s resources (S3 bucket kept)
+just s3-pod-identity/s3-test      # Full demo: sysbench → backup → copy → debug pod
+just s3-pod-identity/s3-restore   # Optional: restore backup to sbtest_restored database
+just s3-pod-identity/s3-cleanup   # Remove K8s resources (S3 bucket kept)
 ```
 
 ## Architecture
@@ -75,13 +75,13 @@ flowchart TB
 
 | File | Purpose |
 |------|---------|
-| [base/namespace.yaml](base/namespace.yaml) | Namespace and ServiceAccount |
-| [base/s3files.yaml](base/s3files.yaml) | Shared rclone env vars and AWS S3 Files StorageClass |
-| [base/mysql.yaml](base/mysql.yaml) | MySQL deployment and sysbench data prep |
-| [base/debug.yaml](base/debug.yaml) | Debug pod with AWS S3 Files CSI mount |
-| [jobs/backup.yaml](jobs/backup.yaml) | mysqlsh dump → S3 backup1/ |
-| [jobs/copy.yaml](jobs/copy.yaml) | rclone server-side copy backup1/ → backup2/ |
-| [jobs/restore.yaml](jobs/restore.yaml) | S3 backup2/ → mysqlsh load |
+| [../charts/s3-pod-identity/templates/base/namespace.yaml](../charts/s3-pod-identity/templates/base/namespace.yaml) | Namespace and ServiceAccount |
+| [../charts/s3-pod-identity/templates/base/s3files.yaml](../charts/s3-pod-identity/templates/base/s3files.yaml) | Shared rclone env vars and AWS S3 Files StorageClass |
+| [../charts/s3-pod-identity/templates/base/mysql.yaml](../charts/s3-pod-identity/templates/base/mysql.yaml) | MySQL deployment and sysbench data prep |
+| [../charts/s3-pod-identity/templates/base/debug.yaml](../charts/s3-pod-identity/templates/base/debug.yaml) | Debug pod with AWS S3 Files CSI mount |
+| [../charts/s3-pod-identity/templates/jobs/backup.yaml](../charts/s3-pod-identity/templates/jobs/backup.yaml) | mysqlsh dump → S3 backup1/ |
+| [../charts/s3-pod-identity/templates/jobs/copy.yaml](../charts/s3-pod-identity/templates/jobs/copy.yaml) | rclone server-side copy backup1/ → backup2/ |
+| [../charts/s3-pod-identity/templates/jobs/restore.yaml](../charts/s3-pod-identity/templates/jobs/restore.yaml) | S3 backup2/ → mysqlsh load |
 
 ## Learning Goals
 
@@ -112,7 +112,7 @@ kubectl exec -it debug -n s3-test -- sh
 ls /mnt/s3  # S3 bucket contents via AWS S3 Files / EFS CSI
 ```
 
-Uses [AWS S3 Files with the Amazon EFS CSI driver](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files-mounting-eks.html) for the filesystem mount. The `rclone/` directory still uses veloxpack rclone CSI for local k3d clusters only.
+Uses [AWS S3 Files with the Amazon EFS CSI driver](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files-mounting-eks.html) for the filesystem mount. The `rclone/` directory still uses veloxpack rclone CSI for local kind clusters only.
 
 ### CSI Driver Logs
 
@@ -127,16 +127,16 @@ Common issue: pods stuck in `ContainerCreating` can indicate a missing S3 Files 
 
 ## Key Patterns
 
-- **initContainer + main container**: [backup.yaml](jobs/backup.yaml) uses an initContainer for mysqlsh dump, main container for rclone upload
-- **Server-side copy**: [copy.yaml](jobs/copy.yaml) copies between S3 prefixes without downloading locally
-- **Schema rename on restore**: [restore.yaml](jobs/restore.yaml) uses `util.loadDump()` with the `schema` option to restore to a different database name
+- **initContainer + main container**: [backup.yaml](../charts/s3-pod-identity/templates/jobs/backup.yaml) uses an initContainer for mysqlsh dump, main container for rclone upload
+- **Server-side copy**: [copy.yaml](../charts/s3-pod-identity/templates/jobs/copy.yaml) copies between S3 prefixes without downloading locally
+- **Schema rename on restore**: [restore.yaml](../charts/s3-pod-identity/templates/jobs/restore.yaml) uses `util.loadDump()` with the `schema` option to restore to a different database name
 - **Pod Identity auth**: All jobs use `serviceAccountName: s3-access` bound to an IAM role via Terraform's `aws_eks_pod_identity_association`
 
 ## See Also
 
 - [LEARNING_PATH.md](../LEARNING_PATH.md#22-s3-pod-identity) - Step-by-step walkthrough
 - [GLOSSARY.md](../GLOSSARY.md#pod-identity) - Pod Identity definition
-- [rclone/](../rclone/) - rclone CSI examples on local k3d
+- [rclone/](../rclone/) - rclone CSI examples on local kind
 - [eksauto/](../eksauto/) - EKS cluster configuration and cost info
 - [Mounting S3 file systems on Amazon EKS](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files-mounting-eks.html) - Official AWS S3 Files pattern
 - [EKS Pod Identity docs](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html) - Official AWS documentation

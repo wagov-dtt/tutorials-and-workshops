@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-config
+data:
+  traefik.yml: |
+    entryPoints:
+      web:
+        address: ":8000"
+    providers:
+      file:
+        filename: /config/dynamic.yml
+    api:
+      dashboard: true
+      insecure: true
+    log:
+      level: INFO
+  dynamic.yml: |
+    http:
+      routers:
+        bookstack:
+          rule: Host(`bookstack.localhost`)
+          entryPoints: [web]
+          middlewares: [sso, auth-errors]
+          service: bookstack
+        kanboard:
+          rule: Host(`kanboard.localhost`)
+          entryPoints: [web]
+          middlewares: [sso, auth-errors]
+          service: kanboard
+        forgejo:
+          rule: Host(`forgejo.localhost`)
+          entryPoints: [web]
+          middlewares: [sso, auth-errors]
+          service: forgejo
+        keycloak:
+          rule: Host(`keycloak.localhost`)
+          entryPoints: [web]
+          service: keycloak
+        auth:
+          rule: Host(`auth.localhost`)
+          entryPoints: [web]
+          service: oauth2-proxy
+        dashboard:
+          rule: Host(`traefik.localhost`)
+          entryPoints: [web]
+          service: api@internal
+      middlewares:
+        sso:
+          forwardAuth:
+            address: http://oauth2-proxy:4180/oauth2/auth
+            trustForwardHeader: true
+            authResponseHeaders:
+              - X-Auth-Request-User
+              - X-Auth-Request-Email
+              - X-Auth-Request-Preferred-Username
+              - Authorization
+        auth-errors:
+          errors:
+            status: ["401-403"]
+            service: oauth2-proxy
+            query: /oauth2/sign_in?rd={url}
+      services:
+        bookstack:
+          loadBalancer:
+            servers:
+              - url: http://bookstack:80
+        kanboard:
+          loadBalancer:
+            servers:
+              - url: http://kanboard:80
+        forgejo:
+          loadBalancer:
+            servers:
+              - url: http://forgejo:3000
+        keycloak:
+          loadBalancer:
+            servers:
+              - url: http://keycloak:8080
+        oauth2-proxy:
+          loadBalancer:
+            servers:
+              - url: http://oauth2-proxy:4180
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      serviceAccountName: traefik
+      containers:
+        - name: traefik
+          image: traefik:v3.2
+          args: ["--configFile=/config/traefik.yml"]
+          ports:
+            - name: http
+              containerPort: 8000
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: config
+          configMap:
+            name: traefik-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik
+spec:
+  selector:
+    app: traefik
+  ports:
+    - port: 80
+      targetPort: 8000

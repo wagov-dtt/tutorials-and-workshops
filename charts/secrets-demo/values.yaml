@@ -1,0 +1,6 @@
+secretStore:
+  name: aws-secrets-manager
+  kind: ClusterSecretStore
+remoteSecret:
+  key: training/db-credentials
+refreshInterval: 5m

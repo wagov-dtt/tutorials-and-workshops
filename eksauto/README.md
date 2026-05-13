@@ -25,7 +25,7 @@ just eksauto/destroy-eks
 
 ```bash
 just eksauto/setup-eks      # Create cluster via Terraform
-just deploy         # Deploy kustomize manifests
+just eksauto/deploy         # Deploy database Helm chart
 # ... do your training ...
 just eksauto/destroy-eks    # IMPORTANT: destroys everything
 ```
@@ -84,9 +84,9 @@ Press Enter to continue with destruction, or Ctrl+C to abort and keep resources 
 - **terraform-aws-modules**: Using community modules for VPC and EKS
 - **Managed observability**: CloudWatch Container Insights vs self-hosted Prometheus
 
-## ArgoCD (Optional)
+## Helm Deployment
 
-ArgoCD EKS Capability requires AWS Identity Center and is disabled by default. See [argocd/README.md](../argocd/) for setup if needed.
+This repo packages Kubernetes examples as Helm charts. Deploy them directly with CI or reconcile them from an orchestration cluster. For AWS-managed ArgoCD on EKS, see [../argocd/README.md](../argocd/README.md).
 
 ## Observability
 

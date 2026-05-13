@@ -10,7 +10,6 @@ set shell := ["bash", "-lc"]
 # Run `just <dir>/<recipe>` to call a sub-project recipe,
 #    e.g.  just eksauto/setup-eks
 #          just restic/backup
-#          just argocd/argocd-ui
 # Or cd into a directory and run `just` there.
 # Shared helpers (used by all sub-projects and this file)
 
@@ -19,14 +18,13 @@ import 'shared.just'
 # Sub-projects as dependencies (hyphen dirs get alias names via `mod NAME 'dir'`)
 
 mod eksauto
-mod kustomize
+mod databases
 mod rclone
-mod argocd
 mod secrets
 mod restic
 mod s3pi 's3-pod-identity'
 mod drupal 'drupal-hugo'
-mod bs 'bookstack-kanboard'
+mod collab 'collaboration-stack'
 
 # ──── Validate (cross-cutting) ──────────────────────────────
 
@@ -36,14 +34,14 @@ prereqs:
     mise install
     @mkdir -p .codeql
 
-# Validate kustomize + terraform + trivy
+# Validate Helm charts + terraform + trivy
 [group('validate')]
-lint: _lint-kustomize _lint-terraform _lint-trivy
+lint: _lint-helm _lint-terraform _lint-trivy
     @echo "All validations passed ✓"
 
 # Validate all local examples
 [group('validate')]
-validate-local: lint _validate-ddev _validate-k3d
+validate-local: lint _validate-ddev _validate-kind
     @echo "Local validation passed ✓"
 
 # Full AWS validation (creates EKS, runs tests, destroys)
@@ -70,16 +68,23 @@ validate-aws: _awslogin _terraform-validate
     @echo "AWS validation passed ✓"
 
 [private]
-_lint-kustomize:
-    @echo "Validating kustomize..."
-    kubectl kustomize kustomize/overlays/local >/dev/null
-    kubectl kustomize kustomize/overlays/training01 >/dev/null
-    kubectl kustomize s3-pod-identity >/dev/null
-    kubectl kustomize argocd >/dev/null
-    kubectl kustomize secrets >/dev/null
-    kubectl kustomize rclone/base >/dev/null
-    kubectl kustomize bookstack-kanboard >/dev/null
-    @echo "Kustomize valid ✓"
+_lint-helm:
+    @echo "Validating Helm charts..."
+    helm lint charts/databases
+    helm template databases charts/databases >/dev/null
+    helm lint charts/collaboration-stack
+    helm template collaboration-stack charts/collaboration-stack >/dev/null
+    helm template collaboration-stack charts/collaboration-stack --set linkerd.enabled=false >/dev/null
+    helm lint charts/rclone-demo
+    helm template rclone-demo charts/rclone-demo >/dev/null
+    helm lint charts/secrets-demo
+    helm template secrets-demo charts/secrets-demo >/dev/null
+    helm lint charts/s3-pod-identity
+    helm template s3-pod-identity charts/s3-pod-identity \
+      --set aws.region=us-east-1 \
+      --set bucket=test-123456789012 \
+      --set s3files.fileSystemId=fs-12345678 >/dev/null
+    @echo "Helm charts valid ✓"
 
 [private]
 [working-directory('eksauto/terraform')]
@@ -94,7 +99,7 @@ _lint-terraform:
 _lint-trivy:
     @echo "Running trivy..."
     trivy config --exit-code 1 --ignorefile eksauto/terraform/.trivyignore --skip-dirs .terraform eksauto/terraform
-    trivy config --exit-code 1 --ignorefile .trivyignore kustomize argocd s3-pod-identity secrets rclone bookstack-kanboard
+    trivy config --exit-code 1 --ignorefile .trivyignore charts
     @echo "Trivy passed ✓"
 
 # Run SAST analysis (semgrep + CodeQL)
@@ -116,8 +121,8 @@ _validate-ddev: drupal::drupal-setup
     @echo "DDEV working ✓"
 
 [private]
-_validate-k3d: kustomize::deploy-local rclone::rclone-test
-    @echo "k3d validation passed ✓"
+_validate-kind: databases::deploy rclone::rclone-test
+    @echo "kind validation passed ✓"
 
 # ──── Utilities (cross-cutting) ─────────────────────────────
 
@@ -131,4 +136,4 @@ vegeta URL:
 install-secret SECRETID $NAMESPACE $NAME: _awslogin
     kubectl get namespace $NAMESPACE || kubectl create namespace $NAMESPACE
     SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id {{ SECRETID }} --query SecretString --output text) \
-      envsubst < kustomize/secrets-template.yaml | kubectl apply -f -
+      envsubst < charts/databases/secrets-template.yaml | kubectl apply -f -

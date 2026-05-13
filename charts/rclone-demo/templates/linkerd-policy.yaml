@@ -1,0 +1,48 @@
+{{- if .Values.linkerd.enabled }}
+apiVersion: policy.linkerd.io/v1beta1
+kind: Server
+metadata:
+  name: filebrowser-public
+spec:
+  podSelector:
+    matchLabels:
+      app: filebrowser
+  port: 80
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: allow-public-to-filebrowser
+spec:
+  server:
+    name: filebrowser-public
+  client:
+    unauthenticated: true
+    networks:
+      - cidr: 0.0.0.0/0
+      - cidr: ::/0
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: Server
+metadata:
+  name: rclone-s3
+spec:
+  podSelector:
+    matchLabels:
+      app: serves3
+  port: 8080
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: allow-filebrowser-to-rclone
+spec:
+  server:
+    name: rclone-s3
+  client:
+    meshTLS:
+      serviceAccounts:
+        - name: filebrowser
+{{- end }}
