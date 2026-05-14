@@ -4,6 +4,10 @@ set shell := ["bash", "-lc"]
 
 import '../shared.just'
 
+# List all recipes (default)
+default:
+    @just --list
+
 # Deploy the collaboration stack to kind with Helm, Traefik static config, and Linkerd policy
 [group('local')]
 deploy: _platform

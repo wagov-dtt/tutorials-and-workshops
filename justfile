@@ -15,6 +15,10 @@ set shell := ["bash", "-lc"]
 
 import 'shared.just'
 
+# List all recipes (default)
+default:
+    @just --list
+
 # Sub-projects as dependencies (hyphen dirs get alias names via `mod NAME 'dir'`)
 
 mod eksauto

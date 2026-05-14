@@ -1,120 +1,69 @@
 # Glossary
 
-Quick definitions for terms used throughout this repo. For deeper understanding, follow the links to official documentation.
+Quick definitions for terms used throughout this repo.
+
+## Local Platform
+
+### kind
+
+Kubernetes in Docker. This repo uses kind for local Kubernetes examples.
+
+**Official docs**: <https://kind.sigs.k8s.io/>
+
+### Helm
+
+Kubernetes package manager. This repo packages Kubernetes examples as Helm charts under `charts/` and deploys them with `helm upgrade --install`.
+
+**Official docs**: <https://helm.sh/docs/>
+
+### Linkerd
+
+A service mesh that provides transparent mTLS, workload identity, and traffic authorization. Local Kubernetes examples use Linkerd as the default in-cluster trust boundary.
+
+**Official docs**: <https://linkerd.io/2/overview/>
+
+### Traefik static config
+
+Traefik can route HTTP traffic from a static file provider. This repo uses that for web/app stacks instead of adding ingress CRDs to each example.
 
 ## Kubernetes Concepts
 
 ### CSI (Container Storage Interface)
-A standard API that allows storage vendors to write plugins for Kubernetes. CSI drivers let you mount external storage (S3, NFS, cloud disks) as volumes in pods without changing your application code.
 
-**Used in**: [rclone/](rclone/), [s3-pod-identity/](s3-pod-identity/)
-
-### Kustomize
-A tool for customizing Kubernetes YAML without templates. Instead of `{{ .Values.x }}` placeholders, you write patches that overlay base manifests. Built into `kubectl` - no extra installation needed.
-
-**Used in**: [kustomize/](kustomize/), all example directories
-
-**Official docs**: <https://kustomize.io/>
-
-### Pod
-The smallest deployable unit in Kubernetes. A pod contains one or more containers that share networking and storage. Most apps run as Deployments (which manage pods) rather than bare pods.
-
-### PVC (PersistentVolumeClaim)
-A request for storage by a pod. PVCs abstract away the details of where storage comes from - could be local disk, cloud storage, or network-attached storage.
+A standard API for storage plugins. Used by the rclone local demo and AWS S3 Files/EFS CSI examples.
 
 ### ServiceAccount
-An identity for pods. When a pod needs to access the Kubernetes API or external services (like AWS), it uses a ServiceAccount. Combined with Pod Identity, this enables secure, credential-free access to cloud resources.
+
+An identity for pods. Linkerd turns ServiceAccounts into mesh identities, and EKS Pod Identity uses ServiceAccounts to grant AWS access.
+
+### ClusterIP
+
+The default Kubernetes Service type. Most app origins in this repo are ClusterIP-only and are reached through Traefik or by other approved workloads.
 
 ## AWS Concepts
 
-### IAM (Identity and Access Management)
-AWS service for managing access to resources. IAM roles define what actions are allowed; IAM policies attach to roles, users, or groups. Pod Identity uses IAM roles to grant pods AWS access without storing credentials.
+### EKS
 
-**Used in**: [eksauto/](eksauto/), [s3-pod-identity/](s3-pod-identity/), [secrets/](secrets/)
-
-### VPC (Virtual Private Cloud)
-An isolated network in AWS where you launch resources. VPCs contain subnets (public/private), route tables, and security groups. EKS clusters run inside VPCs.
-
-**Used in**: [eksauto/](eksauto/)
-
-### EKS (Elastic Kubernetes Service)
-AWS's managed Kubernetes offering. AWS handles the control plane (API server, etcd, scheduler), you manage the workloads.
-
-**Used in**: [eksauto/](eksauto/)
-
-**Official docs**: <https://docs.aws.amazon.com/eks/>
+AWS managed Kubernetes. See [eksauto/](eksauto/) for the Terraform walkthrough.
 
 ### EKS Auto Mode
-A feature where AWS also manages worker nodes - automatic provisioning, scaling, and security patches. You just deploy workloads; AWS picks instance types and handles capacity.
 
-**Used in**: [eksauto/](eksauto/)
+EKS mode where AWS manages worker capacity and several operational details.
 
 ### Pod Identity
-An EKS feature that lets pods assume IAM roles without storing credentials. The Pod Identity Agent (built into EKS Auto Mode) injects temporary credentials based on the pod's ServiceAccount.
 
-**Used in**: [s3-pod-identity/](s3-pod-identity/), [secrets/](secrets/)
-
-**Official docs**: <https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html>
+An EKS feature that lets pods assume IAM roles without static credentials. Used in [s3-pod-identity/](s3-pod-identity/) and [secrets/](secrets/).
 
 ### Secrets Manager
-AWS service for storing and rotating secrets (passwords, API keys, certificates). Applications retrieve secrets at runtime rather than storing them in config files or environment variables.
 
-**Used in**: [secrets/](secrets/)
+AWS service for storing secrets. The External Secrets demo syncs selected values into Kubernetes.
 
-## DevOps Patterns
+## Deployment Concepts
 
-### GitOps
-A deployment pattern where Git is the single source of truth. You commit desired state to a repo, and a controller (like ArgoCD) automatically syncs the cluster to match. Benefits: audit trail, easy rollbacks, declarative everything.
+### CI with Helm
 
-**Used in**: [argocd/](argocd/)
+A simple deployment model where CI runs `helm upgrade --install` against a cluster.
 
-### Infrastructure as Code (IaC)
-Managing infrastructure through configuration files rather than manual processes. Terraform, Pulumi, and CloudFormation are common IaC tools. Benefits: reproducibility, version control, code review for infrastructure changes.
+### ArgoCD
 
-**Used in**: [eksauto/](eksauto/)
-
-### ADOT (AWS Distro for OpenTelemetry)
-AWS-supported distribution of OpenTelemetry for collecting metrics, traces, and logs. Used by the CloudWatch Observability addon in EKS.
-
-**Used in**: [eksauto/](eksauto/)
-
-### Helm
-A package manager for Kubernetes. Helm charts bundle related manifests with configurable values. Great for installing third-party software; for your own apps, Kustomize is often simpler.
-
-**Official docs**: <https://helm.sh/>
-
-### Just
-A command runner (like Make, but simpler). The `justfile` contains recipes - named commands with dependencies. Run `just` to list all recipes, `just <recipe>` to run one.
-
-**Official docs**: <https://github.com/casey/just>
-
-### k3d
-Runs lightweight Kubernetes (k3s) inside Docker containers. Perfect for local development - create/destroy clusters in seconds, no VM overhead.
-
-**Used in**: All local examples
-
-**Official docs**: <https://k3d.io/>
-
-### mise
-A polyglot tool version manager (successor to asdf). Manages versions of kubectl, terraform, node, python, and 100+ other tools. Ensures everyone uses the same versions.
-
-**Official docs**: <https://mise.jdx.dev/>
-
-### rclone
-"rsync for cloud storage." Syncs files to/from 40+ cloud storage providers. Also provides `rclone serve s3` (expose local storage as S3 API) and CSI drivers for Kubernetes.
-
-**Used in**: [rclone/](rclone/), [s3-pod-identity/](s3-pod-identity/)
-
-**Official docs**: <https://rclone.org/>
-
-### Terraform
-HashiCorp's Infrastructure as Code tool. You declare what resources you want (VPCs, clusters, buckets), Terraform figures out how to create them and tracks state.
-
-**Used in**: [eksauto/](eksauto/)
-
-**Official docs**: <https://www.terraform.io/>
-
-## See Also
-
-- [GETTING_STARTED.md](GETTING_STARTED.md) - First-time setup guide
-- [LEARNING_PATH.md](LEARNING_PATH.md) - Suggested order for examples
+A GitOps controller that can reconcile these Helm charts from an orchestration cluster. This repo does not carry ArgoCD application manifests; see [argocd/README.md](argocd/README.md).

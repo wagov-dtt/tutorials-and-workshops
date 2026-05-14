@@ -4,6 +4,10 @@ set shell := ["bash", "-lc"]
 
 import '../shared.just'
 
+# List all recipes (default)
+default:
+    @just --list
+
 # --- BACKUP (restic) ---
 
 # Dump wagov and wagov-dtt GitHub orgs to a local folder

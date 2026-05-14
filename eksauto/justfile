@@ -4,6 +4,10 @@ set shell := ["bash", "-lc"]
 
 import '../shared.just'
 
+# List all recipes (default)
+default:
+    @just --list
+
 # --- EKS (requires AWS) ---
 
 # Create EKS cluster via Terraform

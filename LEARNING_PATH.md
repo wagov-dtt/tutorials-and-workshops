@@ -1,226 +1,103 @@
 # Learning Path
 
-A suggested order for working through the examples, from beginner to advanced. Each section links to the corresponding example README for detailed instructions.
+Suggested order: local first, then AWS.
 
-## Level 1: Local Kubernetes (No Cloud Required)
+## Level 1: Local Kubernetes with kind, Linkerd, and Helm
 
-Start here. Everything runs on your laptop using Docker.
-
-### 1.1 Deploy Local Databases
+### 1.1 Local Databases
 
 ```bash
-just deploy-local
+just databases/deploy
+kubectl get pods -n databases
 ```
 
-**What you learn**: How k3d creates a local Kubernetes cluster, the Kustomize base/overlay pattern, and core Kubernetes resources (Pods, Deployments, Services, PVCs).
+**What you learn**: kind, Linkerd mesh baseline, Helm releases, and simple stateful services.
 
-**Detailed guide**: [kustomize/README.md](kustomize/README.md)
+**Detailed guide**: [databases/README.md](databases/README.md)
 
 **Files to study**:
-- `kustomize/overlays/local/kustomization.yaml` - How overlays work
-- `kustomize/databases/postgres.yaml` - A complete database deployment
-
-**Exercises**:
-1. Run `kubectl get pods -A` and identify each pod's purpose
-2. Connect to Postgres: `kubectl exec -it postgres-0 -n databases -- psql -U postgres`
-3. Inspect the storage: `kubectl get pvc -n databases`
+- `charts/databases/Chart.yaml`
+- `charts/databases/templates/postgres.yaml`
+- `charts/databases/templates/mysql.yaml`
+- `charts/databases/templates/mongodb.yaml`
+- `shared.just` - `_kind`, `_linkerd`, and `_platform`
 
 ---
 
-### 1.2 CSI Volumes with rclone
+### 1.2 rclone CSI Volumes
 
 ```bash
-just rclone-test
+just rclone/rclone-test
+kubectl -n rclone port-forward svc/filebrowser 8080:80
 ```
 
-**What you learn**: CSI (Container Storage Interface) drivers, mounting cloud storage as filesystems, and StorageClasses with PersistentVolumes.
+**What you learn**: CSI drivers, S3-compatible storage mounts, and Helm chart deployment for demo workloads.
 
 **Detailed guide**: [rclone/README.md](rclone/README.md)
 
 **Files to study**:
-- `rclone/base/deployment.yaml` - CSI volume in a pod spec
-- `rclone/base/volumes.yaml` - StorageClass definition
-
-**Exercises**:
-1. Exec into the filebrowser pod and create a file
-2. Verify the file appears in the rclone-serve storage
+- `charts/rclone-demo/templates/deployment.yaml`
+- `charts/rclone-demo/templates/linkerd-policy.yaml`
 
 ---
 
-### 1.3 BookStack and Kanboard
+### 1.3 Collaboration Stack
 
 ```bash
-just bookstack-kanboard
+just collaboration-stack/deploy
+kubectl -n collaboration port-forward svc/traefik 8080:80
 ```
 
-**What you learn**: Running web apps as Kubernetes Deployments, connecting an app to a database service, and using `kubectl port-forward` for local-only access.
+**What you learn**: Traefik static routing, Keycloak edge SSO, oauth2-proxy ForwardAuth, and Linkerd policy between Traefik, identity, and origins.
 
-**Detailed guide**: [bookstack-kanboard/README.md](bookstack-kanboard/README.md)
+**Detailed guide**: [collaboration-stack/README.md](collaboration-stack/README.md)
 
 **Files to study**:
-- `bookstack-kanboard/apps.yaml` - BookStack and Kanboard Deployments and Services
-- `bookstack-kanboard/mariadb.yaml` - Database Deployment for BookStack
-
-**Exercises**:
-1. Port-forward both services and log in with the demo credentials
-2. Create a BookStack page and a Kanboard task
-3. Delete a pod and observe what happens to `emptyDir` demo data
+- `charts/collaboration-stack/templates/traefik.yaml`
+- `charts/collaboration-stack/templates/identity.yaml`
+- `charts/collaboration-stack/templates/linkerd-policy.yaml`
 
 ---
 
 ### 1.4 Drupal CMS
 
 ```bash
-just drupal-setup
-cd drupal
-ddev drush user:login  # Get admin login
+just drupal/drupal-setup
+cd drupal-hugo
+ddev drush user:login
 ```
 
-**What you learn**: DDEV for local development, FrankenPHP (modern PHP runtime), and Composer/Drush for Drupal management.
+**Detailed guide**: [drupal-hugo/README.md](drupal-hugo/README.md)
 
-**Detailed guide**: [drupal/README.md](drupal/README.md)
+## Level 2: AWS Examples
 
-**Files to study**:
-- `drupal/Caddyfile` - Web server and PHP config in one file
-- `drupal/.ddev/config.yaml` - DDEV project settings
-
-**Exercises**:
-1. Create a new article in Drupal
-2. Generate test content: `cd drupal && ddev drush php:script scripts/generate_news_content.php`
-3. Run performance test: `just drupal-test`
-
-**Daily commands** (use DDEV directly):
-```bash
-cd drupal
-ddev start              # Start environment
-ddev stop               # Stop environment
-ddev drush user:login   # Get admin login link
-```
-
----
-
-## Level 2: AWS Basics (Requires AWS Account)
-
-**Cost warning**: EKS clusters cost money—see [eksauto/README.md](eksauto/) for cost breakdown. Always destroy when done.
-
-### 2.1 Create an EKS Cluster
+### 2.1 EKS Auto Mode
 
 ```bash
-just setup-eks
+just eksauto/setup-eks
+just eksauto/deploy
 ```
-
-**What you learn**: Terraform basics, EKS Auto Mode (managed nodes), and AWS VPC networking.
 
 **Detailed guide**: [eksauto/README.md](eksauto/README.md)
-
-**Files to study**:
-- `eksauto/terraform/main.tf` - VPC and EKS definition
-- `eksauto/terraform/outputs.tf` - Getting cluster info
-
-**Exercises**:
-1. Run `terraform plan` to preview what will be created
-2. Explore the cluster: `kubectl get nodes`
-3. Check AWS Console for the VPC and subnets
-
----
 
 ### 2.2 S3 Pod Identity
 
 ```bash
-just s3-test
+just s3-pod-identity/s3-test
+just s3-pod-identity/s3-restore
 ```
 
-**What you learn**: EKS Pod Identity (credential-free AWS access), MySQL Shell for backups, rclone for S3 object operations, and AWS S3 Files/EFS CSI for POSIX-style S3 inspection on EKS.
-
 **Detailed guide**: [s3-pod-identity/README.md](s3-pod-identity/README.md)
-
-**Files to study**:
-- `s3-pod-identity/base/namespace.yaml` - ServiceAccount setup
-- `s3-pod-identity/base/s3files.yaml` - AWS S3 Files StorageClass rendered for EFS CSI
-- `s3-pod-identity/jobs/backup.yaml` - Multi-container job pattern
-- `eksauto/terraform/pod_identity.tf` - How Pod Identity is configured
-- `eksauto/terraform/s3files.tf` - S3 Files file system, mount targets, and CSI IAM roles
-
-**Exercises**:
-1. Run `just s3-restore` to test the restore flow
-2. Check S3 bucket contents in AWS Console
-3. Explore the AWS S3 Files mount: `kubectl exec -it debug -n s3-test -- sh`
-
----
 
 ### 2.3 External Secrets
 
 ```bash
-just secrets-deploy
-just secrets-test
+just secrets/secrets-deploy
+just secrets/secrets-test
 ```
-
-**What you learn**: External Secrets Operator, AWS Secrets Manager integration, and the ClusterSecretStore pattern.
 
 **Detailed guide**: [secrets/README.md](secrets/README.md)
 
-**Files to study**:
-- `secrets/base/clustersecretstore.yaml` - Backend configuration
-- `secrets/base/externalsecret.yaml` - Secret reference
+## Deployment Model
 
-**Exercises**:
-1. Update the secret in AWS Secrets Manager
-2. Wait 5 minutes and verify the K8s secret updated
-3. Create your own ExternalSecret
-
----
-
-## Level 3: GitOps (Optional)
-
-### 3.1 ArgoCD
-
-> **Requires AWS Identity Center.** Skip if Identity Center isn't configured.
-
-```bash
-# First enable ArgoCD
-cd eksauto/terraform && terraform apply -var="enable_argocd=true"
-
-# Then use ArgoCD
-just argocd-ui
-just argocd-deploy
-```
-
-**What you learn**: GitOps workflow, ApplicationSets, and AWS Identity Center integration.
-
-**Detailed guide**: [argocd/README.md](argocd/README.md)
-
-**Files to study**:
-- `argocd/base/applicationset.yaml` - How apps are discovered
-- `argocd/apps/guestbook/` - Example application
-
-**Exercises**:
-1. Add a new app under `argocd/apps/`
-2. Push to git and watch ArgoCD sync
-3. Make a manual change and watch ArgoCD revert it
-
----
-
-## Cleanup Checklist
-
-When you're done learning:
-
-```bash
-# Level 1 cleanup
-k3d cluster delete tutorials
-just drupal-reset
-
-# Level 2-3 cleanup (IMPORTANT - stops AWS charges)
-just destroy-eks
-```
-
-Verify in AWS Console that:
-- [ ] No EKS clusters running
-- [ ] No EC2 instances running
-- [ ] No NAT Gateways (these are expensive!)
-
----
-
-## See Also
-
-- [GETTING_STARTED.md](GETTING_STARTED.md) - First-time setup instructions
-- [GLOSSARY.md](GLOSSARY.md) - Definitions of key terms
+Kubernetes examples live under `charts/`. Deploy them directly with `helm upgrade --install`, or reconcile them from an orchestration cluster with ArgoCD. See [argocd/README.md](argocd/README.md).

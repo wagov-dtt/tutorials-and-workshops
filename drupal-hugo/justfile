@@ -4,6 +4,10 @@ set shell := ["bash", "-lc"]
 
 import '../shared.just'
 
+# List all recipes (default)
+default:
+    @just --list
+
 # --- DRUPAL ---
 
 # Setup Drupal CMS with FrankenPHP (DDEV)

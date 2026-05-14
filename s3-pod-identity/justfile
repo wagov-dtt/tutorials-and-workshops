@@ -4,6 +4,10 @@ set shell := ["bash", "-lc"]
 
 import '../shared.just'
 
+# List all recipes (default)
+default:
+    @just --list
+
 # --- S3 Pod Identity Demo ---
 
 _helm-values := "--set aws.region=$AWS_REGION --set bucket=$(just _bucket) --set s3files.fileSystemId=$(just _s3files-id)"
