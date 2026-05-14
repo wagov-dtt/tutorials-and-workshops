@@ -1,0 +1,4 @@
+apiVersion: v2
+name: secrets-demo
+version: 0.1.0
+description: External Secrets demo objects

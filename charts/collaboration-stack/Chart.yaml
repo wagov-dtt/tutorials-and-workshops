@@ -1,0 +1,4 @@
+apiVersion: v2
+name: collaboration-stack
+version: 0.1.0
+description: BookStack, Kanboard, Forgejo, Keycloak, oauth2-proxy, Traefik, and Linkerd policy

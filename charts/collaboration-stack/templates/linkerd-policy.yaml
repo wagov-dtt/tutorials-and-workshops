@@ -1,0 +1,157 @@
+{{- if .Values.linkerd.enabled }}
+# Linkerd policy for the local collaboration stack.
+#
+# Trust boundary:
+# - External browser traffic enters only at Traefik, commonly via kubectl port-forward.
+# - Internal app/origin traffic is allowed only from the expected Linkerd workload identity.
+# - Header-based app trust should only trust headers that arrive through Traefik.
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: Server
+metadata:
+  name: traefik-public
+  labels:
+    access: public-edge
+spec:
+  podSelector:
+    matchLabels:
+      app: traefik
+  port: 8000
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: allow-public-to-traefik
+spec:
+  server:
+    selector:
+      matchLabels:
+        access: public-edge
+  client:
+    unauthenticated: true
+    networks:
+      - cidr: 0.0.0.0/0
+      - cidr: ::/0
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: Server
+metadata:
+  name: bookstack-http
+  labels:
+    access: from-traefik
+spec:
+  podSelector:
+    matchLabels:
+      app: bookstack
+  port: 80
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: Server
+metadata:
+  name: kanboard-http
+  labels:
+    access: from-traefik
+spec:
+  podSelector:
+    matchLabels:
+      app: kanboard
+  port: 80
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: Server
+metadata:
+  name: forgejo-http
+  labels:
+    access: from-traefik
+spec:
+  podSelector:
+    matchLabels:
+      app: forgejo
+  port: 3000
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: Server
+metadata:
+  name: oauth2-proxy-http
+  labels:
+    access: from-traefik
+spec:
+  podSelector:
+    matchLabels:
+      app: oauth2-proxy
+  port: 4180
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: allow-traefik-to-origins
+spec:
+  server:
+    selector:
+      matchLabels:
+        access: from-traefik
+  client:
+    meshTLS:
+      identities:
+        - traefik.collaboration.serviceaccount.identity.linkerd.cluster.local
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: Server
+metadata:
+  name: keycloak-http
+  labels:
+    access: from-edge-or-auth
+spec:
+  podSelector:
+    matchLabels:
+      app: keycloak
+  port: 8080
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: allow-traefik-and-auth-to-keycloak
+spec:
+  server:
+    selector:
+      matchLabels:
+        access: from-edge-or-auth
+  client:
+    meshTLS:
+      identities:
+        - traefik.collaboration.serviceaccount.identity.linkerd.cluster.local
+        - oauth2-proxy.collaboration.serviceaccount.identity.linkerd.cluster.local
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: Server
+metadata:
+  name: bookstack-db-mysql
+  labels:
+    access: from-bookstack
+spec:
+  podSelector:
+    matchLabels:
+      app: bookstack-db
+  port: 3306
+  proxyProtocol: opaque
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: allow-bookstack-to-db
+spec:
+  server:
+    selector:
+      matchLabels:
+        access: from-bookstack
+  client:
+    meshTLS:
+      identities:
+        - bookstack.collaboration.serviceaccount.identity.linkerd.cluster.local
+{{- end }}

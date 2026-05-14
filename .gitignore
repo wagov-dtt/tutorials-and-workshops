@@ -12,7 +12,10 @@ __pycache__/
 .codeql/
 .aider*
 
+# Restic backup dumps (downloaded GitHub orgs, gitignored)
+restic/github-dump/
+
 # DDEV boilerplate (auto-generated on ddev start)
-drupal/.ddev/**/*.example
-drupal/.ddev/**/README*.txt
-drupal/.ddev/.homeadditions/
+drupal-hugo/.ddev/**/*.example
+drupal-hugo/.ddev/**/README*.txt
+drupal-hugo/.ddev/.homeadditions/

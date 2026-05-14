@@ -1,0 +1,41 @@
+set dotenv-load := true
+set export := true
+set shell := ["bash", "-lc"]
+
+import '../shared.just'
+
+# Deploy the collaboration stack to kind with Helm, Traefik static config, and Linkerd policy
+[group('local')]
+deploy: _platform
+    kubectl create namespace collaboration --dry-run=client -o yaml | kubectl apply -f -
+    kubectl annotate namespace collaboration linkerd.io/inject=enabled config.linkerd.io/default-inbound-policy=deny --overwrite
+    helm upgrade --install collaboration-stack ../charts/collaboration-stack -n collaboration
+    just _wait
+    linkerd check --proxy -n collaboration
+    just _urls
+
+# Remove collaboration stack resources
+[group('local')]
+clean:
+    -helm uninstall collaboration-stack -n collaboration
+    -kubectl delete namespace collaboration
+
+[private]
+_wait:
+    kubectl wait --for=condition=Available deploy/bookstack-db -n collaboration --timeout=300s
+    kubectl wait --for=condition=Available deploy/keycloak -n collaboration --timeout=300s
+    kubectl wait --for=condition=Available deploy/oauth2-proxy -n collaboration --timeout=300s
+    kubectl wait --for=condition=Available deploy/traefik -n collaboration --timeout=300s
+    kubectl wait --for=condition=Available deploy/bookstack -n collaboration --timeout=300s
+    kubectl wait --for=condition=Available deploy/kanboard -n collaboration --timeout=300s
+    kubectl wait --for=condition=Available deploy/forgejo -n collaboration --timeout=300s
+
+[private]
+_urls:
+    @echo "Run: kubectl -n collaboration port-forward svc/traefik 8080:80"
+    @echo "Then open:"
+    @echo "  BookStack: http://bookstack.localhost:8080"
+    @echo "  Kanboard:  http://kanboard.localhost:8080"
+    @echo "  Forgejo:   http://forgejo.localhost:8080"
+    @echo "  Keycloak:  http://keycloak.localhost:8080"
+    @echo "SSO demo user: demo / demo-password"

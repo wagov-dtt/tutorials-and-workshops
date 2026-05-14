@@ -1,0 +1,11 @@
+# Namespace and ServiceAccount for S3 Pod Identity demo
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: s3-test
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: s3-access
+  namespace: s3-test

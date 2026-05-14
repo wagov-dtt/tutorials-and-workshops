@@ -1,0 +1,22 @@
+set dotenv-load := true
+set export := true
+set shell := ["bash", "-lc"]
+
+import '../shared.just'
+
+# Deploy local training databases to kind with Helm
+[group('local')]
+deploy: _platform
+    kubectl create namespace databases --dry-run=client -o yaml | kubectl apply -f -
+    kubectl annotate namespace databases linkerd.io/inject=enabled config.linkerd.io/default-inbound-policy=deny --overwrite
+    helm upgrade --install databases ../charts/databases -n databases
+    kubectl wait --for=condition=Available deploy/postgres -n databases --timeout=120s
+    kubectl wait --for=condition=Available deploy/mysql -n databases --timeout=120s
+    kubectl wait --for=condition=Available deploy/mongodb -n databases --timeout=120s
+    kubectl wait --for=condition=Available deploy/whoami -n databases --timeout=120s
+
+# Remove local training databases
+[group('local')]
+clean:
+    -helm uninstall databases -n databases
+    -kubectl delete namespace databases

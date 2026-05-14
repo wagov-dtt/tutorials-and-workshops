@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm
+data:
+  collab-realm.json: |
+    {
+      "realm": "collab",
+      "enabled": true,
+      "displayName": "Collaboration Lab",
+      "users": [
+        {
+          "username": "demo",
+          "enabled": true,
+          "emailVerified": true,
+          "email": "demo@example.test",
+          "firstName": "Demo",
+          "lastName": "User",
+          "credentials": [
+            {
+              "type": "password",
+              "value": "demo-password",
+              "temporary": false
+            }
+          ]
+        }
+      ],
+      "clients": [
+        {
+          "clientId": "traefik-forward-auth",
+          "name": "Traefik ForwardAuth",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "secret": "collab-forward-auth-secret",
+          "standardFlowEnabled": true,
+          "directAccessGrantsEnabled": false,
+          "redirectUris": [
+            "http://auth.localhost:8080/oauth2/callback",
+            "http://auth.localhost/oauth2/callback"
+          ],
+          "webOrigins": [
+            "http://auth.localhost:8080",
+            "http://auth.localhost"
+          ]
+        }
+      ]
+    }

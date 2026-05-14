@@ -1,0 +1,34 @@
+set dotenv-load := true
+set export := true
+set shell := ["bash", "-lc"]
+
+import '../shared.just'
+
+# --- DRUPAL ---
+
+# Setup Drupal CMS with FrankenPHP (DDEV)
+[group('drupal')]
+drupal-setup:
+    ddev add-on get ddev/ddev-frankenphp
+    ddev dotenv set .ddev/.env.web --frankenphp-custom-extensions="apcu opcache intl bcmath"
+    ddev start
+    ddev restart
+    ddev composer update --with-all-dependencies
+    ddev composer require drupal/drupal_cms_starter drupal/drupal_cms_search drupal/drupal_cms_news
+    ddev drush site:install --account-name=admin --account-pass=admin -y
+    ddev drush recipe ../recipes/drupal_cms_starter
+    ddev drush recipe ../recipes/drupal_cms_search
+    ddev drush recipe ../recipes/drupal_cms_news
+
+# Run search performance tests (DDEV)
+[group('drupal')]
+drupal-test:
+    ddev drush search-api:rebuild-tracker content
+    ddev drush search-api:index --batch-size=1000
+    ddev drush php:script scripts/search_performance_test.php
+
+# Reset Drupal (delete and start fresh)
+[confirm("This will delete the Drupal instance. Continue?")]
+[group('drupal')]
+drupal-reset:
+    -ddev delete -O -y
