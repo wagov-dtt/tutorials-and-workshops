@@ -48,13 +48,3 @@ output "example_secret_arn" {
   description = "ARN of the example secret in Secrets Manager"
   value       = aws_secretsmanager_secret.db_credentials.arn
 }
-
-output "argocd_enabled" {
-  description = "Whether ArgoCD capability is enabled"
-  value       = var.enable_argocd
-}
-
-output "argocd_ui_command" {
-  description = "Command to get ArgoCD UI URL (if enabled)"
-  value       = var.enable_argocd ? "aws eks describe-capability --cluster-name ${var.cluster_name} --capability-name argocd --query 'capability.argoCdDetail.webServerEndpoint' --output text" : "ArgoCD not enabled - run with enable_argocd=false was used"
-}

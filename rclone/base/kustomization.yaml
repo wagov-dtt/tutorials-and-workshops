@@ -1,6 +1,0 @@
-# rclone CSI demo resources (S3 server + filebrowser)
-# CSI driver installed via helm in justfile
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - deployment.yaml

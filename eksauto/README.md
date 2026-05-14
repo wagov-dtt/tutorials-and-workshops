@@ -18,16 +18,16 @@
 **Always destroy when done:**
 
 ```bash
-just destroy-eks
+just eksauto/destroy-eks
 ```
 
 ## Quick Start
 
 ```bash
-just setup-eks      # Create cluster via Terraform
-just deploy         # Deploy kustomize manifests
+just eksauto/setup-eks      # Create cluster via Terraform
+just eksauto/deploy         # Deploy database Helm chart
 # ... do your training ...
-just destroy-eks    # IMPORTANT: destroys everything
+just eksauto/destroy-eks    # IMPORTANT: destroys everything
 ```
 
 ## Full Validation with Inspection Pause
@@ -84,9 +84,9 @@ Press Enter to continue with destruction, or Ctrl+C to abort and keep resources 
 - **terraform-aws-modules**: Using community modules for VPC and EKS
 - **Managed observability**: CloudWatch Container Insights vs self-hosted Prometheus
 
-## ArgoCD (Optional)
+## Helm Deployment
 
-ArgoCD EKS Capability requires AWS Identity Center and is disabled by default. See [argocd/README.md](../argocd/) for setup if needed.
+This repo packages Kubernetes examples as Helm charts. Deploy them directly with CI or reconcile them from an orchestration cluster. For AWS-managed ArgoCD on EKS, see [../argocd/README.md](../argocd/README.md).
 
 ## Observability
 
@@ -117,13 +117,13 @@ terraform destroy
 Terraform handles all cleanup:
 
 ```bash
-just destroy-eks   # Destroys VPC, EKS, IAM, S3, and all associated resources
+just eksauto/destroy-eks   # Destroys VPC, EKS, IAM, S3, and all associated resources
 ```
 
 If destroy fails, check for:
 - LoadBalancer services still running (delete them first)
 - Stuck PVCs (delete them first)
-- Then retry `just destroy-eks`
+- Then retry `just eksauto/destroy-eks`
 
 ## See Also
 
