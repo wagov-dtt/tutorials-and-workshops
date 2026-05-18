@@ -2,6 +2,10 @@ set dotenv-load := true
 set export := true
 set shell := ["bash", "-lc"]
 
+# List all recipes (default)
+default:
+    @just --list
+
 import '../shared.just'
 
 # --- S3 Pod Identity Demo ---

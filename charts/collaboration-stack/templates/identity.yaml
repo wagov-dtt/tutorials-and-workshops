@@ -99,6 +99,8 @@ spec:
             - --http-address=0.0.0.0:4180
             - --reverse-proxy=true
             - --cookie-secure=false
+            - --cookie-domain=.localhost
+            - --whitelist-domain=.localhost:8080
             - --skip-provider-button=true
             - --set-xauthrequest=true
             - --pass-access-token=true

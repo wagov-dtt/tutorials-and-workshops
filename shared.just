@@ -1,9 +1,5 @@
 # Shared settings and helpers — imported by all sub-project justfiles
 
-# List all recipes (default)
-default:
-    @just --list
-
 default_cluster := "training01"
 root_dir := source_directory()
 

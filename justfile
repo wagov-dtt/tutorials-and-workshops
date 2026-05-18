@@ -2,6 +2,10 @@ set dotenv-load := true
 set export := true
 set shell := ["bash", "-lc"]
 
+# List all recipes (default)
+default:
+    @just --list
+
 # Constants (defined in shared.just)
 # ──── Docs / Reference ─────────────────────────────────────
 # This repo is a collection of standalone mini-projects.

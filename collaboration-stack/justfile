@@ -2,6 +2,10 @@ set dotenv-load := true
 set export := true
 set shell := ["bash", "-lc"]
 
+# List all recipes (default)
+default:
+    @just --list
+
 import '../shared.just'
 
 # Deploy the collaboration stack to kind with Helm, Traefik static config, and Linkerd policy

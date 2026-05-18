@@ -115,4 +115,4 @@ just eksauto/destroy-eks
 
 ## License
 
-[MIT](LICENSE)
+[Apache 2](LICENSE)
