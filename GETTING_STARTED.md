@@ -44,22 +44,22 @@ k9s
 
 ```bash
 just rclone/rclone-test
-just collaboration-stack/deploy
+just collab::deploy
 kubectl -n collaboration port-forward svc/traefik 8080:80
 ```
 
 Then open:
 
-- <http://bookstack.localhost:8080>
-- <http://kanboard.localhost:8080>
-- <http://forgejo.localhost:8080>
-- <http://keycloak.localhost:8080>
+- <http://bookstack.localhost:8080> (`admin@admin.com` / `password`)
+- <http://kanboard.localhost:8080> (`admin` / `admin`)
+- <http://forgejo.localhost:8080> (create/use local users)
+- <http://keycloak.localhost:8080> (admin: `admin` / `admin-password`)
 
 ## Cleanup
 
 ```bash
 just databases/clean
-just collaboration-stack/clean
+just collab::clean
 kind delete cluster --name tutorials
 ```
 

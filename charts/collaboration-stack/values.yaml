@@ -1,2 +1,4 @@
 linkerd:
   enabled: true
+sso:
+  enabled: false

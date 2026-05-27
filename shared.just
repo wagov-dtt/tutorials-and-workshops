@@ -37,8 +37,33 @@ _sso-role-arn:
 [private]
 _kind:
     @which kind > /dev/null || (cd "{{ root_dir }}" && mise install)
-    kind create cluster --name tutorials --config "{{ root_dir }}/kind/config.yaml" || true
-    kubectl config use-context kind-tutorials
+    @created=false; \
+    if ! kind get clusters | grep -qx tutorials; then \
+      kind create cluster --name tutorials --config "{{ root_dir }}/kind/config.yaml" || { \
+        status=$?; \
+        echo "kind failed to create cluster 'tutorials'; deleting the partial cluster."; \
+        kind delete cluster --name tutorials >/dev/null 2>&1 || true; \
+        echo "Fix the container runtime issue, then retry: just collab::deploy"; \
+        exit $status; \
+      }; \
+      created=true; \
+    fi; \
+    kind export kubeconfig --name tutorials; \
+    kubectl config use-context kind-tutorials; \
+    for i in {1..24}; do \
+      kubectl --context kind-tutorials get --raw=/readyz >/dev/null 2>&1 && break; \
+      sleep 5; \
+    done; \
+    if ! kubectl --context kind-tutorials get --raw=/readyz >/dev/null 2>&1; then \
+      if [ "$created" = true ]; then \
+        echo "kind cluster 'tutorials' was created, but the API did not become ready within 120s."; \
+        echo "Inspect Docker/kind logs, then retry: kind delete cluster --name tutorials && just collab::deploy"; \
+        exit 1; \
+      fi; \
+      echo "kind cluster 'tutorials' exists but the API is not ready; delete it, then retry: kind delete cluster --name tutorials && just collab::deploy"; \
+      exit 1; \
+    fi
+    kubectl --context kind-tutorials wait --for=condition=Ready node --all --timeout=120s
 
 [private]
 _linkerd: _kind

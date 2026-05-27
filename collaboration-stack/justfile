@@ -26,13 +26,14 @@ clean:
 
 [private]
 _wait:
-    kubectl wait --for=condition=Available deploy/bookstack-db -n collaboration --timeout=300s
-    kubectl wait --for=condition=Available deploy/keycloak -n collaboration --timeout=300s
-    kubectl wait --for=condition=Available deploy/oauth2-proxy -n collaboration --timeout=300s
-    kubectl wait --for=condition=Available deploy/traefik -n collaboration --timeout=300s
-    kubectl wait --for=condition=Available deploy/bookstack -n collaboration --timeout=300s
-    kubectl wait --for=condition=Available deploy/kanboard -n collaboration --timeout=300s
-    kubectl wait --for=condition=Available deploy/forgejo -n collaboration --timeout=300s
+    kubectl wait --for=condition=Available deploy/bookstack-db -n collaboration --timeout=900s
+    kubectl rollout restart deploy/bookstack -n collaboration
+    kubectl rollout status deploy/bookstack -n collaboration --timeout=900s
+    kubectl wait --for=condition=Available deploy/keycloak -n collaboration --timeout=900s
+    kubectl wait --for=condition=Available deploy/oauth2-proxy -n collaboration --timeout=900s
+    kubectl wait --for=condition=Available deploy/traefik -n collaboration --timeout=900s
+    kubectl wait --for=condition=Available deploy/kanboard -n collaboration --timeout=900s
+    kubectl wait --for=condition=Available deploy/forgejo -n collaboration --timeout=900s
 
 [private]
 _urls:
@@ -42,4 +43,4 @@ _urls:
     @echo "  Kanboard:  http://kanboard.localhost:8080"
     @echo "  Forgejo:   http://forgejo.localhost:8080"
     @echo "  Keycloak:  http://keycloak.localhost:8080"
-    @echo "SSO demo user: demo / demo-password"
+    @echo "Keycloak demo user: demo / demo-password"

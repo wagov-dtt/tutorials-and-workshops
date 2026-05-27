@@ -44,11 +44,11 @@ kubectl -n rclone port-forward svc/filebrowser 8080:80
 ### 1.3 Collaboration Stack
 
 ```bash
-just collaboration-stack/deploy
+just collab::deploy
 kubectl -n collaboration port-forward svc/traefik 8080:80
 ```
 
-**What you learn**: Traefik static routing, Keycloak edge SSO, oauth2-proxy ForwardAuth, and Linkerd policy between Traefik, identity, and origins.
+**What you learn**: Traefik static routing, local app auth, optional Keycloak/oauth2-proxy ForwardAuth, and Linkerd policy between Traefik, identity, and origins.
 
 **Detailed guide**: [collaboration-stack/README.md](collaboration-stack/README.md)
 

@@ -21,17 +21,23 @@ data:
         bookstack:
           rule: Host(`bookstack.localhost`)
           entryPoints: [web]
-          middlewares: [sso, auth-errors]
+{{- if .Values.sso.enabled }}
+          middlewares: [auth-errors, sso]
+{{- end }}
           service: bookstack
         kanboard:
           rule: Host(`kanboard.localhost`)
           entryPoints: [web]
-          middlewares: [sso, auth-errors]
+{{- if .Values.sso.enabled }}
+          middlewares: [auth-errors, sso]
+{{- end }}
           service: kanboard
         forgejo:
           rule: Host(`forgejo.localhost`)
           entryPoints: [web]
-          middlewares: [sso, auth-errors]
+{{- if .Values.sso.enabled }}
+          middlewares: [auth-errors, sso]
+{{- end }}
           service: forgejo
         keycloak:
           rule: Host(`keycloak.localhost`)

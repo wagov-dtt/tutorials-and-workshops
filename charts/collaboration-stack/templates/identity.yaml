@@ -16,7 +16,11 @@ spec:
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:26.0
-          args: ["start-dev", "--import-realm"]
+          args:
+            - start-dev
+            - --import-realm
+            - --hostname=http://keycloak.localhost:8080
+            - --hostname-backchannel-dynamic=true
           ports:
             - name: http
               containerPort: 8080
@@ -88,9 +92,11 @@ spec:
           args:
             - --provider=keycloak-oidc
             - --client-id=traefik-forward-auth
-            - --oidc-issuer-url=http://keycloak:8080/realms/collab
+            - --oidc-issuer-url=http://keycloak.localhost:8080/realms/collab
+            - --skip-oidc-discovery=true
             - --login-url=http://keycloak.localhost:8080/realms/collab/protocol/openid-connect/auth
             - --redeem-url=http://keycloak:8080/realms/collab/protocol/openid-connect/token
+            - --oidc-jwks-url=http://keycloak:8080/realms/collab/protocol/openid-connect/certs
             - --profile-url=http://keycloak:8080/realms/collab/protocol/openid-connect/userinfo
             - --validate-url=http://keycloak:8080/realms/collab/protocol/openid-connect/userinfo
             - --redirect-url=http://auth.localhost:8080/oauth2/callback
