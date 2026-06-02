@@ -1,6 +1,7 @@
 [tools]
 awscli = { version = "latest", symlink_bins = "true" }
 helm = "latest"
+just = "latest"
 kind = "latest"
 "aqua:linkerd/linkerd2" = "latest"
 k9s = "latest"
@@ -12,3 +13,4 @@ mkcert = "latest"
 trivy = "latest"
 "github:ddev/ddev" = "latest"
 restic = "latest"
+rclone = "latest"
