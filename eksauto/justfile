@@ -14,7 +14,7 @@ import '../shared.just'
 #   AWS_PROFILE=your-profile just s3-copy s3://source-bucket/path s3://destination-bucket/path
 [group('eks')]
 s3-copy SRC DST: _awslogin
-    aws configure set s3.max_concurrent_requests 300
+    aws configure set s3.max_concurrent_requests 3000
     aws configure set s3.max_queue_size 150000
     aws s3 sync "{{ SRC }}" "{{ DST }}" --only-show-errors
 
@@ -22,7 +22,7 @@ s3-copy SRC DST: _awslogin
 #   AWS_PROFILE=your-profile just rclone-s3-copy s3://source-bucket/path s3://destination-bucket/path
 [group('eks')]
 rclone-s3-copy SRC DST: _awslogin
-    rclone copy "${SRC/s3:\/\//s3:}" "${DST/s3:\/\//s3:}" --config "{{ root_dir }}/rclone/example-rclone.conf" --stats 30s --stats-one-line --stats-one-line-date
+    rclone copy "${SRC/s3:\/\//s3:}" "${DST/s3:\/\//s3:}" --config "{{ root_dir }}/rclone/example-rclone.conf" --progress --stats-one-line
 
 
 # Create EKS cluster via Terraform
