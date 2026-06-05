@@ -60,10 +60,11 @@ Press Enter to continue with destruction, or Ctrl+C to abort and keep resources 
 | IAM roles `eks-efs-csi-*` | EFS CSI access for AWS S3 Files mounts |
 | IAM role `eks-s3files-service` | S3 Files service access to synchronize the test bucket |
 | IAM role `eks-secrets-manager` | Secrets Manager access for External Secrets Operator |
+| IAM role `eks-observability-collector` | CloudWatch Logs and X-Ray write access for the optional observability collector |
 | S3 bucket `test-<account>` | Backup storage for examples |
 | S3 Files file system + mount targets | POSIX-style S3 mount for EKS examples |
 | Secrets Manager `training/db-credentials` | Example secret for ESO demo |
-| Pod Identity associations | Pre-created for s3-test, kube-system EFS CSI, external-secrets namespaces |
+| Pod Identity associations | Pre-created for s3-test, kube-system EFS CSI, external-secrets, and observability namespaces |
 
 ## Terraform Files
 
@@ -100,7 +101,13 @@ The cluster includes the `amazon-cloudwatch-observability` addon which provides:
 
 View metrics in AWS Console → CloudWatch → Container Insights → Performance Monitoring.
 
-If you want a cluster-local day-to-day UI as well, keep CloudWatch enabled and deploy the optional Victoria*/Grafana stack as a short-retention hot cache. Fan out app OTLP to both in-cluster Victoria* and AWS-managed backends for durable investigations. See [../observability/README.md](../observability/README.md#storage-and-eks-auto-mode).
+If you want a cluster-local day-to-day UI as well, keep CloudWatch enabled and deploy the optional Victoria*/Grafana stack as a short-retention hot cache:
+
+```bash
+just observability/deploy-eksauto-cloudwatch
+```
+
+That recipe fans out app OTLP to both in-cluster Victoria* and AWS-managed backends for durable investigations. See [../observability/README.md](../observability/README.md#storage-and-eks-auto-mode).
 
 ## Manual Terraform Commands
 

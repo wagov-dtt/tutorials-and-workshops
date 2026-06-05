@@ -1,5 +1,5 @@
 # Pod Identity Associations
-# Pre-created for all examples that need S3 access
+# Pre-created for examples that need AWS API access from pods
 
 # s3-test namespace - used by s3-pod-identity Helm chart example
 resource "aws_eks_pod_identity_association" "s3_test" {
@@ -45,6 +45,19 @@ resource "aws_eks_pod_identity_association" "external_secrets" {
   namespace       = "external-secrets"
   service_account = "external-secrets"
   role_arn        = aws_iam_role.eks_secrets_manager.arn
+
+  tags = {
+    Terraform   = "true"
+    Environment = "training"
+  }
+}
+
+# observability namespace - used by the optional OTel collector CloudWatch/X-Ray fan-out
+resource "aws_eks_pod_identity_association" "observability_collector" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "observability"
+  service_account = "otel-collector"
+  role_arn        = aws_iam_role.eks_observability_collector.arn
 
   tags = {
     Terraform   = "true"

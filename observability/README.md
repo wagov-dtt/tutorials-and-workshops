@@ -22,6 +22,14 @@ The stack uses upstream Helm charts, disables PVCs, and sets local retention to 
 
 Do not rely on an implicit cluster default `StorageClass` for this local stack, and do not make HA Victoria the default for kind. HA adds pods, volumes, scheduling constraints, and operational failure modes; keep the default small until Victoria itself is the durable observability system.
 
+EKS Auto example:
+
+```bash
+just observability/deploy-eksauto-cloudwatch
+```
+
+This deploys the same ephemeral Victoria*/Grafana hot store, but overlays the app OTel collector with AWS exporters. It sends metrics to CloudWatch Metrics via EMF, logs to CloudWatch Logs, and traces to X-Ray while keeping the Victoria datasources available in cluster.
+
 ## Deploy
 
 ```bash

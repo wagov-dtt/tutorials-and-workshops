@@ -10,6 +10,7 @@ import '../shared.just'
 
 namespace := "observability"
 retention := env_var_or_default("OBSERVABILITY_RETENTION", "30d")
+aws_region := env_var_or_default("AWS_REGION", "us-east-1")
 s3_bucket := env_var_or_default("OBSERVABILITY_S3_BUCKET", "")
 s3_region := env_var_or_default("OBSERVABILITY_S3_REGION", "us-east-1")
 s3_prefix := env_var_or_default("OBSERVABILITY_S3_BASE_PREFIX", "local-kind")
@@ -70,6 +71,30 @@ deploy-s3: _platform _helm-repos _namespace _require-s3-bucket
     kubectl rollout status deploy/observability-ui -n {{ namespace }} --timeout=120s
     just urls
 
+# Deploy an EKS Auto example: Victoria*/Grafana as the in-cluster hot UI,
+# with app OTLP also sent to CloudWatch Metrics, CloudWatch Logs, and X-Ray.
+[group('eks')]
+deploy-eksauto-cloudwatch CLUSTER=default_cluster: _awslogin (_eks-kubeconfig CLUSTER) _helm-repos _namespace-eksauto
+    helm upgrade --install victoria-metrics-single vm/victoria-metrics-single -n {{ namespace }} \
+      -f ../charts/observability/victoria-metrics-single-values.yaml \
+      --set server.retentionPeriod={{ retention }}
+    helm upgrade --install victoria-logs-single vm/victoria-logs-single -n {{ namespace }} \
+      -f ../charts/observability/victoria-logs-single-values.yaml \
+      --set server.retentionPeriod={{ retention }}
+    helm upgrade --install victoria-traces-single vm/victoria-traces-single -n {{ namespace }} \
+      -f ../charts/observability/victoria-traces-single-values.yaml \
+      --set server.retentionPeriod={{ retention }}
+    helm upgrade --install grafana grafana-community/grafana -n {{ namespace }} \
+      -f ../charts/observability/grafana-values.yaml
+    helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -n {{ namespace }} \
+      -f ../charts/observability/opentelemetry-collector-values.yaml \
+      -f ../charts/observability/opentelemetry-collector-cloudwatch-values.yaml \
+      --set-string extraEnvs[0].value={{ aws_region }}
+    kubectl apply -f ui-proxy.yaml
+    just _wait-eksauto
+    kubectl rollout status deploy/observability-ui -n {{ namespace }} --timeout=120s
+    just urls
+
 # Remove local observability stack
 [group('local')]
 clean:
@@ -117,6 +142,10 @@ _namespace:
     kubectl annotate namespace {{ namespace }} linkerd.io/inject=enabled config.linkerd.io/default-inbound-policy=deny --overwrite
 
 [private]
+_namespace-eksauto:
+    kubectl create namespace {{ namespace }} --dry-run=client -o yaml | kubectl apply -f -
+
+[private]
 _helm-repos:
     helm repo add vm https://victoriametrics.github.io/helm-charts/ >/dev/null 2>&1 || true
     helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts >/dev/null 2>&1 || true
@@ -135,6 +164,14 @@ _wait:
     kubectl rollout status deploy/grafana -n {{ namespace }} --timeout=180s
     kubectl rollout status deploy/otel-collector -n {{ namespace }} --timeout=180s
     kubectl rollout status daemonset/linkerd-telemetry-collector-agent -n {{ namespace }} --timeout=180s
+
+[private]
+_wait-eksauto:
+    kubectl rollout status statefulset/victoria-metrics-single-server -n {{ namespace }} --timeout=180s
+    kubectl rollout status statefulset/victoria-logs-single-server -n {{ namespace }} --timeout=180s
+    kubectl rollout status statefulset/victoria-traces-single-server -n {{ namespace }} --timeout=180s
+    kubectl rollout status deploy/grafana -n {{ namespace }} --timeout=180s
+    kubectl rollout status deploy/otel-collector -n {{ namespace }} --timeout=180s
 
 [private]
 _require-s3-bucket:

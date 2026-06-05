@@ -49,6 +49,71 @@ resource "aws_iam_role_policy" "eks_s3_test" {
   })
 }
 
+# IAM Role for the optional observability collector CloudWatch/X-Ray fan-out.
+resource "aws_iam_role" "eks_observability_collector" {
+  name = "eks-observability-collector"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "pods.eks.amazonaws.com"
+        }
+        Action = [
+          "sts:AssumeRole",
+          "sts:TagSession"
+        ]
+      }
+    ]
+  })
+
+  tags = {
+    Terraform   = "true"
+    Environment = "training"
+  }
+}
+
+resource "aws_iam_role_policy" "observability_collector" {
+  name = "cloudwatch-xray-write"
+  role = aws_iam_role.eks_observability_collector.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:DescribeLogGroups"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:DescribeLogStreams",
+          "logs:PutLogEvents"
+        ]
+        Resource = [
+          "arn:aws:logs:*:${local.account_id}:log-group:/aws/eks/tutorials/observability/*",
+          "arn:aws:logs:*:${local.account_id}:log-group:/aws/eks/tutorials/observability/*:*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "xray:PutTraceSegments",
+          "xray:PutTelemetryRecords"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # S3 bucket for backups (versioned, force_destroy for easy cleanup)
 resource "aws_s3_bucket" "test" {
   bucket        = "test-${local.account_id}"

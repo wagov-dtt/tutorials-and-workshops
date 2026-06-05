@@ -93,6 +93,9 @@ _lint-helm:
       -f charts/observability/grafana-values.yaml >/dev/null
     helm template otel-collector open-telemetry/opentelemetry-collector \
       -f charts/observability/opentelemetry-collector-values.yaml >/dev/null
+    helm template otel-collector open-telemetry/opentelemetry-collector \
+      -f charts/observability/opentelemetry-collector-values.yaml \
+      -f charts/observability/opentelemetry-collector-cloudwatch-values.yaml >/dev/null
     helm template linkerd-telemetry-collector open-telemetry/opentelemetry-collector \
       -f charts/observability/linkerd-telemetry-collector-values.yaml >/dev/null
     helm template otel-collector open-telemetry/opentelemetry-collector \

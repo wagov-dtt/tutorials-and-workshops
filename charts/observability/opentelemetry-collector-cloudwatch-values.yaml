@@ -1,0 +1,35 @@
+# EKS Auto overlay: keep Victoria* as the in-cluster hot store while also
+# sending durable diagnostics to AWS-managed observability backends.
+# Requires Pod Identity permissions for CloudWatch Logs/EMF and X-Ray.
+extraEnvs:
+  - name: AWS_REGION
+    value: us-east-1
+
+serviceAccount:
+  create: true
+  name: otel-collector
+
+config:
+  exporters:
+    awsemf:
+      region: ${env:AWS_REGION}
+      namespace: tutorials/observability
+      log_group_name: /aws/eks/tutorials/observability/metrics
+      log_stream_name: otel-collector
+      resource_to_telemetry_conversion:
+        enabled: true
+    awscloudwatchlogs:
+      region: ${env:AWS_REGION}
+      log_group_name: /aws/eks/tutorials/observability/app
+      log_stream_name: otel-collector
+    awsxray:
+      region: ${env:AWS_REGION}
+
+  service:
+    pipelines:
+      metrics:
+        exporters: [otlphttp/victoriametrics, awsemf]
+      logs:
+        exporters: [otlphttp/victorialogs, awscloudwatchlogs]
+      traces:
+        exporters: [otlphttp/victoriatraces, awsxray]
