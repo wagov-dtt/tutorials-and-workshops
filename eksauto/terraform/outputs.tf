@@ -36,7 +36,7 @@ output "configure_kubectl" {
 
 output "eks_version" {
   description = "EKS cluster Kubernetes version"
-  value       = local.eks_version
+  value       = var.kubernetes_version
 }
 
 output "secrets_manager_role_arn" {

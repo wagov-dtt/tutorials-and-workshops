@@ -169,7 +169,7 @@ _lint-helm-cloud:
     helm template secrets-demo charts/secrets-demo --set secretStore.kind=ClusterSecretStore >/dev/null
     helm lint charts/s3-pod-identity
     helm template s3-pod-identity charts/s3-pod-identity \
-      --set-string aws.region=$(just _aws-region) \
+      --set-string aws.region="${AWS_REGION:-${AWS_DEFAULT_REGION:-ap-southeast-2}}" \
       --set bucket=test-123456789012 \
       --set s3files.fileSystemId=fs-12345678 >/dev/null
     @echo "Cloud Helm renders valid ✓"
@@ -223,7 +223,18 @@ _lint-terraform:
 _lint-trivy:
     @echo "Running trivy..."
     trivy config --exit-code 1 --ignorefile eksauto/terraform/.trivyignore --skip-dirs .terraform eksauto/terraform
-    trivy config --exit-code 1 --ignorefile .trivyignore charts
+    @tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT; \
+      region="${AWS_REGION:-${AWS_DEFAULT_REGION:-ap-southeast-2}}"; \
+      helm template databases charts/databases > "$tmp/databases.yaml"; \
+      helm template collaboration-stack charts/collaboration-stack > "$tmp/collaboration-stack.yaml"; \
+      helm template collaboration-stack charts/collaboration-stack --set sso.enabled=true > "$tmp/collaboration-stack-sso.yaml"; \
+      helm template collaboration-stack charts/collaboration-stack --set linkerd.enabled=false > "$tmp/collaboration-stack-no-linkerd.yaml"; \
+      helm template rclone-demo charts/rclone-demo > "$tmp/rclone-demo.yaml"; \
+      helm template secrets-demo charts/secrets-demo > "$tmp/secrets-demo.yaml"; \
+      helm template secrets-demo charts/secrets-demo --set secretStore.kind=ClusterSecretStore > "$tmp/secrets-demo-clusterstore.yaml"; \
+      helm template s3-pod-identity charts/s3-pod-identity --set-string aws.region="$region" --set bucket=test-123456789012 --set s3files.fileSystemId=fs-12345678 > "$tmp/s3-pod-identity.yaml"; \
+      helm template s3-pod-identity charts/s3-pod-identity --set-string aws.region="$region" --set bucket=test-123456789012 --set s3files.fileSystemId=fs-12345678 --set jobs.backup=true --set jobs.copy=true --set jobs.restore=true > "$tmp/s3-pod-identity-jobs.yaml"; \
+      trivy config --exit-code 1 --ignorefile .trivyignore "$tmp"
     @echo "Trivy passed ✓"
 
 # Run SAST analysis (semgrep + CodeQL)

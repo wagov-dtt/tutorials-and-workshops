@@ -13,8 +13,8 @@ updates:
    schedule:
      interval: weekly
 
- - package-ecosystem: "docker"
-   directory: "/drupal"
+ - package-ecosystem: "composer"
+   directory: "/drupal-hugo"
    schedule:
      interval: weekly
 
