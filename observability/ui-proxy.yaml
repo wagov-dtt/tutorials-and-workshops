@@ -1,0 +1,187 @@
+# Local-only Traefik UI proxy for the observability stack.
+#
+# This is intentionally ClusterIP-only. Humans use one kubectl port-forward to this
+# service; Linkerd mTLS then carries the proxy's service-account identity to the
+# Victoria backends.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: observability-ui
+  namespace: observability
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: observability-ui-traefik
+  namespace: observability
+data:
+  traefik.yml: |
+    entryPoints:
+      home:
+        address: ":8080"
+      metrics:
+        address: ":8428"
+      logs:
+        address: ":9428"
+      traces:
+        address: ":10428"
+    providers:
+      file:
+        filename: /config/dynamic.yml
+    log:
+      level: INFO
+  dynamic.yml: |
+    http:
+      routers:
+        home:
+          rule: PathPrefix(`/`)
+          entryPoints: [home]
+          service: home
+        metrics:
+          rule: PathPrefix(`/`)
+          entryPoints: [metrics]
+          service: victoria-metrics
+        logs:
+          rule: PathPrefix(`/`)
+          entryPoints: [logs]
+          service: victoria-logs
+        traces:
+          rule: PathPrefix(`/`)
+          entryPoints: [traces]
+          service: victoria-traces
+      services:
+        home:
+          loadBalancer:
+            servers:
+              - url: http://127.0.0.1:8090
+        victoria-metrics:
+          loadBalancer:
+            servers:
+              - url: http://victoria-metrics-single-server.observability.svc.cluster.local:8428
+        victoria-logs:
+          loadBalancer:
+            servers:
+              - url: http://victoria-logs-single-server.observability.svc.cluster.local:9428
+        victoria-traces:
+          loadBalancer:
+            servers:
+              - url: http://victoria-traces-single-server.observability.svc.cluster.local:10428
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: observability-ui
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: observability-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: observability-ui
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: observability-ui
+    spec:
+      serviceAccountName: observability-ui
+      containers:
+        - name: traefik
+          image: traefik:v3.2
+          args: ["--configFile=/config/traefik.yml"]
+          ports:
+            - name: http-home
+              containerPort: 8080
+            - name: http-metrics
+              containerPort: 8428
+            - name: http-logs
+              containerPort: 9428
+            - name: http-traces
+              containerPort: 10428
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http-home
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http-home
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: traefik-config
+              mountPath: /config
+              readOnly: true
+        - name: home
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              cat >/tmp/index.html <<'EOF'
+              <!doctype html>
+              <html>
+                <head><title>Local Observability</title></head>
+                <body>
+                  <h1>Local Observability</h1>
+                  <ul>
+                    <li><a href="http://localhost:8428/vmui">Metrics: VictoriaMetrics</a></li>
+                    <li><a href="http://localhost:9428/select/vmui">Logs: VictoriaLogs</a></li>
+                    <li><a href="http://localhost:10428">Traces: VictoriaTraces</a></li>
+                  </ul>
+                  <p>Keep <code>just observability/ui</code> running while browsing.</p>
+                </body>
+              </html>
+              EOF
+              exec httpd -f -p 8090 -h /tmp
+          ports:
+            - name: home-backend
+              containerPort: 8090
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: traefik-config
+          configMap:
+            name: observability-ui-traefik
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: observability-ui
+  namespace: observability
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: observability-ui
+  ports:
+    - name: home
+      port: 8080
+      targetPort: http-home
+    - name: metrics
+      port: 8428
+      targetPort: http-metrics
+    - name: logs
+      port: 9428
+      targetPort: http-logs
+    - name: traces
+      port: 10428
+      targetPort: http-traces

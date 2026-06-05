@@ -1,0 +1,132 @@
+set dotenv-load := true
+set export := true
+set shell := ["bash", "-lc"]
+
+# List all recipes (default)
+default:
+    @just --list
+
+import '../shared.just'
+
+namespace := "observability"
+retention := env_var_or_default("OBSERVABILITY_RETENTION", "30d")
+s3_bucket := env_var_or_default("OBSERVABILITY_S3_BUCKET", "")
+s3_region := env_var_or_default("OBSERVABILITY_S3_REGION", "us-east-1")
+s3_prefix := env_var_or_default("OBSERVABILITY_S3_BASE_PREFIX", "local-kind")
+
+# Deploy local VictoriaMetrics, VictoriaLogs, VictoriaTraces, app OTLP collector,
+# Linkerd telemetry collector, and a Traefik UI proxy.
+[group('local')]
+deploy: _platform _helm-repos _namespace
+    helm upgrade --install victoria-metrics-single vm/victoria-metrics-single -n {{ namespace }} \
+      -f ../charts/observability/victoria-metrics-single-values.yaml \
+      --set server.retentionPeriod={{ retention }}
+    helm upgrade --install victoria-logs-single vm/victoria-logs-single -n {{ namespace }} \
+      -f ../charts/observability/victoria-logs-single-values.yaml \
+      --set server.retentionPeriod={{ retention }}
+    helm upgrade --install victoria-traces-single vm/victoria-traces-single -n {{ namespace }} \
+      -f ../charts/observability/victoria-traces-single-values.yaml \
+      --set server.retentionPeriod={{ retention }}
+    helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -n {{ namespace }} \
+      -f ../charts/observability/opentelemetry-collector-values.yaml
+    helm upgrade --install linkerd-telemetry-collector open-telemetry/opentelemetry-collector -n {{ namespace }} \
+      -f ../charts/observability/linkerd-telemetry-collector-values.yaml
+    kubectl apply -f ui-proxy.yaml
+    just _policy
+    just _wait
+    kubectl rollout status deploy/observability-ui -n {{ namespace }} --timeout=120s
+    just urls
+
+# Deploy with OTLP fan-out to S3. Requires OBSERVABILITY_S3_BUCKET and AWS credentials/identity.
+[group('local')]
+deploy-s3: _platform _helm-repos _namespace _require-s3-bucket
+    helm upgrade --install victoria-metrics-single vm/victoria-metrics-single -n {{ namespace }} \
+      -f ../charts/observability/victoria-metrics-single-values.yaml \
+      --set server.retentionPeriod={{ retention }}
+    helm upgrade --install victoria-logs-single vm/victoria-logs-single -n {{ namespace }} \
+      -f ../charts/observability/victoria-logs-single-values.yaml \
+      --set server.retentionPeriod={{ retention }}
+    helm upgrade --install victoria-traces-single vm/victoria-traces-single -n {{ namespace }} \
+      -f ../charts/observability/victoria-traces-single-values.yaml \
+      --set server.retentionPeriod={{ retention }}
+    helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -n {{ namespace }} \
+      -f ../charts/observability/opentelemetry-collector-values.yaml \
+      -f ../charts/observability/opentelemetry-collector-s3-values.yaml \
+      --set-string extraEnvs[0].name=OBSERVABILITY_S3_BUCKET \
+      --set-string extraEnvs[0].value={{ s3_bucket }} \
+      --set-string extraEnvs[1].name=OBSERVABILITY_S3_REGION \
+      --set-string extraEnvs[1].value={{ s3_region }} \
+      --set-string extraEnvs[2].name=OBSERVABILITY_S3_BASE_PREFIX \
+      --set-string extraEnvs[2].value={{ s3_prefix }}
+    helm upgrade --install linkerd-telemetry-collector open-telemetry/opentelemetry-collector -n {{ namespace }} \
+      -f ../charts/observability/linkerd-telemetry-collector-values.yaml
+    kubectl apply -f ui-proxy.yaml
+    just _policy
+    just _wait
+    kubectl rollout status deploy/observability-ui -n {{ namespace }} --timeout=120s
+    just urls
+
+# Remove local observability stack
+[group('local')]
+clean:
+    -kubectl delete -f linkerd-policy.yaml --ignore-not-found
+    -kubectl delete -f ui-proxy.yaml --ignore-not-found
+    -helm uninstall linkerd-telemetry-collector -n {{ namespace }}
+    -helm uninstall otel-collector -n {{ namespace }}
+    -helm uninstall victoria-traces-single -n {{ namespace }}
+    -helm uninstall victoria-logs-single -n {{ namespace }}
+    -helm uninstall victoria-metrics-single -n {{ namespace }}
+    -kubectl delete namespace {{ namespace }}
+
+# Show local UI access and OTLP endpoints
+[group('local')]
+urls:
+    @echo "Observability UI:   just observability/ui  # then open http://localhost:8080"
+    @echo "Metrics UI:         http://localhost:8428/vmui"
+    @echo "Logs UI:            http://localhost:9428/select/vmui"
+    @echo "Traces UI:          http://localhost:10428"
+    @echo "OTLP gRPC ingest:   otel-collector.{{ namespace }}.svc.cluster.local:4317"
+    @echo "OTLP HTTP ingest:   http://otel-collector.{{ namespace }}.svc.cluster.local:4318"
+
+# Open one local port-forward to the meshed UI proxy
+[group('local')]
+ui:
+    @echo "Open http://localhost:8080 while this port-forward is running."
+    kubectl -n {{ namespace }} port-forward svc/observability-ui 8080:8080 8428:8428 9428:9428 10428:10428
+
+# Smoke-test the local kind observability stack and Linkerd metrics ingestion
+[group('local')]
+smoke:
+    kubectl -n {{ namespace }} rollout status deploy/observability-ui --timeout=120s
+    kubectl -n {{ namespace }} rollout status deploy/otel-collector --timeout=120s
+    kubectl -n {{ namespace }} rollout status daemonset/linkerd-telemetry-collector-agent --timeout=120s
+    -kubectl -n {{ namespace }} delete pod vm-query --ignore-not-found --wait=true
+    kubectl -n {{ namespace }} run vm-query --image=curlimages/curl:8.11.1 --restart=Never --rm -i --quiet -- \
+      sh -lc 'for i in $$(seq 1 24); do curl -fsS "http://victoria-metrics-single-server:8428/api/v1/query?query=up%7Bjob%3D%22linkerd-control-plane%22%7D" | grep -q "\"result\":\[{" && exit 0; sleep 5; done; echo "Linkerd metrics not found in VictoriaMetrics" >&2; exit 1'
+
+[private]
+_namespace:
+    kubectl create namespace {{ namespace }} --dry-run=client -o yaml | kubectl apply -f -
+    kubectl annotate namespace {{ namespace }} linkerd.io/inject=enabled config.linkerd.io/default-inbound-policy=deny --overwrite
+
+[private]
+_helm-repos:
+    helm repo add vm https://victoriametrics.github.io/helm-charts/ >/dev/null 2>&1 || true
+    helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts >/dev/null 2>&1 || true
+    helm repo update vm open-telemetry
+
+[private]
+_policy:
+    kubectl apply -f linkerd-policy.yaml
+
+[private]
+_wait:
+    kubectl rollout status statefulset/victoria-metrics-single-server -n {{ namespace }} --timeout=180s
+    kubectl rollout status statefulset/victoria-logs-single-server -n {{ namespace }} --timeout=180s
+    kubectl rollout status statefulset/victoria-traces-single-server -n {{ namespace }} --timeout=180s
+    kubectl rollout status deploy/otel-collector -n {{ namespace }} --timeout=180s
+    kubectl rollout status daemonset/linkerd-telemetry-collector-agent -n {{ namespace }} --timeout=180s
+
+[private]
+_require-s3-bucket:
+    @test -n "{{ s3_bucket }}" || (echo "Set OBSERVABILITY_S3_BUCKET before running deploy-s3" >&2; exit 1)

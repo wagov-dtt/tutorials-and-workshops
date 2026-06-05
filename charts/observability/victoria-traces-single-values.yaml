@@ -1,0 +1,16 @@
+# Local kind defaults: ephemeral storage plus bounded retention.
+nameOverride: ""
+printNotes: false
+server:
+  retentionPeriod: 30d
+  # Chart value is GiB; the template appends "GiB" for
+  # -retention.maxDiskSpaceUsageBytes. Do not use Kubernetes units like "20Gi".
+  retentionDiskSpaceUsage: 20
+  persistentVolume:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi

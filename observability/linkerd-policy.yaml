@@ -1,0 +1,233 @@
+# Linkerd policy for the local observability stack.
+#
+# Trust boundary:
+# - Namespace default inbound policy is deny.
+# - No Ingress route is created for telemetry frontends.
+# - Browser access goes through the ClusterIP-only Traefik observability-ui proxy via kubectl port-forward.
+# - OTLP ingest is open to authenticated meshed clients so any injected local workload can send telemetry.
+# - Victoria* backends accept telemetry writes and queries from authenticated meshed clients.
+# - Linkerd proxy admin metrics are scrapeable only by the Linkerd telemetry collector.
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: otel-grpc
+  namespace: observability
+  labels:
+    access: mesh-ingest
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: opentelemetry-collector
+      app.kubernetes.io/instance: otel-collector
+      component: standalone-collector
+  port: otlp
+  proxyProtocol: gRPC
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: otel-http
+  namespace: observability
+  labels:
+    access: mesh-ingest
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: opentelemetry-collector
+      app.kubernetes.io/instance: otel-collector
+      component: standalone-collector
+  port: otlp-http
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: allow-meshed-otlp-ingest
+  namespace: observability
+spec:
+  server:
+    selector:
+      matchLabels:
+        access: mesh-ingest
+  client:
+    meshTLS:
+      identities: ["*"]
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: victoria-metrics-http
+  namespace: observability
+  labels:
+    access: victoria-backend
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: victoria-metrics-single
+      app.kubernetes.io/instance: victoria-metrics-single
+      app.kubernetes.io/component: server
+  port: http
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: victoria-logs-http
+  namespace: observability
+  labels:
+    access: victoria-backend
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: victoria-logs-single
+      app.kubernetes.io/instance: victoria-logs-single
+      app.kubernetes.io/component: server
+  port: http
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: victoria-traces-http
+  namespace: observability
+  labels:
+    access: victoria-backend
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: victoria-traces-single
+      app.kubernetes.io/instance: victoria-traces-single
+      app.kubernetes.io/component: server
+  port: http
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: allow-meshed-to-victoria
+  namespace: observability
+spec:
+  server:
+    selector:
+      matchLabels:
+        access: victoria-backend
+  client:
+    meshTLS:
+      identities: ["*"]
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: linkerd-proxy-admin
+  namespace: observability
+  labels:
+    access: linkerd-proxy-admin
+spec:
+  podSelector: {}
+  port: linkerd-admin
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: allow-linkerd-telemetry-collector-to-proxy-admin
+  namespace: observability
+spec:
+  server:
+    selector:
+      matchLabels:
+        access: linkerd-proxy-admin
+  client:
+    meshTLS:
+      serviceAccounts:
+        - name: linkerd-telemetry-collector
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: observability-ui-home
+  namespace: observability
+  labels:
+    access: local-ui
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: observability-ui
+  port: http-home
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: observability-ui-metrics
+  namespace: observability
+  labels:
+    access: local-ui
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: observability-ui
+  port: http-metrics
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: observability-ui-logs
+  namespace: observability
+  labels:
+    access: local-ui
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: observability-ui
+  port: http-logs
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: observability-ui-traces
+  namespace: observability
+  labels:
+    access: local-ui
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: observability-ui
+  port: http-traces
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: allow-meshed-to-observability-ui
+  namespace: observability
+spec:
+  server:
+    selector:
+      matchLabels:
+        access: local-ui
+  client:
+    meshTLS:
+      identities: ["*"]
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: allow-port-forward-to-observability-ui
+  namespace: observability
+spec:
+  server:
+    selector:
+      matchLabels:
+        access: local-ui
+  client:
+    unauthenticated: true
+    networks:
+      # kubectl port-forward traffic reaches the pod from kubelet/node networking,
+      # not reliably from 127.0.0.1. This is still local-only because the service is
+      # ClusterIP and no Ingress/LoadBalancer is created.
+      - cidr: 0.0.0.0/0
+      - cidr: ::/0

@@ -18,7 +18,7 @@ New here? Use [GETTING_STARTED.md](GETTING_STARTED.md).
 ## Repository Shape
 
 - `charts/` contains the Helm charts.
-- Wrapper directories such as `databases/`, `rclone/`, and `collaboration-stack/` contain small `just` recipes and README files.
+- Wrapper directories such as `databases/`, `rclone/`, `collaboration-stack/`, and `observability/` contain small `just` recipes and README files.
 - `shared.just` owns shared local platform helpers: kind + Linkerd.
 - AWS examples live in `eksauto/`, `s3-pod-identity/`, and `secrets/`.
 
@@ -38,6 +38,7 @@ Internal services stay ClusterIP-only. Browser-facing stacks expose one Traefik 
 | Local databases | `just databases/deploy` | No |
 | Local S3 filesystem mount | `just rclone/rclone-test` | No |
 | Collaboration stack | `just collab::deploy` | No |
+| Local observability | `just observability/deploy` | No |
 | Local Drupal CMS | `just drupal/drupal-setup` | No |
 | EKS cluster | `just eksauto/setup-eks` | Yes |
 | Deploy database chart to EKS | `just eksauto/deploy` | Yes |
@@ -53,6 +54,7 @@ Run `just` to list all recipes.
 | [databases/](databases/) | Helm deployment to kind with Linkerd baseline | Beginner |
 | [rclone/](rclone/) | rclone CSI and S3-compatible mounts | Intermediate |
 | [collaboration-stack/](collaboration-stack/) | Traefik routing, local app auth, optional Keycloak/oauth2-proxy SSO demo, Linkerd policy | Intermediate |
+| [observability/](observability/) | VictoriaMetrics/Logs/Traces on kind with optional S3 OTLP archive | Intermediate |
 | [drupal-hugo/](drupal-hugo/) | Drupal/PHP development with DDEV | Intermediate |
 | [restic/](restic/) | Encrypted GitHub org backups to S3 | Intermediate |
 | [eksauto/](eksauto/) | EKS Auto Mode cluster via Terraform | Advanced |

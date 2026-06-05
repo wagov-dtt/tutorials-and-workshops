@@ -1,0 +1,170 @@
+# Collects Linkerd control-plane metrics and Linkerd pod logs, then writes them
+# through the same local Victoria hot stores as application OTLP telemetry.
+mode: daemonset
+fullnameOverride: linkerd-telemetry-collector
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+
+# Keep this collector meshed so Linkerd policy allows writes to Victoria.
+# The filelog receiver tails the Linkerd control plane and injected proxy sidecars.
+
+serviceAccount:
+  create: true
+  name: linkerd-telemetry-collector
+
+clusterRole:
+  create: true
+  rules:
+    - apiGroups: [""]
+      resources: [pods, namespaces]
+      verbs: [get, list, watch]
+
+ports:
+  otlp:
+    enabled: false
+  otlp-http:
+    enabled: false
+  jaeger-compact:
+    enabled: false
+  jaeger-thrift:
+    enabled: false
+  jaeger-grpc:
+    enabled: false
+  zipkin:
+    enabled: false
+  metrics:
+    enabled: false
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+extraVolumeMounts:
+  - name: varlogpods
+    mountPath: /var/log/pods
+    readOnly: true
+  - name: varlibdockercontainers
+    mountPath: /var/lib/docker/containers
+    readOnly: true
+
+extraVolumes:
+  - name: varlogpods
+    hostPath:
+      path: /var/log/pods
+  - name: varlibdockercontainers
+    hostPath:
+      path: /var/lib/docker/containers
+
+alternateConfig:
+  extensions:
+    health_check:
+      endpoint: ${env:MY_POD_IP}:13133
+
+  receivers:
+    # Linkerd exposes Prometheus metrics from proxy and control-plane admin ports.
+    prometheus/linkerd:
+      config:
+        scrape_configs:
+          - job_name: linkerd-proxy
+            scrape_interval: 10s
+            kubernetes_sd_configs:
+              - role: pod
+            relabel_configs:
+              - source_labels: [__meta_kubernetes_pod_container_port_name]
+                action: keep
+                regex: linkerd-admin
+              - source_labels: [__meta_kubernetes_pod_phase]
+                action: keep
+                regex: Running
+              - source_labels: [__meta_kubernetes_namespace]
+                target_label: namespace
+              - source_labels: [__meta_kubernetes_pod_name]
+                target_label: pod
+              - source_labels: [__meta_kubernetes_pod_container_name]
+                target_label: container
+              - source_labels: [__meta_kubernetes_pod_label_linkerd_io_proxy_deployment]
+                target_label: deployment
+          - job_name: linkerd-control-plane
+            scrape_interval: 10s
+            kubernetes_sd_configs:
+              - role: pod
+            relabel_configs:
+              - source_labels: [__meta_kubernetes_namespace]
+                action: keep
+                regex: linkerd
+              - source_labels: [__meta_kubernetes_pod_container_port_name]
+                action: keep
+                regex: .*admin
+              - source_labels: [__meta_kubernetes_pod_phase]
+                action: keep
+                regex: Running
+              - source_labels: [__meta_kubernetes_namespace]
+                target_label: namespace
+              - source_labels: [__meta_kubernetes_pod_name]
+                target_label: pod
+              - source_labels: [__meta_kubernetes_pod_container_name]
+                target_label: container
+              - source_labels: [__meta_kubernetes_pod_label_linkerd_io_control_plane_component]
+                target_label: component
+    filelog/linkerd:
+      include:
+        - /var/log/pods/linkerd_*/*/*.log
+        - /var/log/pods/*_*_*/linkerd-proxy/*.log
+      include_file_path: true
+      operators:
+        - id: container-parser
+          type: container
+
+  processors:
+    batch: {}
+    memory_limiter:
+      check_interval: 1s
+      limit_percentage: 75
+      spike_limit_percentage: 20
+    resource/linkerd_metrics:
+      attributes:
+        - action: upsert
+          key: service.namespace
+          value: linkerd
+        - action: upsert
+          key: telemetry.source
+          value: linkerd
+        - action: upsert
+          key: observability.s3_prefix
+          value: metrics
+    resource/linkerd_logs:
+      attributes:
+        - action: upsert
+          key: service.namespace
+          value: linkerd
+        - action: upsert
+          key: telemetry.source
+          value: linkerd
+        - action: upsert
+          key: observability.s3_prefix
+          value: logs
+
+  exporters:
+    otlphttp/victoriametrics:
+      compression: gzip
+      encoding: proto
+      metrics_endpoint: http://victoria-metrics-single-server:8428/opentelemetry/v1/metrics
+    otlphttp/victorialogs:
+      logs_endpoint: http://victoria-logs-single-server:9428/insert/opentelemetry/v1/logs
+
+  service:
+    extensions: [health_check]
+    pipelines:
+      metrics/linkerd:
+        receivers: [prometheus/linkerd]
+        processors: [memory_limiter, resource/linkerd_metrics, batch]
+        exporters: [otlphttp/victoriametrics]
+      logs/linkerd:
+        receivers: [filelog/linkerd]
+        processors: [memory_limiter, resource/linkerd_logs, batch]
+        exporters: [otlphttp/victorialogs]

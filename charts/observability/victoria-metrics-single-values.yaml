@@ -1,0 +1,12 @@
+# Local kind defaults: ephemeral storage plus bounded retention.
+printNotes: false
+server:
+  retentionPeriod: 30d
+  persistentVolume:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi

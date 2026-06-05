@@ -1,0 +1,95 @@
+# Receives OTLP on 4317/4318, writes to local Victoria backends,
+# and can optionally fan out raw OTLP JSON to S3.
+mode: deployment
+fullnameOverride: otel-collector
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+
+presets:
+  kubernetesAttributes:
+    enabled: true
+
+ports:
+  otlp:
+    enabled: true
+    containerPort: 4317
+    servicePort: 4317
+    protocol: TCP
+  otlp-http:
+    enabled: true
+    containerPort: 4318
+    servicePort: 4318
+    protocol: TCP
+
+extraEnvs: []
+# For S3 fan-out, prefer IRSA/pod identity in cloud. For local testing only:
+# extraEnvs:
+#   - name: AWS_ACCESS_KEY_ID
+#     valueFrom:
+#       secretKeyRef:
+#         name: otel-s3-credentials
+#         key: access-key-id
+#   - name: AWS_SECRET_ACCESS_KEY
+#     valueFrom:
+#       secretKeyRef:
+#         name: otel-s3-credentials
+#         key: secret-access-key
+
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: ${env:MY_POD_IP}:4317
+        http:
+          endpoint: ${env:MY_POD_IP}:4318
+
+  processors:
+    batch: {}
+    memory_limiter:
+      check_interval: 1s
+      limit_percentage: 75
+      spike_limit_percentage: 20
+    resource/s3_prefix_metrics:
+      attributes:
+        - action: insert
+          key: observability.s3_prefix
+          value: metrics
+    resource/s3_prefix_logs:
+      attributes:
+        - action: insert
+          key: observability.s3_prefix
+          value: logs
+    resource/s3_prefix_traces:
+      attributes:
+        - action: insert
+          key: observability.s3_prefix
+          value: traces
+
+  exporters:
+    debug:
+      verbosity: basic
+    otlphttp/victoriametrics:
+      compression: gzip
+      encoding: proto
+      metrics_endpoint: http://victoria-metrics-single-server:8428/opentelemetry/v1/metrics
+    otlphttp/victorialogs:
+      logs_endpoint: http://victoria-logs-single-server:9428/insert/opentelemetry/v1/logs
+    otlphttp/victoriatraces:
+      traces_endpoint: http://victoria-traces-single-server:10428/insert/opentelemetry/v1/traces
+
+  service:
+    pipelines:
+      metrics:
+        receivers: [otlp]
+        processors: [memory_limiter, resource/s3_prefix_metrics, batch]
+        exporters: [otlphttp/victoriametrics]
+      logs:
+        receivers: [otlp]
+        processors: [memory_limiter, resource/s3_prefix_logs, batch]
+        exporters: [otlphttp/victorialogs]
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, resource/s3_prefix_traces, batch]
+        exporters: [otlphttp/victoriatraces]

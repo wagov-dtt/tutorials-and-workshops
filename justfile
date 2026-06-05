@@ -29,6 +29,7 @@ mod restic
 mod s3pi 's3-pod-identity'
 mod drupal 'drupal-hugo'
 mod collab 'collaboration-stack'
+mod observability
 
 # ──── Validate (cross-cutting) ──────────────────────────────
 
@@ -84,6 +85,28 @@ _lint-helm:
     helm lint charts/secrets-demo
     helm template secrets-demo charts/secrets-demo >/dev/null
     helm lint charts/s3-pod-identity
+    helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts >/dev/null 2>&1 || true
+    helm repo add vm https://victoriametrics.github.io/helm-charts/ >/dev/null 2>&1 || true
+    helm repo update open-telemetry vm >/dev/null
+    helm template otel-collector open-telemetry/opentelemetry-collector \
+      -f charts/observability/opentelemetry-collector-values.yaml >/dev/null
+    helm template linkerd-telemetry-collector open-telemetry/opentelemetry-collector \
+      -f charts/observability/linkerd-telemetry-collector-values.yaml >/dev/null
+    helm template otel-collector open-telemetry/opentelemetry-collector \
+      -f charts/observability/opentelemetry-collector-values.yaml \
+      -f charts/observability/opentelemetry-collector-s3-values.yaml \
+      --set-string extraEnvs[0].name=OBSERVABILITY_S3_BUCKET \
+      --set-string extraEnvs[0].value=test-bucket \
+      --set-string extraEnvs[1].name=OBSERVABILITY_S3_REGION \
+      --set-string extraEnvs[1].value=us-east-1 \
+      --set-string extraEnvs[2].name=OBSERVABILITY_S3_BASE_PREFIX \
+      --set-string extraEnvs[2].value=local-kind >/dev/null
+    helm template victoria-metrics-single vm/victoria-metrics-single \
+      -f charts/observability/victoria-metrics-single-values.yaml >/dev/null
+    helm template victoria-logs-single vm/victoria-logs-single \
+      -f charts/observability/victoria-logs-single-values.yaml >/dev/null
+    helm template victoria-traces-single vm/victoria-traces-single \
+      -f charts/observability/victoria-traces-single-values.yaml >/dev/null
     helm template s3-pod-identity charts/s3-pod-identity \
       --set aws.region=us-east-1 \
       --set bucket=test-123456789012 \
