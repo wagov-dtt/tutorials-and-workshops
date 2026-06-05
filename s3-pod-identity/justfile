@@ -10,7 +10,7 @@ import '../shared.just'
 
 # --- S3 Pod Identity Demo ---
 
-_helm-values := "--set aws.region=$AWS_REGION --set bucket=$(just _bucket) --set s3files.fileSystemId=$(just _s3files-id)"
+_helm-values := "--set-string aws.region=$(just _aws-region) --set-string bucket=$(just _bucket) --set-string s3files.fileSystemId=$(just _s3files-id)"
 
 # S3 Pod Identity demo (MySQL → S3 → S3 Files mount → restore)
 [group('eks')]

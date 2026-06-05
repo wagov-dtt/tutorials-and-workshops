@@ -1,5 +1,5 @@
 aws:
-  region: us-east-1
+  region: ap-southeast-2
 bucket: test-placeholder
 s3files:
   fileSystemId: fs-12345678

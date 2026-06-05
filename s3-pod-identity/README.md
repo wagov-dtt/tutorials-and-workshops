@@ -13,7 +13,7 @@
 
 ## Prerequisites
 
-- AWS account with SSO configured (copy `.env.example` to `.env` and set `AWS_PROFILE` and `AWS_REGION`)
+- AWS account with SSO configured (copy `.env.example` to `.env` and set `AWS_PROFILE`; region defaults to `AWS_REGION`, `AWS_DEFAULT_REGION`, or the profile region)
 - EKS cluster created via `just eksauto/setup-eks`
 
 Terraform pre-creates:

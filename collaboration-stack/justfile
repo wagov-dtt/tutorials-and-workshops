@@ -1,5 +1,5 @@
-set dotenv-load := true
-set export := true
+set dotenv-load
+set export
 set shell := ["bash", "-lc"]
 
 # List all recipes (default)
@@ -11,10 +11,19 @@ import '../shared.just'
 # Deploy the collaboration stack to kind with Helm, Traefik static config, and Linkerd policy
 [group('local')]
 deploy: _platform
+    just _deploy "" false
+
+# Deploy the collaboration stack with Keycloak/oauth2-proxy edge SSO enabled
+[group('local')]
+deploy-sso: _platform
+    just _deploy "--set sso.enabled=true" true
+
+[private]
+_deploy HELM_ARGS SSO_ENABLED:
     kubectl create namespace collaboration --dry-run=client -o yaml | kubectl apply -f -
     kubectl annotate namespace collaboration linkerd.io/inject=enabled config.linkerd.io/default-inbound-policy=deny --overwrite
-    helm upgrade --install collaboration-stack ../charts/collaboration-stack -n collaboration
-    just _wait
+    helm upgrade --install collaboration-stack ../charts/collaboration-stack -n collaboration {{ HELM_ARGS }}
+    just _wait {{ SSO_ENABLED }}
     linkerd check --proxy -n collaboration
     just _urls
 
@@ -25,12 +34,11 @@ clean:
     -kubectl delete namespace collaboration
 
 [private]
-_wait:
+_wait SSO_ENABLED:
     kubectl wait --for=condition=Available deploy/bookstack-db -n collaboration --timeout=900s
     kubectl rollout restart deploy/bookstack -n collaboration
     kubectl rollout status deploy/bookstack -n collaboration --timeout=900s
-    kubectl wait --for=condition=Available deploy/keycloak -n collaboration --timeout=900s
-    kubectl wait --for=condition=Available deploy/oauth2-proxy -n collaboration --timeout=900s
+    if [ "{{ SSO_ENABLED }}" = "true" ]; then kubectl wait --for=condition=Available deploy/keycloak -n collaboration --timeout=900s; kubectl wait --for=condition=Available deploy/oauth2-proxy -n collaboration --timeout=900s; fi
     kubectl wait --for=condition=Available deploy/traefik -n collaboration --timeout=900s
     kubectl wait --for=condition=Available deploy/kanboard -n collaboration --timeout=900s
     kubectl wait --for=condition=Available deploy/forgejo -n collaboration --timeout=900s
@@ -42,5 +50,5 @@ _urls:
     @echo "  BookStack: http://bookstack.localhost:8080"
     @echo "  Kanboard:  http://kanboard.localhost:8080"
     @echo "  Forgejo:   http://forgejo.localhost:8080"
-    @echo "  Keycloak:  http://keycloak.localhost:8080"
-    @echo "Keycloak demo user: demo / demo-password"
+    @echo "  Keycloak:  http://keycloak.localhost:8080  # only after just collab::deploy-sso"
+    @echo "Keycloak demo user for SSO: demo / demo-password"

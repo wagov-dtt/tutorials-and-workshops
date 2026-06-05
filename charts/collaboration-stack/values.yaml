@@ -2,3 +2,6 @@ linkerd:
   enabled: true
 sso:
   enabled: false
+images:
+  bookstack: lscr.io/linuxserver/bookstack:26.05.20260601
+  kanboard: kanboard/kanboard:v1.2.52

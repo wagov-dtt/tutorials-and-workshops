@@ -39,6 +39,7 @@ data:
           middlewares: [auth-errors, sso]
 {{- end }}
           service: forgejo
+{{- if .Values.sso.enabled }}
         keycloak:
           rule: Host(`keycloak.localhost`)
           entryPoints: [web]
@@ -47,10 +48,12 @@ data:
           rule: Host(`auth.localhost`)
           entryPoints: [web]
           service: oauth2-proxy
+{{- end }}
         dashboard:
           rule: Host(`traefik.localhost`)
           entryPoints: [web]
           service: api@internal
+{{- if .Values.sso.enabled }}
       middlewares:
         sso:
           forwardAuth:
@@ -66,6 +69,7 @@ data:
             status: ["401-403"]
             service: oauth2-proxy
             query: /oauth2/sign_in?rd={url}
+{{- end }}
       services:
         bookstack:
           loadBalancer:
@@ -79,6 +83,7 @@ data:
           loadBalancer:
             servers:
               - url: http://forgejo:3000
+{{- if .Values.sso.enabled }}
         keycloak:
           loadBalancer:
             servers:
@@ -87,6 +92,7 @@ data:
           loadBalancer:
             servers:
               - url: http://oauth2-proxy:4180
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment

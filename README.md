@@ -82,7 +82,7 @@ For EKS/S3 work, render before touching a live cluster:
 
 ```bash
 helm template s3-pod-identity charts/s3-pod-identity \
-  --set aws.region=us-east-1 \
+  --set-string aws.region="${AWS_REGION:-$(aws configure get region)}" \
   --set bucket=test-123456789012 \
   --set s3files.fileSystemId=fs-12345678 >/tmp/s3-pod-identity.yaml
 ```

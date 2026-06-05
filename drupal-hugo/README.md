@@ -26,6 +26,8 @@ ddev composer bootstrap
 
 That bootstrap command is a shortcut for `composer install` plus `composer drupal:recipe-unpack`, so it restores `vendor/`, Drupal core and contrib code under `web/`, scaffolded web-root files, and unpacked recipes from `composer.lock`.
 
+The repo setup path runs `composer install` before adding optional Drupal CMS recipe packages, so the broad dependency graph is not updated on every setup. Update dependencies intentionally with Composer and commit the resulting `composer.json`/lockfile changes together.
+
 Drupal CMS has the same system requirements as Drupal core, so you can use your preferred setup to run it locally. [See the Drupal User Guide for more information](https://www.drupal.org/docs/user_guide/en/installation-chapter.html) on how to set up Drupal.
 
 ### Installation options

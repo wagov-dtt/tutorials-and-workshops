@@ -7,7 +7,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: backup-to-s3
-  namespace: s3-test
+  namespace: {{ .Release.Namespace }}
 spec:
   template:
     spec:

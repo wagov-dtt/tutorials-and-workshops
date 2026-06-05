@@ -63,7 +63,7 @@ kind: Deployment
 metadata:
   name: filebrowser
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: filebrowser

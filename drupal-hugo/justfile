@@ -1,5 +1,5 @@
-set dotenv-load := true
-set export := true
+set dotenv-load
+set export
 set shell := ["bash", "-lc"]
 
 # List all recipes (default)
@@ -17,8 +17,8 @@ drupal-setup:
     ddev dotenv set .ddev/.env.web --frankenphp-custom-extensions="apcu opcache intl bcmath"
     ddev start
     ddev restart
-    ddev composer update --with-all-dependencies
-    ddev composer require drupal/drupal_cms_starter drupal/drupal_cms_search drupal/drupal_cms_news
+    ddev composer install
+    ddev composer show drupal/drupal_cms_starter drupal/drupal_cms_search drupal/drupal_cms_news >/dev/null 2>&1 || ddev composer require drupal/drupal_cms_starter drupal/drupal_cms_search drupal/drupal_cms_news
     ddev drush site:install --account-name=admin --account-pass=admin -y
     ddev drush recipe ../recipes/drupal_cms_starter
     ddev drush recipe ../recipes/drupal_cms_search

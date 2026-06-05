@@ -4,7 +4,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: s3-mount
-  namespace: s3-test
+  namespace: {{ .Release.Namespace }}
 spec:
   accessModes: [ReadWriteMany]
   storageClassName: s3files-s3
@@ -16,7 +16,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: debug
-  namespace: s3-test
+  namespace: {{ .Release.Namespace }}
 spec:
   serviceAccountName: s3-access
   containers:

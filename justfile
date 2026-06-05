@@ -104,7 +104,7 @@ _lint-helm:
       --set-string extraEnvs[0].name=OBSERVABILITY_S3_BUCKET \
       --set-string extraEnvs[0].value=test-bucket \
       --set-string extraEnvs[1].name=OBSERVABILITY_S3_REGION \
-      --set-string extraEnvs[1].value=us-east-1 \
+      --set-string extraEnvs[1].value=$(just _aws-region) \
       --set-string extraEnvs[2].name=OBSERVABILITY_S3_BASE_PREFIX \
       --set-string extraEnvs[2].value=local-kind >/dev/null
     helm template victoria-metrics-single vm/victoria-metrics-single \
@@ -114,7 +114,7 @@ _lint-helm:
     helm template victoria-traces-single vm/victoria-traces-single \
       -f charts/observability/victoria-traces-single-values.yaml >/dev/null
     helm template s3-pod-identity charts/s3-pod-identity \
-      --set aws.region=us-east-1 \
+      --set-string aws.region=$(just _aws-region) \
       --set bucket=test-123456789012 \
       --set s3files.fileSystemId=fs-12345678 >/dev/null
     @echo "Helm charts valid ✓"

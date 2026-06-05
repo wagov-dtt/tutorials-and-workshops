@@ -1,6 +1,6 @@
 # collaboration-stack/
 
-> Local collaboration lab: BookStack, Kanboard, Forgejo, Keycloak, Traefik static config, and Linkerd policy.
+> Local collaboration lab: BookStack, Kanboard, Forgejo, optional Keycloak/oauth2-proxy SSO, Traefik static config, and Linkerd policy.
 
 This wrapper deploys the `charts/collaboration-stack` Helm chart to a local kind cluster.
 
@@ -18,7 +18,6 @@ Then open:
 | BookStack | <http://bookstack.localhost:8080> | `admin@admin.com` / `password` |
 | Kanboard | <http://kanboard.localhost:8080> | `admin` / `admin` |
 | Forgejo | <http://forgejo.localhost:8080> | Create/use local Forgejo users |
-| Keycloak | <http://keycloak.localhost:8080> | Admin: `admin` / `admin-password` |
 | Traefik dashboard | <http://traefik.localhost:8080> | No auth in this local demo |
 
 Keycloak demo user:
@@ -39,6 +38,14 @@ Edge SSO is optional and disabled by default for the local demo. To render it fo
 ```bash
 helm template collaboration-stack ../charts/collaboration-stack --set sso.enabled=true
 ```
+
+To deploy the SSO variant locally:
+
+```bash
+just collab::deploy-sso
+```
+
+Then Keycloak is available at <http://keycloak.localhost:8080> with admin `admin` / `admin-password` and demo user `demo` / `demo-password`.
 
 ## What to Study
 

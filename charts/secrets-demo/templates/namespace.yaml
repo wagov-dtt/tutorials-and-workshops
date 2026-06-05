@@ -1,10 +1,2 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: external-secrets
----
-# Namespace for the example app that uses synced secrets
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: secrets-demo
+{{/* Namespaces are owned by wrapper recipes / Helm --create-namespace.
+The demo chart must not claim the external-secrets operator namespace. */}}

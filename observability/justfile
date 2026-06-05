@@ -1,5 +1,5 @@
-set dotenv-load := true
-set export := true
+set dotenv-load
+set export
 set shell := ["bash", "-lc"]
 
 # List all recipes (default)
@@ -10,89 +10,44 @@ import '../shared.just'
 
 namespace := "observability"
 retention := env_var_or_default("OBSERVABILITY_RETENTION", "30d")
-aws_region := env_var_or_default("AWS_REGION", "us-east-1")
 s3_bucket := env_var_or_default("OBSERVABILITY_S3_BUCKET", "")
-s3_region := env_var_or_default("OBSERVABILITY_S3_REGION", "us-east-1")
+s3_region := env_var_or_default("OBSERVABILITY_S3_REGION", "")
 s3_prefix := env_var_or_default("OBSERVABILITY_S3_BASE_PREFIX", "local-kind")
 
 # Deploy local VictoriaMetrics, VictoriaLogs, VictoriaTraces, Grafana,
 # app OTLP collector, Linkerd telemetry collector, and a Traefik UI proxy.
 [group('local')]
 deploy: _platform _helm-repos _namespace
-    helm upgrade --install victoria-metrics-single vm/victoria-metrics-single -n {{ namespace }} \
-      -f ../charts/observability/victoria-metrics-single-values.yaml \
-      --set server.retentionPeriod={{ retention }}
-    helm upgrade --install victoria-logs-single vm/victoria-logs-single -n {{ namespace }} \
-      -f ../charts/observability/victoria-logs-single-values.yaml \
-      --set server.retentionPeriod={{ retention }}
-    helm upgrade --install victoria-traces-single vm/victoria-traces-single -n {{ namespace }} \
-      -f ../charts/observability/victoria-traces-single-values.yaml \
-      --set server.retentionPeriod={{ retention }}
-    helm upgrade --install grafana grafana-community/grafana -n {{ namespace }} \
-      -f ../charts/observability/grafana-values.yaml
-    helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -n {{ namespace }} \
-      -f ../charts/observability/opentelemetry-collector-values.yaml
-    helm upgrade --install linkerd-telemetry-collector open-telemetry/opentelemetry-collector -n {{ namespace }} \
-      -f ../charts/observability/linkerd-telemetry-collector-values.yaml
-    kubectl apply -f ui-proxy.yaml
+    just _install-hot-store
+    just _install-otel-local
+    just _install-linkerd-telemetry
+    just _install-ui
     just _policy
     just _wait
-    kubectl rollout status deploy/observability-ui -n {{ namespace }} --timeout=120s
+    just _wait-ui
     just urls
 
 # Deploy with OTLP fan-out to S3. Requires OBSERVABILITY_S3_BUCKET and AWS credentials/identity.
 [group('local')]
 deploy-s3: _platform _helm-repos _namespace _require-s3-bucket
-    helm upgrade --install victoria-metrics-single vm/victoria-metrics-single -n {{ namespace }} \
-      -f ../charts/observability/victoria-metrics-single-values.yaml \
-      --set server.retentionPeriod={{ retention }}
-    helm upgrade --install victoria-logs-single vm/victoria-logs-single -n {{ namespace }} \
-      -f ../charts/observability/victoria-logs-single-values.yaml \
-      --set server.retentionPeriod={{ retention }}
-    helm upgrade --install victoria-traces-single vm/victoria-traces-single -n {{ namespace }} \
-      -f ../charts/observability/victoria-traces-single-values.yaml \
-      --set server.retentionPeriod={{ retention }}
-    helm upgrade --install grafana grafana-community/grafana -n {{ namespace }} \
-      -f ../charts/observability/grafana-values.yaml
-    helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -n {{ namespace }} \
-      -f ../charts/observability/opentelemetry-collector-values.yaml \
-      -f ../charts/observability/opentelemetry-collector-s3-values.yaml \
-      --set-string extraEnvs[0].name=OBSERVABILITY_S3_BUCKET \
-      --set-string extraEnvs[0].value={{ s3_bucket }} \
-      --set-string extraEnvs[1].name=OBSERVABILITY_S3_REGION \
-      --set-string extraEnvs[1].value={{ s3_region }} \
-      --set-string extraEnvs[2].name=OBSERVABILITY_S3_BASE_PREFIX \
-      --set-string extraEnvs[2].value={{ s3_prefix }}
-    helm upgrade --install linkerd-telemetry-collector open-telemetry/opentelemetry-collector -n {{ namespace }} \
-      -f ../charts/observability/linkerd-telemetry-collector-values.yaml
-    kubectl apply -f ui-proxy.yaml
+    just _install-hot-store
+    just _install-otel-s3
+    just _install-linkerd-telemetry
+    just _install-ui
     just _policy
     just _wait
-    kubectl rollout status deploy/observability-ui -n {{ namespace }} --timeout=120s
+    just _wait-ui
     just urls
 
 # Deploy an EKS Auto example: Victoria*/Grafana as the in-cluster hot UI,
 # with app OTLP also sent to CloudWatch Metrics, CloudWatch Logs, and X-Ray.
 [group('eks')]
 deploy-eksauto-cloudwatch CLUSTER=default_cluster: _awslogin (_eks-kubeconfig CLUSTER) _helm-repos _namespace-eksauto
-    helm upgrade --install victoria-metrics-single vm/victoria-metrics-single -n {{ namespace }} \
-      -f ../charts/observability/victoria-metrics-single-values.yaml \
-      --set server.retentionPeriod={{ retention }}
-    helm upgrade --install victoria-logs-single vm/victoria-logs-single -n {{ namespace }} \
-      -f ../charts/observability/victoria-logs-single-values.yaml \
-      --set server.retentionPeriod={{ retention }}
-    helm upgrade --install victoria-traces-single vm/victoria-traces-single -n {{ namespace }} \
-      -f ../charts/observability/victoria-traces-single-values.yaml \
-      --set server.retentionPeriod={{ retention }}
-    helm upgrade --install grafana grafana-community/grafana -n {{ namespace }} \
-      -f ../charts/observability/grafana-values.yaml
-    helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -n {{ namespace }} \
-      -f ../charts/observability/opentelemetry-collector-values.yaml \
-      -f ../charts/observability/opentelemetry-collector-cloudwatch-values.yaml \
-      --set-string extraEnvs[0].value={{ aws_region }}
-    kubectl apply -f ui-proxy.yaml
+    just _install-hot-store
+    just _install-otel-cloudwatch
+    just _install-ui
     just _wait-eksauto
-    kubectl rollout status deploy/observability-ui -n {{ namespace }} --timeout=120s
+    just _wait-ui
     just urls
 
 # Remove local observability stack
@@ -153,6 +108,53 @@ _helm-repos:
     helm repo update vm open-telemetry grafana-community
 
 [private]
+_install-hot-store:
+    helm upgrade --install victoria-metrics-single vm/victoria-metrics-single -n {{ namespace }} \
+      -f ../charts/observability/victoria-metrics-single-values.yaml \
+      --set server.retentionPeriod={{ retention }}
+    helm upgrade --install victoria-logs-single vm/victoria-logs-single -n {{ namespace }} \
+      -f ../charts/observability/victoria-logs-single-values.yaml \
+      --set server.retentionPeriod={{ retention }}
+    helm upgrade --install victoria-traces-single vm/victoria-traces-single -n {{ namespace }} \
+      -f ../charts/observability/victoria-traces-single-values.yaml \
+      --set server.retentionPeriod={{ retention }}
+    helm upgrade --install grafana grafana-community/grafana -n {{ namespace }} \
+      -f ../charts/observability/grafana-values.yaml
+
+[private]
+_install-otel-local:
+    helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -n {{ namespace }} \
+      -f ../charts/observability/opentelemetry-collector-values.yaml
+
+[private]
+_install-otel-s3:
+    helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -n {{ namespace }} \
+      -f ../charts/observability/opentelemetry-collector-values.yaml \
+      -f ../charts/observability/opentelemetry-collector-s3-values.yaml \
+      --set-string extraEnvs[0].name=OBSERVABILITY_S3_BUCKET \
+      --set-string extraEnvs[0].value={{ s3_bucket }} \
+      --set-string extraEnvs[1].name=OBSERVABILITY_S3_REGION \
+      --set-string extraEnvs[1].value=${OBSERVABILITY_S3_REGION:-$(just _aws-region)} \
+      --set-string extraEnvs[2].name=OBSERVABILITY_S3_BASE_PREFIX \
+      --set-string extraEnvs[2].value={{ s3_prefix }}
+
+[private]
+_install-otel-cloudwatch:
+    helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -n {{ namespace }} \
+      -f ../charts/observability/opentelemetry-collector-values.yaml \
+      -f ../charts/observability/opentelemetry-collector-cloudwatch-values.yaml \
+      --set-string extraEnvs[0].value=$(just _aws-region)
+
+[private]
+_install-linkerd-telemetry:
+    helm upgrade --install linkerd-telemetry-collector open-telemetry/opentelemetry-collector -n {{ namespace }} \
+      -f ../charts/observability/linkerd-telemetry-collector-values.yaml
+
+[private]
+_install-ui:
+    kubectl apply -f ui-proxy.yaml
+
+[private]
 _policy:
     kubectl apply -f linkerd-policy.yaml
 
@@ -172,6 +174,10 @@ _wait-eksauto:
     kubectl rollout status statefulset/victoria-traces-single-server -n {{ namespace }} --timeout=180s
     kubectl rollout status deploy/grafana -n {{ namespace }} --timeout=180s
     kubectl rollout status deploy/otel-collector -n {{ namespace }} --timeout=180s
+
+[private]
+_wait-ui:
+    kubectl rollout status deploy/observability-ui -n {{ namespace }} --timeout=120s
 
 [private]
 _require-s3-bucket:

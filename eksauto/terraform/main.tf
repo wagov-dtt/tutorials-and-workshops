@@ -2,13 +2,10 @@ data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 data "aws_availability_zones" "available" {}
 
-# Get latest EKS version
-data "aws_eks_cluster_versions" "available" {}
 
 locals {
-  account_id  = data.aws_caller_identity.current.account_id
-  azs         = slice(data.aws_availability_zones.available.names, 0, 3)
-  eks_version = data.aws_eks_cluster_versions.available.cluster_versions[0].cluster_version
+  account_id = data.aws_caller_identity.current.account_id
+  azs        = slice(data.aws_availability_zones.available.names, 0, 3)
 }
 
 # VPC for EKS
@@ -47,7 +44,7 @@ module "eks" {
   version = "~> 21.18"
 
   name               = var.cluster_name
-  kubernetes_version = local.eks_version
+  kubernetes_version = var.kubernetes_version
 
   endpoint_public_access = true
 

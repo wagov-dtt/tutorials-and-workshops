@@ -14,6 +14,13 @@ _bucket:
     @echo "test-$(just _account)"
 
 [private]
+_aws-region:
+    @region="${AWS_REGION:-${AWS_DEFAULT_REGION:-}}"; \
+    if [ -z "$region" ]; then region="$(aws configure get region 2>/dev/null || true)"; fi; \
+    if [ -z "$region" ]; then echo "Set AWS_REGION, AWS_DEFAULT_REGION, or a region on AWS_PROFILE" >&2; exit 1; fi; \
+    echo "$region"
+
+[private]
 _s3files-id:
     @terraform -chdir="{{ root_dir }}/eksauto/terraform" output -raw s3files_file_system_id
 
@@ -95,8 +102,8 @@ _eks-kubeconfig CLUSTER=default_cluster:
 
 [private]
 _terraform-init:
-    -aws s3api create-bucket --bucket tfstate-$(just _account) --create-bucket-configuration LocationConstraint="$AWS_REGION" 2>/dev/null
-    terraform -chdir="{{ root_dir }}/eksauto/terraform" init -backend-config="bucket=tfstate-$(just _account)" -backend-config="region=$AWS_REGION"
+    -region="$(just _aws-region)"; if [ "$region" = "us-east-1" ]; then aws s3api create-bucket --bucket tfstate-$(just _account) 2>/dev/null; else aws s3api create-bucket --bucket tfstate-$(just _account) --create-bucket-configuration LocationConstraint="$region" 2>/dev/null; fi
+    terraform -chdir="{{ root_dir }}/eksauto/terraform" init -backend-config="bucket=tfstate-$(just _account)" -backend-config="region=$(just _aws-region)"
 
 [private]
 _terraform-validate: _terraform-init

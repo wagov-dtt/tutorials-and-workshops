@@ -4,7 +4,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: mysql-secret
-  namespace: s3-test
+  namespace: {{ .Release.Namespace }}
 stringData:
   MYSQL_ROOT_PASSWORD: testpass
   MYSQL_DATABASE: sbtest
@@ -13,7 +13,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mysql
-  namespace: s3-test
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
@@ -54,7 +54,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mysql
-  namespace: s3-test
+  namespace: {{ .Release.Namespace }}
 spec:
   selector:
     app: mysql
@@ -65,7 +65,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: sysbench-prepare
-  namespace: s3-test
+  namespace: {{ .Release.Namespace }}
 spec:
   template:
     spec:

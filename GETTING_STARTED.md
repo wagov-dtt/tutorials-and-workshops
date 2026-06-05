@@ -53,7 +53,8 @@ Then open:
 - <http://bookstack.localhost:8080> (`admin@admin.com` / `password`)
 - <http://kanboard.localhost:8080> (`admin` / `admin`)
 - <http://forgejo.localhost:8080> (create/use local users)
-- <http://keycloak.localhost:8080> (admin: `admin` / `admin-password`)
+
+Optional SSO/Keycloak path: run `just collab::deploy-sso`, then open <http://keycloak.localhost:8080>.
 
 ## Cleanup
 

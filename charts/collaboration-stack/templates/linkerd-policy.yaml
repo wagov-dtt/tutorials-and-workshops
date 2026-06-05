@@ -72,6 +72,7 @@ spec:
       app: forgejo
   port: 3000
   proxyProtocol: HTTP/1
+{{ if .Values.sso.enabled }}
 ---
 apiVersion: policy.linkerd.io/v1beta1
 kind: Server
@@ -85,6 +86,7 @@ spec:
       app: oauth2-proxy
   port: 4180
   proxyProtocol: HTTP/1
+{{ end }}
 ---
 apiVersion: policy.linkerd.io/v1beta1
 kind: ServerAuthorization
@@ -99,6 +101,7 @@ spec:
     meshTLS:
       identities:
         - traefik.collaboration.serviceaccount.identity.linkerd.cluster.local
+{{ if .Values.sso.enabled }}
 ---
 apiVersion: policy.linkerd.io/v1beta1
 kind: Server
@@ -127,6 +130,7 @@ spec:
       identities:
         - traefik.collaboration.serviceaccount.identity.linkerd.cluster.local
         - oauth2-proxy.collaboration.serviceaccount.identity.linkerd.cluster.local
+{{ end }}
 ---
 apiVersion: policy.linkerd.io/v1beta1
 kind: Server

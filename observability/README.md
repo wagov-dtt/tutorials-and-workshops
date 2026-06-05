@@ -152,7 +152,7 @@ To make cluster storage disposable while keeping raw telemetry elsewhere, enable
 
 ```bash
 OBSERVABILITY_S3_BUCKET=my-observability-archive \
-OBSERVABILITY_S3_REGION=us-east-1 \
+OBSERVABILITY_S3_REGION="${AWS_REGION:-$(aws configure get region)}" \
 OBSERVABILITY_S3_BASE_PREFIX=local-kind \
 just observability/deploy-s3
 ```

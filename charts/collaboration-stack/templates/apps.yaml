@@ -15,7 +15,7 @@ spec:
       serviceAccountName: bookstack
       containers:
         - name: bookstack
-          image: lscr.io/linuxserver/bookstack:latest
+          image: {{ .Values.images.bookstack | quote }}
           ports:
             - name: http
               containerPort: 80
@@ -105,7 +105,7 @@ spec:
       serviceAccountName: kanboard
       containers:
         - name: kanboard
-          image: kanboard/kanboard:latest
+          image: {{ .Values.images.kanboard | quote }}
           ports:
             - name: http
               containerPort: 80
