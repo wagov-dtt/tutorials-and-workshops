@@ -114,7 +114,41 @@ spec:
         access: victoria-backend
   client:
     meshTLS:
-      identities: ["*"]
+      serviceAccounts:
+        - name: otel-collector
+        - name: linkerd-telemetry-collector
+        - name: observability-ui
+        - name: grafana
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: grafana-http
+  namespace: observability
+  labels:
+    access: grafana-ui
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: grafana
+      app.kubernetes.io/instance: grafana
+  port: 3000
+  proxyProtocol: HTTP/1
+---
+apiVersion: policy.linkerd.io/v1beta1
+kind: ServerAuthorization
+metadata:
+  name: allow-observability-ui-to-grafana
+  namespace: observability
+spec:
+  server:
+    selector:
+      matchLabels:
+        access: grafana-ui
+  client:
+    meshTLS:
+      serviceAccounts:
+        - name: observability-ui
 ---
 apiVersion: policy.linkerd.io/v1beta3
 kind: Server
@@ -142,6 +176,20 @@ spec:
     meshTLS:
       serviceAccounts:
         - name: linkerd-telemetry-collector
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: observability-ui-grafana
+  namespace: observability
+  labels:
+    access: local-ui
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: observability-ui
+  port: http-grafana
+  proxyProtocol: HTTP/1
 ---
 apiVersion: policy.linkerd.io/v1beta3
 kind: Server

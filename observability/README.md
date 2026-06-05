@@ -5,6 +5,7 @@ Small local-first observability stack for the `tutorials` kind cluster:
 - **VictoriaMetrics Single** for metrics
 - **VictoriaLogs Single** for logs
 - **VictoriaTraces Single** for traces
+- **Grafana** for a combined metrics/logs/traces UI
 - **OpenTelemetry Collector Contrib** as one ingestion/fan-out point
 - **Linkerd telemetry collector** for Linkerd metrics and logs
 - **Traefik** as the local-only UI proxy
@@ -44,15 +45,19 @@ just observability/ui
 Then open:
 
 - Home: `http://localhost:8080`
+- Grafana: `http://localhost:3000`
 - Metrics: `http://localhost:8428/vmui`
 - Logs: `http://localhost:9428/select/vmui`
 - Traces: `http://localhost:10428`
 
 This proxy is still a `ClusterIP` service. It does not create Ingress, LoadBalancer, DNS, or TLS certificates. Linkerd makes the proxy useful by giving Traefik the `observability-ui` mesh identity, and policy allows that identity to query the Victoria backends.
 
+Grafana is also internal-only. It has ephemeral storage, anonymous local admin access, and pre-provisioned datasources for VictoriaMetrics, VictoriaLogs, and VictoriaTraces. Use it as the combined UI; keep the Victoria-native UIs for direct debugging.
+
 In-cluster services can use the same proxy URLs if they need UI/API access through the documented policy path:
 
 - Home: `http://observability-ui.observability.svc.cluster.local:8080`
+- Grafana: `http://observability-ui.observability.svc.cluster.local:3000`
 - Metrics: `http://observability-ui.observability.svc.cluster.local:8428/vmui`
 - Logs: `http://observability-ui.observability.svc.cluster.local:9428/select/vmui`
 - Traces: `http://observability-ui.observability.svc.cluster.local:10428`
@@ -88,7 +93,8 @@ Allowed paths:
 - **OTel collector -> Victoria backends**: only the `otel-collector` service account can write application metrics, logs, and traces.
 - **Linkerd telemetry collector -> Victoria backends**: only the `linkerd-telemetry-collector` service account can write Linkerd metrics and logs.
 - **Browser -> observability-ui**: `kubectl port-forward` reaches the ClusterIP-only Traefik UI proxy.
-- **observability-ui -> Victoria backends**: only the `observability-ui` service account can query the UI/API ports.
+- **observability-ui -> Grafana and Victoria backends**: only the `observability-ui` service account can reach the UI/API ports exposed through the local proxy.
+- **Grafana -> Victoria backends**: Grafana uses its provisioned datasources to query metrics, logs, and traces from inside the meshed namespace.
 
 This keeps browser access simple without making the Victoria services public. Linkerd supplies identity and policy; `kubectl port-forward` supplies the temporary local access path.
 

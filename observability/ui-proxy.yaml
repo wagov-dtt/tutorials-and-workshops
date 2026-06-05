@@ -26,6 +26,8 @@ data:
         address: ":9428"
       traces:
         address: ":10428"
+      grafana:
+        address: ":3000"
     providers:
       file:
         filename: /config/dynamic.yml
@@ -50,6 +52,10 @@ data:
           rule: PathPrefix(`/`)
           entryPoints: [traces]
           service: victoria-traces
+        grafana:
+          rule: PathPrefix(`/`)
+          entryPoints: [grafana]
+          service: grafana
       services:
         home:
           loadBalancer:
@@ -67,6 +73,10 @@ data:
           loadBalancer:
             servers:
               - url: http://victoria-traces-single-server.observability.svc.cluster.local:10428
+        grafana:
+          loadBalancer:
+            servers:
+              - url: http://grafana.observability.svc.cluster.local:80
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -99,6 +109,8 @@ spec:
               containerPort: 9428
             - name: http-traces
               containerPort: 10428
+            - name: http-grafana
+              containerPort: 3000
           readinessProbe:
             httpGet:
               path: /
@@ -138,6 +150,7 @@ spec:
                     <li><a href="http://localhost:8428/vmui">Metrics: VictoriaMetrics</a></li>
                     <li><a href="http://localhost:9428/select/vmui">Logs: VictoriaLogs</a></li>
                     <li><a href="http://localhost:10428">Traces: VictoriaTraces</a></li>
+                    <li><a href="http://localhost:3000">Combined UI: Grafana</a></li>
                   </ul>
                   <p>Keep <code>just observability/ui</code> running while browsing.</p>
                 </body>
@@ -185,3 +198,6 @@ spec:
     - name: traces
       port: 10428
       targetPort: http-traces
+    - name: grafana
+      port: 3000
+      targetPort: http-grafana

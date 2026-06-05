@@ -1,0 +1,63 @@
+# Local kind defaults: ephemeral Grafana with provisioned Victoria datasources.
+testFramework:
+  enabled: false
+
+persistence:
+  enabled: false
+
+rbac:
+  create: false
+
+automountServiceAccountToken: false
+
+serviceAccount:
+  automountServiceAccountToken: false
+
+plugins:
+  - victoriametrics-logs-datasource
+
+grafana.ini:
+  auth:
+    disable_login_form: true
+  auth.anonymous:
+    enabled: true
+    org_role: Admin
+  analytics:
+    reporting_enabled: false
+    check_for_updates: false
+    check_for_plugin_updates: false
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: VictoriaMetrics
+        type: prometheus
+        access: proxy
+        url: http://victoria-metrics-single-server:8428
+        isDefault: true
+        editable: true
+      - name: VictoriaLogs
+        type: victoriametrics-logs-datasource
+        access: proxy
+        url: http://victoria-logs-single-server:9428
+        editable: true
+        jsonData:
+          derivedFields:
+            - name: Trace ID
+              datasourceUid: VictoriaTraces
+              matcherRegex: 'trace_id="?([0-9a-fA-F]{16,32})"?'
+              url: '$${__value.raw}'
+      - name: VictoriaTraces
+        uid: VictoriaTraces
+        type: jaeger
+        access: proxy
+        url: http://victoria-traces-single-server:10428/select/jaeger
+        editable: true
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi

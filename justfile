@@ -87,7 +87,10 @@ _lint-helm:
     helm lint charts/s3-pod-identity
     helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts >/dev/null 2>&1 || true
     helm repo add vm https://victoriametrics.github.io/helm-charts/ >/dev/null 2>&1 || true
-    helm repo update open-telemetry vm >/dev/null
+    helm repo add grafana-community https://grafana-community.github.io/helm-charts >/dev/null 2>&1 || true
+    helm repo update open-telemetry vm grafana-community >/dev/null
+    helm template grafana grafana-community/grafana \
+      -f charts/observability/grafana-values.yaml >/dev/null
     helm template otel-collector open-telemetry/opentelemetry-collector \
       -f charts/observability/opentelemetry-collector-values.yaml >/dev/null
     helm template linkerd-telemetry-collector open-telemetry/opentelemetry-collector \
