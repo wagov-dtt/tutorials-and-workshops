@@ -8,6 +8,7 @@ Suggested order: local first, then AWS.
 
 ```bash
 just databases/deploy
+just databases/smoke
 kubectl get pods -n databases
 ```
 
@@ -27,7 +28,8 @@ kubectl get pods -n databases
 ### 1.2 rclone CSI Volumes
 
 ```bash
-just rclone/rclone-test
+just rclone/deploy
+just rclone/smoke
 kubectl -n rclone port-forward svc/filebrowser 8080:80
 ```
 
@@ -45,6 +47,7 @@ kubectl -n rclone port-forward svc/filebrowser 8080:80
 
 ```bash
 just collab::deploy
+just collab::smoke
 kubectl -n collaboration port-forward svc/traefik 8080:80
 ```
 
@@ -62,7 +65,8 @@ kubectl -n collaboration port-forward svc/traefik 8080:80
 ### 1.4 Drupal CMS
 
 ```bash
-just drupal/drupal-setup
+just drupal::deploy
+just drupal::smoke
 cd drupal-hugo
 ddev drush user:login
 ```
@@ -75,6 +79,7 @@ ddev drush user:login
 
 ```bash
 just eksauto/setup-eks
+just eksauto/smoke
 just eksauto/deploy
 ```
 
@@ -83,7 +88,8 @@ just eksauto/deploy
 ### 2.2 S3 Pod Identity
 
 ```bash
-just s3-pod-identity/s3-test
+just s3-pod-identity/deploy
+just s3-pod-identity/smoke
 just s3-pod-identity/s3-restore
 ```
 
@@ -92,8 +98,8 @@ just s3-pod-identity/s3-restore
 ### 2.3 External Secrets
 
 ```bash
-just secrets/secrets-deploy
-just secrets/secrets-test
+just secrets/deploy
+just secrets/smoke
 ```
 
 **Detailed guide**: [secrets/README.md](secrets/README.md)

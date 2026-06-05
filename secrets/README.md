@@ -18,24 +18,24 @@ Prefer smaller secret blast radius:
 Requires EKS and AWS credentials:
 
 ```bash
-just secrets/secrets-deploy
-just secrets/secrets-test
+just secrets/deploy
+just secrets/smoke
 ```
 
 Cleanup:
 
 ```bash
-just secrets/secrets-cleanup
+just secrets/clean
 ```
 
 ## What to Study
 
 | Path | Purpose |
 |------|---------|
-| `../charts/secrets-demo/templates/clustersecretstore.yaml` | AWS Secrets Manager backend config |
+| `../charts/secrets-demo/templates/clustersecretstore.yaml` | AWS Secrets Manager backend config; defaults to namespace-scoped `SecretStore` |
 | `../charts/secrets-demo/templates/externalsecret.yaml` | Syncs one AWS secret into Kubernetes |
 | `justfile` | Installs ESO with Helm, then installs this repo's demo chart |
 
 ## Notes
 
-This demo still uses `ClusterSecretStore` to match the existing EKS Pod Identity setup. For app-specific production use, prefer a namespace-scoped `SecretStore` where practical.
+This demo defaults to a namespace-scoped `SecretStore` to keep blast radius local. Set `secretStore.kind=ClusterSecretStore` only when the lesson explicitly needs one cluster-wide store.

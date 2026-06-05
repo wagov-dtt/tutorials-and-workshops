@@ -10,7 +10,7 @@ import '../shared.just'
 
 # rclone CSI demo on kind using Helm
 [group('local')]
-rclone-test: _platform
+deploy: _platform
     helm upgrade --install csi-rclone oci://ghcr.io/veloxpack/charts/csi-driver-rclone \
       --set feature.enableInlineVolume=true
     kubectl rollout status deploy/csi-rclone-controller --timeout=300s
@@ -23,6 +23,19 @@ rclone-test: _platform
     kubectl exec deploy/filebrowser -n rclone -c filebrowser -- ls -la /srv
     @echo "Run: kubectl -n rclone port-forward svc/filebrowser 8080:80"
     @echo "rclone CSI working ✓"
+
+# Smoke-test file write/read/delete through the mounted path.
+[group('local')]
+smoke:
+    kubectl rollout status deploy/filebrowser -n rclone --timeout=300s
+    kubectl exec deploy/filebrowser -n rclone -c filebrowser -- sh -lc 'echo rclone-smoke > /srv/smoke.txt && grep -q rclone-smoke /srv/smoke.txt && rm /srv/smoke.txt'
+    @echo "rclone smoke test passed ✓"
+
+# Show local UI access.
+[group('local')]
+urls:
+    @echo "Run: kubectl -n rclone port-forward svc/filebrowser 8080:80"
+    @echo "Then open: http://localhost:8080"
 
 [group('local')]
 clean:

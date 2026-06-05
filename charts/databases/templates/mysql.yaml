@@ -1,11 +1,12 @@
 # Percona Server for MySQL - simple single-node setup
+{{- $mysqlSecret := lookup "v1" "Secret" .Release.Namespace "mysql-secret" }}
 apiVersion: v1
 kind: Secret
 metadata:
   name: mysql-secret
 type: Opaque
 stringData:
-  MYSQL_ROOT_PASSWORD: changeme
+  MYSQL_ROOT_PASSWORD: {{ if $mysqlSecret }}{{ index $mysqlSecret.data "MYSQL_ROOT_PASSWORD" | b64dec | quote }}{{ else }}{{ randAlphaNum 24 | quote }}{{ end }}
   MYSQL_DATABASE: testdb
 ---
 apiVersion: apps/v1
@@ -47,6 +48,15 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        readinessProbe:
+          exec:
+            command: ["sh", "-lc", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$MYSQL_ROOT_PASSWORD\""]
+          periodSeconds: 10
+        livenessProbe:
+          exec:
+            command: ["sh", "-lc", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$MYSQL_ROOT_PASSWORD\""]
+          initialDelaySeconds: 30
+          periodSeconds: 20
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

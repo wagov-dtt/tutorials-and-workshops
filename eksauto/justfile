@@ -51,3 +51,10 @@ eks-access CLUSTER=default_cluster: _awslogin
 [group('eks')]
 deploy CLUSTER=default_cluster: _awslogin (_eks-kubeconfig CLUSTER)
     helm upgrade --install databases "{{ root_dir }}/charts/databases" -n databases --create-namespace
+
+# Smoke-test EKS cluster connectivity.
+[group('eks')]
+smoke CLUSTER=default_cluster: _awslogin (_eks-kubeconfig CLUSTER)
+    kubectl get nodes
+    kubectl get ns
+    @echo "EKS smoke test passed ✓"

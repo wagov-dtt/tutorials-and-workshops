@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "secrets-demo values",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["secretStore", "remoteSecret", "refreshInterval"],
+  "properties": {
+    "secretStore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "kind"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "enum": ["SecretStore", "ClusterSecretStore"] }
+      }
+    },
+    "remoteSecret": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key"],
+      "properties": {
+        "key": { "type": "string", "minLength": 1 }
+      }
+    },
+    "refreshInterval": { "type": "string", "pattern": "^[0-9]+[smhd]$" }
+  }
+}

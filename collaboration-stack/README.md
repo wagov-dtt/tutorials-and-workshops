@@ -8,6 +8,7 @@ This wrapper deploys the `charts/collaboration-stack` Helm chart to a local kind
 
 ```bash
 just collab::deploy
+just collab::smoke
 kubectl -n collaboration port-forward svc/traefik 8080:80
 ```
 
@@ -55,6 +56,7 @@ Then Keycloak is available at <http://keycloak.localhost:8080> with admin `admin
 | `../charts/collaboration-stack/templates/identity.yaml` | Keycloak and oauth2-proxy demo components |
 | `../charts/collaboration-stack/templates/apps.yaml` | BookStack, Kanboard, and Forgejo |
 | `../charts/collaboration-stack/templates/linkerd-policy.yaml` | mTLS authorization between edge, identity, apps, and DB |
+| `../charts/collaboration-stack/templates/networkpolicy.yaml` | CNI-level default-deny and allow-list examples |
 | `justfile` | Local deploy/cleanup wrapper |
 
 ## Cleanup

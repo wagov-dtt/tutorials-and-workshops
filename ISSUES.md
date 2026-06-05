@@ -10,7 +10,7 @@
 
 ## 1. Replace embedded and default credentials before they escape throwaway-local use
 - **Priority:** P1
-- **Status:** Open
+- **Status:** Partial — database and S3 Pod Identity chart passwords are generated per install; remaining examples/docs should still be reviewed for copy-paste credentials.
 - **Location:** `charts/databases/templates/postgres.yaml:3-10`, `charts/databases/templates/mysql.yaml:3-8`, `charts/databases/templates/mongodb.yaml:3-9`, `charts/s3-pod-identity/templates/base/mysql.yaml:3-10`, `eksauto/terraform/iam.tf:157-162`, `rclone/README.md:22-27`
 - **Category:** security
 - **Standard reference:** OWASP ASVS 5.0.0 `13.2.3`, `13.3.1`, `13.3.2`
@@ -28,20 +28,20 @@
 
 ## 3. Secret scoping is broader than the repo’s own “local > global” guidance
 - **Priority:** P1
-- **Status:** Open
+- **Status:** Fixed — `secrets-demo` now defaults to namespace-scoped `SecretStore`, with `ClusterSecretStore` as an explicit opt-in.
 - **Location:** `charts/secrets-demo/templates/clustersecretstore.yaml:1-18`, `charts/secrets-demo/templates/externalsecret.yaml:1-27`, `secrets/README.md:5-24`
 - **Category:** security
 - **Standard reference:** OWASP ASVS 5.0.0 `13.2.2`, `13.3.2`
-- **Finding:** The docs correctly say local blast radius is better than global blast radius, but the implementation uses a cluster-wide `ClusterSecretStore`. That widens access patterns and makes accidental reuse across namespaces easier than necessary for a teaching example.
-- **Recommendation:** Prefer namespace-scoped `SecretStore` for the demo unless the lesson specifically requires cross-namespace reuse. If `ClusterSecretStore` stays, call out the blast-radius trade-off directly in the manifest and README.
+- **Finding:** The docs say local blast radius is better than global blast radius, and the implementation now defaults to namespace-scoped `SecretStore` while keeping `ClusterSecretStore` as an explicit advanced option.
+- **Recommendation:** Keep namespace-scoped `SecretStore` as the default unless the lesson specifically requires cross-namespace reuse. If `ClusterSecretStore` is used, call out the blast-radius trade-off directly in the manifest and README.
 
 ## 4. There are no `NetworkPolicy` resources anywhere in the Kubernetes examples
 - **Priority:** P2
-- **Status:** Open
+- **Status:** Partial — minimal `NetworkPolicy` examples were added to local and EKS-facing Helm charts; non-chart/reference examples still need review.
 - **Location:** repo-wide Kubernetes examples (`charts/`, `rclone/`, `s3-pod-identity/`, `argocd/`, `secrets/`) — no `NetworkPolicy` manifests found
 - **Category:** security
 - **Standard reference:** OWASP ASVS 5.0.0 `13.2.4`, `15.2.5`
-- **Finding:** Namespace isolation is taught, but network isolation is not. In practice this means any compromised pod can attempt lateral movement to databases, secret-sync components, or example admin surfaces.
+- **Finding:** Namespace isolation is taught, and the main Helm charts now include commented default-deny/allow-list examples. Remaining non-chart/reference examples should still be reviewed before this is closed completely.
 - **Recommendation:** Add minimal, commented default-deny `NetworkPolicy` examples for the EKS-facing namespaces, then allow only the traffic paths each tutorial needs. This would improve security and also teach a better baseline.
 
 ## 5. Version drift is built into the toolchain and infrastructure defaults
@@ -82,11 +82,11 @@
 
 ## 9. Kubernetes availability safeguards are mostly absent: no probes, and several workloads lack resource controls
 - **Priority:** P2
-- **Status:** Open
+- **Status:** Partial — long-running database, rclone, and S3 Pod Identity MySQL workloads now have probes/resources; job and app coverage still needs a final pass.
 - **Location:** repo-wide across `charts/databases/*.yaml`, `charts/rclone-demo/*.yaml`, `charts/s3-pod-identity/templates/base/mysql.yaml`, and `charts/s3-pod-identity/templates/jobs/*.yaml`
 - **Category:** performance
 - **Standard reference:** OWASP ASVS 5.0.0 `13.1.2`, `13.1.3`, `15.2.2`
-- **Finding:** No `livenessProbe`, `readinessProbe`, or `startupProbe` resources were found, and several workloads/jobs also omit CPU and memory requests/limits. For a training repo that is meant to be re-run locally and on EKS, this makes slow starts, transient failures, and noisy-neighbor effects harder to understand and recover from.
+- **Finding:** Many long-running workloads now have probes/resources, but coverage is still inconsistent across all jobs and app examples. For a training repo that is meant to be re-run locally and on EKS, missing probes/resources make slow starts, transient failures, and noisy-neighbor effects harder to understand and recover from.
 - **Recommendation:** Add basic probes to long-running services and set lightweight resource requests/limits for the remaining examples. If a manifest is intentionally probe-free for readability, note that explicitly.
 
 ## 10. EKS setup now fails fast instead of destroying on retry

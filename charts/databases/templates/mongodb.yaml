@@ -1,4 +1,5 @@
 # Official MongoDB container - simple single-node setup
+{{- $mongodbSecret := lookup "v1" "Secret" .Release.Namespace "mongodb-secret" }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -6,7 +7,7 @@ metadata:
 type: Opaque
 stringData:
   MONGO_INITDB_ROOT_USERNAME: mongo
-  MONGO_INITDB_ROOT_PASSWORD: changeme
+  MONGO_INITDB_ROOT_PASSWORD: {{ if $mongodbSecret }}{{ index $mongodbSecret.data "MONGO_INITDB_ROOT_PASSWORD" | b64dec | quote }}{{ else }}{{ randAlphaNum 24 | quote }}{{ end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -47,6 +48,15 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        readinessProbe:
+          exec:
+            command: ["sh", "-lc", "mongosh --quiet -u \"$MONGO_INITDB_ROOT_USERNAME\" -p \"$MONGO_INITDB_ROOT_PASSWORD\" --eval 'db.adminCommand({ ping: 1 }).ok' | grep -q 1"]
+          periodSeconds: 10
+        livenessProbe:
+          exec:
+            command: ["sh", "-lc", "mongosh --quiet -u \"$MONGO_INITDB_ROOT_USERNAME\" -p \"$MONGO_INITDB_ROOT_PASSWORD\" --eval 'db.adminCommand({ ping: 1 }).ok' | grep -q 1"]
+          initialDelaySeconds: 30
+          periodSeconds: 20
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

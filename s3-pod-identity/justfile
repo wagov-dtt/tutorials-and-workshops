@@ -14,7 +14,7 @@ _helm-values := "--set-string aws.region=$(just _aws-region) --set-string bucket
 
 # S3 Pod Identity demo (MySQL → S3 → S3 Files mount → restore)
 [group('eks')]
-s3-test: _awslogin _eks-kubeconfig
+deploy: _awslogin _eks-kubeconfig
     # Cleanup previous resources
     -kubectl delete job backup-to-s3 rclone-copy restore-from-s3 -n s3-test 2>/dev/null
     -helm uninstall s3-pod-identity -n s3-test 2>/dev/null
@@ -37,7 +37,16 @@ s3-test: _awslogin _eks-kubeconfig
     kubectl exec debug -n s3-test -- ls -la /mnt/s3
 
     @echo "S3 Pod Identity test complete ✓"
-    @echo "Run 'just s3-pod-identity/s3-restore' to test restore, 'just s3-pod-identity/s3-cleanup' when done"
+    @echo "Run 'just s3-pod-identity/s3-restore' to test restore, 'just s3-pod-identity/clean' when done"
+
+# Smoke-test the already-deployed S3 Pod Identity resources.
+[group('eks')]
+smoke: _eks-kubeconfig
+    kubectl wait --for=condition=Available deploy/mysql -n s3-test --timeout=120s
+    kubectl wait --for=condition=Ready pod/debug -n s3-test --timeout=180s
+    kubectl exec debug -n s3-test -- sh -lc 'test -d /mnt/s3 && ls -la /mnt/s3'
+    aws s3 ls s3://$(just _bucket)/backup1/ >/dev/null
+    @echo "S3 Pod Identity smoke test passed ✓"
 
 # Restore MySQL backup from S3
 [group('eks')]
@@ -49,7 +58,7 @@ s3-restore: _eks-kubeconfig
 
 # Cleanup S3 Pod Identity resources
 [group('eks')]
-s3-cleanup:
+clean:
     -kubectl delete job backup-to-s3 rclone-copy restore-from-s3 -n s3-test
     -helm uninstall s3-pod-identity -n s3-test
     -kubectl delete namespace s3-test

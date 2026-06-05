@@ -1,6 +1,8 @@
 secretStore:
   name: aws-secrets-manager
-  kind: ClusterSecretStore
+  # Prefer namespace-scoped SecretStore for demo blast-radius. Set to
+  # ClusterSecretStore only when one cluster-wide store is an explicit lesson.
+  kind: SecretStore
 remoteSecret:
   key: training/db-credentials
 refreshInterval: 5m

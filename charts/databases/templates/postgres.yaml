@@ -1,4 +1,5 @@
 # Official PostgreSQL container - simple single-node setup
+{{- $postgresSecret := lookup "v1" "Secret" .Release.Namespace "postgres-secret" }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -6,7 +7,7 @@ metadata:
 type: Opaque
 stringData:
   POSTGRES_USER: postgres
-  POSTGRES_PASSWORD: changeme
+  POSTGRES_PASSWORD: {{ if $postgresSecret }}{{ index $postgresSecret.data "POSTGRES_PASSWORD" | b64dec | quote }}{{ else }}{{ randAlphaNum 24 | quote }}{{ end }}
   POSTGRES_DB: postgres
 ---
 apiVersion: apps/v1
@@ -51,6 +52,15 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        readinessProbe:
+          exec:
+            command: ["sh", "-lc", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+          periodSeconds: 10
+        livenessProbe:
+          exec:
+            command: ["sh", "-lc", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+          initialDelaySeconds: 30
+          periodSeconds: 20
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

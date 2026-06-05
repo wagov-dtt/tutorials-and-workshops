@@ -26,9 +26,10 @@ Terraform pre-creates:
 ## Quick Start
 
 ```bash
-just s3-pod-identity/s3-test      # Full demo: sysbench → backup → copy → debug pod
+just s3-pod-identity/deploy       # Full demo: sysbench → backup → copy → debug pod
+just s3-pod-identity/smoke        # Check MySQL, debug pod, and S3 backup prefix
 just s3-pod-identity/s3-restore   # Optional: restore backup to sbtest_restored database
-just s3-pod-identity/s3-cleanup   # Remove K8s resources (S3 bucket kept)
+just s3-pod-identity/clean        # Remove K8s resources (S3 bucket kept)
 ```
 
 ## Architecture

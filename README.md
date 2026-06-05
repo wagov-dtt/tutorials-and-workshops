@@ -8,7 +8,9 @@ Install [mise](https://mise.jdx.dev/) and Docker, then:
 
 ```bash
 just prereqs
+just doctor
 just databases/deploy
+just databases/smoke
 ```
 
 This creates the `tutorials` kind cluster, installs Linkerd, and deploys PostgreSQL, MySQL, MongoDB, and `whoami` with Helm.
@@ -35,17 +37,20 @@ Internal services stay ClusterIP-only. Browser-facing stacks expose one Traefik 
 | Goal | Command | Cloud? |
 |------|---------|--------|
 | Install tools from `mise.toml` | `just prereqs` | No |
+| Preflight report | `just doctor` | No |
+| Fast local checks | `just check` | No |
+| Command map | `just commands` | No |
 | Local databases | `just databases/deploy` | No |
-| Local S3 filesystem mount | `just rclone/rclone-test` | No |
+| Local S3 filesystem mount | `just rclone/deploy` | No |
 | Collaboration stack | `just collab::deploy` | No |
 | Local observability | `just observability/deploy` | No |
-| Local Drupal CMS | `just drupal/drupal-setup` | No |
+| Local Drupal CMS | `just drupal::deploy` | No |
 | EKS cluster | `just eksauto/setup-eks` | Yes |
 | Deploy database chart to EKS | `just eksauto/deploy` | Yes |
-| EKS S3 backup + AWS S3 Files | `just s3-pod-identity/s3-test` | Yes |
-| External Secrets demo | `just secrets/secrets-deploy` | Yes |
+| EKS S3 backup + AWS S3 Files | `just s3-pod-identity/deploy` | Yes |
+| External Secrets demo | `just secrets/deploy` | Yes |
 
-Run `just` to list all recipes.
+Run `just` to list all recipes, or `just commands` for the curated workshop command map.
 
 ## Examples
 
@@ -67,8 +72,11 @@ Recommended order: [LEARNING_PATH.md](LEARNING_PATH.md).
 ## Validation
 
 ```bash
-just lint           # Helm render/lint + Terraform validate + Trivy
-just validate-local # local kind examples plus Drupal check
+just check          # fast local just/Helm checks
+just check-cloud    # Terraform validate + cloud chart renders
+just check-security # Trivy config scan
+just lint           # all render/terraform/security checks
+just validate-local # deploy and smoke-test local examples plus Drupal check
 ```
 
 Validate a chart directly:
@@ -94,6 +102,7 @@ Expected EKS S3 Files pattern: `provisioner: efs.csi.aws.com`, `storageClassName
 EKS costs money. Destroy cloud labs when done:
 
 ```bash
+just aws-preflight
 just eksauto/destroy-eks
 ```
 

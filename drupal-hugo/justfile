@@ -12,7 +12,7 @@ import '../shared.just'
 
 # Setup Drupal CMS with FrankenPHP (DDEV)
 [group('drupal')]
-drupal-setup:
+deploy:
     ddev add-on get ddev/ddev-frankenphp
     ddev dotenv set .ddev/.env.web --frankenphp-custom-extensions="apcu opcache intl bcmath"
     ddev start
@@ -26,13 +26,25 @@ drupal-setup:
 
 # Run search performance tests (DDEV)
 [group('drupal')]
+smoke:
+    curl -sf http://drupal.ddev.site/ -o /dev/null
+    ddev drush status --field=bootstrap | grep -q Successful
+
+# Run search performance tests (DDEV)
+[group('drupal')]
 drupal-test:
     ddev drush search-api:rebuild-tracker content
     ddev drush search-api:index --batch-size=1000
     ddev drush php:script scripts/search_performance_test.php
 
+# Show local UI access.
+[group('drupal')]
+urls:
+    @echo "Drupal: http://drupal.ddev.site/"
+    @echo "Login:  ddev drush user:login"
+
 # Reset Drupal (delete and start fresh)
 [confirm("This will delete the Drupal instance. Continue?")]
 [group('drupal')]
-drupal-reset:
+clean:
     -ddev delete -O -y

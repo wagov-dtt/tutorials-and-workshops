@@ -138,7 +138,7 @@ Narrow and freeze the example:
 - Commit and use a lockfile-backed `composer install` path.
 - Remove modules/providers not needed for the lab goal.
 - If the intent is “vanilla Drupal CMS,” avoid carrying the full generated project in the main repo; generate it in the DDEV recipe or isolate it as its own project boundary.
-- Keep `drupal-setup` idempotent: no unconditional `composer update` or repeated `composer require`.
+- Keep `deploy` idempotent: no unconditional `composer update` or repeated `composer require`.
 
 ---
 
@@ -215,7 +215,7 @@ Set `replicas: 1` for the demo. If multi-replica behavior is a learning goal, us
       {
         "path": "secrets/justfile",
         "line": 15,
-        "symbol": "secrets-deploy"
+        "symbol": "deploy"
       },
       {
         "path": "charts/secrets-demo/templates/namespace.yaml",
@@ -310,7 +310,7 @@ Set `replicas: 1` for the demo. If multi-replica behavior is a learning goal, us
       {
         "path": "drupal-hugo/justfile",
         "line": 20,
-        "symbol": "drupal-setup"
+        "symbol": "deploy"
       }
     ],
     "evidence": "The Drupal project requires a large CMS/module set including AI providers, and setup runs composer update plus composer require at runtime.",

@@ -108,3 +108,8 @@ _terraform-init:
 [private]
 _terraform-validate: _terraform-init
     terraform -chdir="{{ root_dir }}/eksauto/terraform" validate
+
+# Public cleanup helper for the local kind cluster.
+[group('local')]
+clean-local:
+    -kind delete cluster --name tutorials

@@ -1,4 +1,5 @@
 # MySQL (Percona 8.0) with sysbench test data
+{{- $mysqlSecret := lookup "v1" "Secret" .Release.Namespace "mysql-secret" }}
 ---
 apiVersion: v1
 kind: Secret
@@ -6,7 +7,7 @@ metadata:
   name: mysql-secret
   namespace: {{ .Release.Namespace }}
 stringData:
-  MYSQL_ROOT_PASSWORD: testpass
+  MYSQL_ROOT_PASSWORD: {{ if $mysqlSecret }}{{ index $mysqlSecret.data "MYSQL_ROOT_PASSWORD" | b64dec | quote }}{{ else }}{{ randAlphaNum 24 | quote }}{{ end }}
   MYSQL_DATABASE: sbtest
 ---
 apiVersion: apps/v1
@@ -42,6 +43,22 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /var/lib/mysql
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        readinessProbe:
+          exec:
+            command: ["sh", "-lc", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$MYSQL_ROOT_PASSWORD\""]
+          periodSeconds: 10
+        livenessProbe:
+          exec:
+            command: ["sh", "-lc", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$MYSQL_ROOT_PASSWORD\""]
+          initialDelaySeconds: 30
+          periodSeconds: 20
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -80,6 +97,13 @@ spec:
               name: mysql-secret
               key: MYSQL_ROOT_PASSWORD
         command: ["sh", "-c", "until mysqladmin ping -h mysql -u root; do sleep 2; done"]
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
       containers:
       - name: sysbench
         image: perconalab/sysbench:1.1
@@ -90,6 +114,13 @@ spec:
               name: mysql-secret
               key: MYSQL_ROOT_PASSWORD
         command: ["sysbench"]
-        args: ["--db-driver=mysql", "--mysql-host=mysql", "--mysql-user=root", 
-               "--mysql-db=sbtest", 
+        args: ["--db-driver=mysql", "--mysql-host=mysql", "--mysql-user=root",
+               "--mysql-db=sbtest",
                "--tables=2", "--table-size=1000", "oltp_read_write", "prepare"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi

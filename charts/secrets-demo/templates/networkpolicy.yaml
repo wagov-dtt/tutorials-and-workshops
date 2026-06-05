@@ -1,0 +1,21 @@
+# Namespace-scoped default deny. Allow same-namespace traffic for the demo object set.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: secrets-demo-default-deny-ingress
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: secrets-demo-allow-same-namespace
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}

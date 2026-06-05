@@ -5,7 +5,8 @@
 ## Quick Start
 
 ```bash
-just rclone/rclone-test
+just rclone/deploy
+just rclone/smoke
 kubectl -n rclone port-forward svc/filebrowser 8080:80
 ```
 

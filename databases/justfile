@@ -19,6 +19,26 @@ deploy: _platform
     kubectl wait --for=condition=Available deploy/mongodb -n databases --timeout=120s
     kubectl wait --for=condition=Available deploy/whoami -n databases --timeout=120s
 
+# Smoke-test the local database lab.
+[group('local')]
+smoke:
+    kubectl wait --for=condition=Available deploy/postgres -n databases --timeout=120s
+    kubectl wait --for=condition=Available deploy/mysql -n databases --timeout=120s
+    kubectl wait --for=condition=Available deploy/mongodb -n databases --timeout=120s
+    kubectl wait --for=condition=Available deploy/whoami -n databases --timeout=120s
+    kubectl exec deploy/postgres -n databases -- sh -lc 'PGPASSWORD="$POSTGRES_PASSWORD" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select 1"'
+    kubectl exec deploy/mysql -n databases -- sh -lc 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "select 1"'
+    kubectl exec deploy/mongodb -n databases -- sh -lc 'mongosh --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --eval "db.adminCommand({ ping: 1 }).ok" | grep -q 1'
+    kubectl run databases-curl --image=curlimages/curl:8.11.1 --restart=Never --rm -i --quiet -n databases -- curl -fsS http://whoami
+    @echo "Databases smoke test passed ✓"
+
+# Show local access hints.
+[group('local')]
+urls:
+    @echo "Internal services are ClusterIP-only. Useful checks:"
+    @echo "  kubectl get pods -n databases"
+    @echo "  just databases/smoke"
+
 # Remove local training databases
 [group('local')]
 clean:

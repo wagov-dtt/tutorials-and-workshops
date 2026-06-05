@@ -11,6 +11,7 @@ It installs:
 
 ```bash
 just databases/deploy
+just databases/smoke
 kubectl get pods -n databases
 ```
 

@@ -22,29 +22,37 @@ git clone https://github.com/wagov-dtt/tutorials-and-workshops
 cd tutorials-and-workshops
 
 just prereqs
+just doctor
 just databases/deploy
+just databases/smoke
 ```
 
 What happens:
 
 1. `just prereqs` installs tools from `mise.toml`.
-2. `just databases/deploy` creates a kind cluster named `tutorials`.
-3. Linkerd is installed and checked.
-4. The database Helm chart deploys PostgreSQL, MySQL, MongoDB, and `whoami` into the `databases` namespace.
+2. `just doctor` prints tool, Docker, cluster, Linkerd, and AWS status without creating cloud resources.
+3. `just databases/deploy` creates a kind cluster named `tutorials`.
+4. Linkerd is installed and checked.
+5. The database Helm chart deploys PostgreSQL, MySQL, MongoDB, and `whoami` into the `databases` namespace.
+6. `just databases/smoke` verifies each database and the sample HTTP app.
 
 ## Explore What You Built
 
 ```bash
 kubectl get pods -A
 kubectl get pods -n databases
+just commands
+just urls
 k9s
 ```
 
 ## Next Local Labs
 
 ```bash
-just rclone/rclone-test
+just rclone/deploy
+just rclone/smoke
 just collab::deploy
+just collab::smoke
 kubectl -n collaboration port-forward svc/traefik 8080:80
 ```
 
@@ -60,8 +68,9 @@ Optional SSO/Keycloak path: run `just collab::deploy-sso`, then open <http://key
 
 ```bash
 just databases/clean
+just rclone/clean
 just collab::clean
-kind delete cluster --name tutorials
+just clean-local
 ```
 
 ## Common Issues
@@ -80,7 +89,7 @@ Run `just prereqs` again, then rerun the recipe.
 ### Helm chart does not render
 
 ```bash
-just lint
+just check
 helm template databases charts/databases
 ```
 

@@ -33,6 +33,20 @@ clean:
     -helm uninstall collaboration-stack -n collaboration
     -kubectl delete namespace collaboration
 
+# Smoke-test local routes through Traefik from inside the namespace.
+[group('local')]
+smoke:
+    kubectl rollout status deploy/traefik -n collaboration --timeout=120s
+    kubectl rollout status deploy/bookstack -n collaboration --timeout=300s
+    kubectl rollout status deploy/kanboard -n collaboration --timeout=300s
+    kubectl rollout status deploy/forgejo -n collaboration --timeout=300s
+    kubectl run collab-curl --image=curlimages/curl:8.11.1 --restart=Never --rm -i --quiet -n collaboration -- sh -lc 'curl -fsS -H "Host: bookstack.localhost" http://traefik/login >/dev/null && curl -fsS -H "Host: kanboard.localhost" http://traefik/ >/dev/null && curl -fsS -H "Host: forgejo.localhost" http://traefik/ >/dev/null'
+    @echo "Collaboration smoke test passed ✓"
+
+# Show local UI access.
+[group('local')]
+urls: _urls
+
 [private]
 _wait SSO_ENABLED:
     kubectl wait --for=condition=Available deploy/bookstack-db -n collaboration --timeout=900s
