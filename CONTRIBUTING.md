@@ -48,6 +48,14 @@ deploy: _platform
     helm upgrade --install example ../charts/example -n example
 ```
 
+## GitHub automation
+
+- Keep GitHub automation small and directly useful for validating examples.
+- Prefer checks that run without cloud credentials.
+- Document any workflow that creates cloud resources, including cost and cleanup.
+- Dependency update checks are configured in `.github/dependabot.yml`.
+- Keep the root `README.md` as the only repository landing page; do not add a second `.github/README.md`.
+
 ## Documentation style
 
 - Start with what the reader can run.

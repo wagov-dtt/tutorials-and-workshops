@@ -58,7 +58,6 @@ ddev stop
 | `composer.json` | PHP/Drupal dependencies and scripts |
 | `composer.lock` | Reproducible dependency graph |
 | `justfile` | Repo wrapper recipes |
-| `AGENTS.md` | Local Drupal workflow notes for coding agents |
 
 ## Guardrails
 
@@ -67,12 +66,39 @@ ddev stop
 - Do not edit Drupal core or contributed modules in place.
 - Put custom code under `web/modules/custom` or `web/themes/custom`.
 
+## Development workflow
+
+Run commands from `drupal-hugo/` unless the top-level `just drupal::...` wrapper is more convenient.
+
+Use `.ddev/config.local.yaml` for machine-specific DDEV overrides; do not commit it.
+
+Add a module intentionally:
+
+```bash
+ddev composer require drupal/<project>
+ddev drush pm:enable --yes <module_machine_name>
+ddev drush cache:rebuild
+```
+
+Apply and manage config:
+
+```bash
+ddev drush update:db --yes
+ddev drush config:import --yes
+ddev drush config:export --yes
+```
+
+Commit dependency changes as `composer.json` plus `composer.lock`.
+Prefer `composer install` for setup; use `composer update` only for intentional upgrades.
+
 ## References
 
 - [DDEV Drupal quickstart](https://docs.ddev.com/en/stable/users/quickstart/#drupal-drupal-cms)
+- [DDEV docs](https://docs.ddev.com/en/stable/)
 - [Drupal CMS user guide](https://project.pages.drupalcode.org/drupal_cms/)
 - [Drupal User Guide](https://www.drupal.org/docs/user_guide/en/index.html)
 - [Drush documentation](https://www.drush.org/)
+- [Drupal configuration management](https://www.drupal.org/docs/administering-a-drupal-site/configuration-management/workflow-using-drush)
 - [Composer documentation](https://getcomposer.org/doc/)
 
 ## Support and upstream
