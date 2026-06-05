@@ -1,21 +1,27 @@
 # Getting Started
 
-Start here if you want the shortest path to a working local lab.
+Use this path for the quickest working local lab. It creates no cloud resources.
 
-You will use **kind** for local Kubernetes, **Helm** for app packaging, **Linkerd** for mesh identity/policy, and simple **Traefik static config** for browser-facing examples. See [GLOSSARY.md](GLOSSARY.md) for definitions.
+You will use:
+
+- [kind](https://kind.sigs.k8s.io/) for local Kubernetes
+- [Helm](https://helm.sh/docs/) for app packaging
+- [Linkerd](https://linkerd.io/2/) for mesh identity and policy
+- [Traefik file/static config](https://doc.traefik.io/traefik/providers/file/) for browser-facing examples
+- [just](https://just.systems/man/en/) for repeatable commands
+
+See [GLOSSARY.md](GLOSSARY.md) for short definitions.
 
 ## Prerequisites
 
-Install these first:
+| Tool | Why | Install |
+|------|-----|---------|
+| [mise](https://mise.jdx.dev/) | Installs repo tool versions from `mise.toml` | `curl https://mise.run \| sh` |
+| [Docker](https://docs.docker.com/get-docker/) | Runs kind cluster nodes | Follow Docker's docs |
 
-| Tool | What it does | Install |
-|------|--------------|---------|
-| [mise](https://mise.jdx.dev/) | Installs repo tool versions | `curl https://mise.run \| sh` |
-| [Docker](https://docs.docker.com/get-docker/) | Runs kind nodes | Follow Docker docs |
+`just prereqs` installs the remaining tools, including `kind`, `kubectl`, `helm`, and the Linkerd CLI.
 
-`just prereqs` installs the rest from `mise.toml`, including `kind`, `kubectl`, `helm`, and the Linkerd CLI.
-
-## First Run
+## First run
 
 ```bash
 git clone https://github.com/wagov-dtt/tutorials-and-workshops
@@ -30,13 +36,13 @@ just databases/smoke
 What happens:
 
 1. `just prereqs` installs tools from `mise.toml`.
-2. `just doctor` prints tool, Docker, cluster, Linkerd, and AWS status without creating cloud resources.
-3. `just databases/deploy` creates a kind cluster named `tutorials`.
+2. `just doctor` prints local tool, Docker, cluster, Linkerd, and AWS status without creating cloud resources.
+3. `just databases/deploy` creates or reuses the `tutorials` kind cluster.
 4. Linkerd is installed and checked.
 5. The database Helm chart deploys PostgreSQL, MySQL, MongoDB, and `whoami` into the `databases` namespace.
-6. `just databases/smoke` verifies each database and the sample HTTP app.
+6. `just databases/smoke` verifies the services.
 
-## Explore What You Built
+## Explore the cluster
 
 ```bash
 kubectl get pods -A
@@ -46,7 +52,9 @@ just urls
 k9s
 ```
 
-## Next Local Labs
+If you do not use [k9s](https://k9scli.io/), `kubectl get`, `kubectl describe`, and `kubectl logs` are enough for these labs.
+
+## Next local labs
 
 ```bash
 just rclone/deploy
@@ -58,22 +66,38 @@ kubectl -n collaboration port-forward svc/traefik 8080:80
 
 Then open:
 
-- <http://bookstack.localhost:8080> (`admin@admin.com` / `password`)
-- <http://kanboard.localhost:8080> (`admin` / `admin`)
-- <http://forgejo.localhost:8080> (create/use local users)
+| App | URL | Local demo login |
+|-----|-----|------------------|
+| BookStack | <http://bookstack.localhost:8080> | `admin@admin.com` / `password` |
+| Kanboard | <http://kanboard.localhost:8080> | `admin` / `admin` |
+| Forgejo | <http://forgejo.localhost:8080> | Create or use local users |
 
-Optional SSO/Keycloak path: run `just collab::deploy-sso`, then open <http://keycloak.localhost:8080>.
+Optional SSO path:
+
+```bash
+just collab::deploy-sso
+kubectl -n collaboration port-forward svc/traefik 8080:80
+```
+
+Then open <http://keycloak.localhost:8080>.
 
 ## Cleanup
+
+Clean individual labs:
 
 ```bash
 just databases/clean
 just rclone/clean
 just collab::clean
+```
+
+Delete the whole local cluster:
+
+```bash
 just clean-local
 ```
 
-## Common Issues
+## Common issues
 
 ### kind cluster will not start
 
@@ -82,9 +106,11 @@ kind delete cluster --name tutorials
 just databases/deploy
 ```
 
+Also check Docker is running and has enough CPU/memory.
+
 ### Linkerd command not found
 
-Run `just prereqs` again, then rerun the recipe.
+Run `just prereqs`, then rerun the failed recipe.
 
 ### Helm chart does not render
 
@@ -93,6 +119,14 @@ just check
 helm template databases charts/databases
 ```
 
+### Browser URL does not load
+
+Make sure the port-forward command is still running:
+
+```bash
+kubectl -n collaboration port-forward svc/traefik 8080:80
+```
+
 ## Next
 
-See [LEARNING_PATH.md](LEARNING_PATH.md) for the recommended order.
+Continue with [LEARNING_PATH.md](LEARNING_PATH.md).

@@ -1,9 +1,17 @@
 # Command Index
 
-Use these consistent verbs across labs.
+Consistent commands make the labs easier to teach and debug. Most labs use this shape:
 
-| Lab | Deploy | Smoke/Test | URLs | Clean/Destroy | Cloud? |
-|---|---|---|---|---|---|
+```text
+just <lab>/deploy -> just <lab>/smoke -> just <lab>/urls -> just <lab>/clean
+```
+
+Some directories use `just` module aliases, such as `collab::deploy` and `drupal::deploy`.
+
+## Lab commands
+
+| Lab | Deploy | Smoke/test | URLs | Clean/destroy | Cloud? |
+|-----|--------|------------|------|---------------|--------|
 | Tools/preflight | `just prereqs` / `just doctor` | `just check` | `just urls` | `just clean-local` | No |
 | Databases | `just databases/deploy` | `just databases/smoke` | `just databases/urls` | `just databases/clean` | No |
 | rclone CSI | `just rclone/deploy` | `just rclone/smoke` | `just rclone/urls` | `just rclone/clean` | No |
@@ -15,17 +23,28 @@ Use these consistent verbs across labs.
 | S3 Pod Identity | `just s3-pod-identity/deploy` | `just s3-pod-identity/smoke` | n/a | `just s3-pod-identity/clean` | Yes |
 | External Secrets | `just secrets/deploy` | `just secrets/smoke` | n/a | `just secrets/clean` | Yes |
 
-Validation split:
+## Validation commands
 
-- `just check` — fast local chart/just syntax checks.
-- `just check-cloud` — Terraform validation and cloud chart renders.
-- `just check-security` — Trivy config scanning.
-- `just lint` — full render/terraform/security validation.
-- `just validate-local` — deploy and smoke-test local examples.
-- `just validate-aws` — paid AWS validation path.
+| Command | Scope |
+|---------|-------|
+| `just check` | Fast local chart and `justfile` checks |
+| `just check-cloud` | Terraform validation and cloud chart renders |
+| `just check-security` | [Trivy](https://aquasecurity.github.io/trivy/) config scanning |
+| `just lint` | Full render, Terraform, and security validation |
+| `just validate-local` | Deploy and smoke-test local examples |
+| `just validate-aws` | Paid AWS validation path with an inspection pause |
 
-Before cloud labs, run:
+## Before cloud labs
 
 ```bash
 just aws-preflight
 ```
+
+This prints the active AWS account/region and the paid-resource blast radius before you create EKS resources.
+
+## Helpful references
+
+- [just manual](https://just.systems/man/en/)
+- [kubectl command reference](https://kubernetes.io/docs/reference/kubectl/)
+- [Helm command docs](https://helm.sh/docs/helm/)
+- [Terraform CLI docs](https://developer.hashicorp.com/terraform/cli)

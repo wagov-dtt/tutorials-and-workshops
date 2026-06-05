@@ -1,117 +1,117 @@
 # eksauto/
 
-> EKS Auto Mode cluster managed by Terraform. AWS handles node provisioning, scaling, and security patches.
+EKS Auto Mode cluster managed by Terraform. AWS manages node provisioning, scaling, and security patches.
 
-## Cost Warning
+This is an AWS lab. Run `just aws-preflight` before creating resources.
 
-**This creates AWS resources that cost money.**
+## Cost warning
 
-| Component | Estimated Cost |
-|-----------|---------------|
-| EKS control plane | ~$73/month ($0.10/hr) |
-| EKS Auto Mode fee | ~12% on top of EC2 costs |
-| EC2 instances | Varies by workload (Auto Mode picks instance types) |
-| CloudWatch logs | ~$0.50/GB ingested |
+This creates paid AWS resources.
 
-**Minimum idle cluster**: ~$80-100/month (control plane + minimal nodes)
+| Component | Typical cost driver |
+|-----------|---------------------|
+| EKS control plane | About $0.10/hour |
+| EKS Auto Mode | Auto Mode fee plus EC2 workload capacity |
+| EC2 capacity | Varies by workload and chosen instance types |
+| CloudWatch logs/metrics | Ingestion and retention volume |
+| NAT/data transfer/S3/EFS-related services | Usage-dependent |
 
-**Always destroy when done:**
+Expect an idle training cluster to cost roughly the EKS control plane plus any minimum workload capacity. Always destroy the lab when done:
 
 ```bash
 just eksauto/destroy-eks
 ```
 
-## Quick Start
+## Quick start
 
 ```bash
 just eksauto/setup-eks      # Create cluster via Terraform
+just eksauto/smoke          # Check cluster access
 just eksauto/deploy         # Deploy database Helm chart
-# ... do your training ...
-just eksauto/destroy-eks    # IMPORTANT: destroys everything
+# ... train or inspect ...
+just eksauto/destroy-eks    # Destroy paid resources
 ```
 
-## Full Validation with Inspection Pause
+## Full validation with inspection pause
 
-The `validate-aws` recipe runs the full test suite and pauses before destruction so you can manually inspect resources:
+`just validate-aws` creates the cluster, runs tests, pauses for manual inspection, then destroys resources.
 
 ```bash
-just validate-aws   # Creates cluster, runs tests, pauses for inspection, then destroys
+just validate-aws
 ```
 
-During the pause, open another terminal and use `just -c` to run commands with AWS credentials loaded:
+During the pause, open another terminal and use `just -c` so AWS credentials are loaded consistently:
 
 ```bash
-just -c k9s                                           # Interactive cluster UI
-just -c 'aws s3 ls s3://test-$(just _account)/'       # List S3 bucket
-just -c 'kubectl get pods -A'                         # List all pods
+just -c k9s
+just -c 'kubectl get pods -A'
+just -c 'aws s3 ls s3://test-$(just _account)/'
 ```
 
-Press Enter to continue with destruction, or Ctrl+C to abort and keep resources running.
+Press Enter in the original terminal to continue destruction, or Ctrl+C to keep resources running temporarily.
 
-## What Terraform Creates
+## What Terraform creates
 
 | Resource | Purpose |
 |----------|---------|
-| S3 bucket `tfstate-<account>` | Terraform state with native S3 locking (auto-created) |
-| VPC + subnets | Network infrastructure (3 AZs) |
-| EKS cluster | Auto Mode enabled, latest K8s version (auto-detected) |
-| EKS addons | snapshot-controller, CloudWatch Observability, EFS CSI driver for AWS S3 Files |
-| IAM role `eks-s3-test` | S3 access for Pod Identity |
+| S3 bucket `tfstate-<account>` | Terraform state with native S3 locking |
+| VPC + subnets | Network infrastructure across 3 AZs |
+| EKS cluster | Auto Mode cluster |
+| EKS add-ons | Snapshot controller, CloudWatch Observability, EFS CSI driver for AWS S3 Files |
+| IAM role `eks-s3-test` | S3 access for Pod Identity demos |
 | IAM roles `eks-efs-csi-*` | EFS CSI access for AWS S3 Files mounts |
-| IAM role `eks-s3files-service` | S3 Files service access to synchronize the test bucket |
+| IAM role `eks-s3files-service` | S3 Files service access to sync the test bucket |
 | IAM role `eks-secrets-manager` | Secrets Manager access for External Secrets Operator |
-| IAM role `eks-observability-collector` | CloudWatch Logs and X-Ray write access for the optional observability collector |
+| IAM role `eks-observability-collector` | CloudWatch Logs and X-Ray write access for optional observability collector |
 | S3 bucket `test-<account>` | Backup storage for examples |
 | S3 Files file system + mount targets | POSIX-style S3 mount for EKS examples |
-| Secrets Manager `training/db-credentials` | Example secret for ESO demo |
-| Pod Identity associations | Pre-created for s3-test, kube-system EFS CSI, external-secrets, and observability namespaces |
+| Secrets Manager `training/db-credentials` | Example secret for the ESO demo |
+| Pod Identity associations | Associations for `s3-test`, EFS CSI, External Secrets, and observability namespaces |
 
-## Terraform Files
+## Terraform files
 
 | File | Purpose |
 |------|---------|
-| [terraform/main.tf](terraform/main.tf) | VPC, EKS cluster, and addons |
-| [terraform/iam.tf](terraform/iam.tf) | IAM role and S3 bucket |
-| [terraform/s3files.tf](terraform/s3files.tf) | AWS S3 Files file system, mount targets, and CSI IAM roles |
-| [terraform/pod_identity.tf](terraform/pod_identity.tf) | Pod Identity associations |
-| [terraform/outputs.tf](terraform/outputs.tf) | Cluster info and kubectl command |
+| `terraform/main.tf` | VPC, EKS cluster, and add-ons |
+| `terraform/iam.tf` | IAM roles and S3 bucket resources |
+| `terraform/s3files.tf` | AWS S3 Files file system, mount targets, and CSI IAM roles |
+| `terraform/pod_identity.tf` | Pod Identity associations |
+| `terraform/outputs.tf` | Cluster info and kubectl command |
 
-## Learning Goals
+## What you learn
 
-- **Terraform for EKS**: Declarative infrastructure with state management
-- **S3 backend with native locking**: No DynamoDB needed (Terraform 1.10+)
-- **EKS Auto Mode**: AWS manages node provisioning, scaling, and security patches
-- **Pod Identity**: Pre-created associations linking ServiceAccounts to IAM roles
-- **terraform-aws-modules**: Using community modules for VPC and EKS
-- **Managed observability**: CloudWatch Container Insights vs self-hosted Prometheus
+- Terraform-managed EKS infrastructure
+- S3 backend with native locking in Terraform 1.10+
+- EKS Auto Mode operations
+- EKS Pod Identity and ServiceAccount-to-IAM binding
+- AWS-managed observability with CloudWatch Container Insights
+- How to render Helm charts before applying them to a paid cluster
 
-## Helm Deployment
+## Helm deployment model
 
-This repo packages Kubernetes examples as Helm charts. Deploy them directly with CI or reconcile them from an orchestration cluster. For AWS-managed ArgoCD on EKS, see [../argocd/README.md](../argocd/README.md).
+Kubernetes examples are repo-owned Helm charts. Deploy them directly from CI or reconcile them from an orchestration cluster. See [../argocd/README.md](../argocd/README.md).
 
 ## Observability
 
-The cluster includes the `amazon-cloudwatch-observability` addon which provides:
+The cluster includes the `amazon-cloudwatch-observability` add-on:
 
-- **Container Insights**: CPU, memory, disk, and network metrics per pod/node
-- **CloudWatch Logs**: Container logs automatically shipped to CloudWatch
-- **ADOT collector**: OpenTelemetry-based metrics and traces collection
-
-**Why use the managed addon?** Zero configuration, auto-updates, and integration with existing CloudWatch dashboards and alarms. No need to deploy Prometheus/Grafana for basic observability.
+- Container Insights for pod/node metrics
+- CloudWatch Logs for container logs
+- ADOT/OpenTelemetry-based collection
 
 View metrics in AWS Console → CloudWatch → Container Insights → Performance Monitoring.
 
-If you want a cluster-local day-to-day UI as well, keep CloudWatch enabled and deploy the optional Victoria*/Grafana stack as a short-retention hot cache:
+If you also want a cluster-local UI, keep CloudWatch enabled and deploy the optional Victoria*/Grafana stack as a short-retention hot cache:
 
 ```bash
 just observability/deploy-eksauto-cloudwatch
 ```
 
-That recipe fans out app OTLP to both in-cluster Victoria* and AWS-managed backends for durable investigations. See [../observability/README.md](../observability/README.md#storage-and-eks-auto-mode).
+That recipe fans app OTLP out to in-cluster Victoria* and AWS-managed backends. See [../observability/README.md](../observability/README.md#storage-and-eks-auto-mode).
 
-## Manual Terraform Commands
+## Manual Terraform commands
 
-To run Terraform directly:
+Use the `just` recipes for normal training. If you need Terraform directly:
 
 ```bash
 cd eksauto/terraform
@@ -121,23 +121,23 @@ terraform apply
 terraform destroy
 ```
 
-## Cleanup
-
-Terraform handles all cleanup:
+## Cleanup troubleshooting
 
 ```bash
-just eksauto/destroy-eks   # Destroys VPC, EKS, IAM, S3, and all associated resources
+just eksauto/destroy-eks
 ```
 
-If destroy fails, check for:
-- LoadBalancer services still running (delete them first)
-- Stuck PVCs (delete them first)
-- Then retry `just eksauto/destroy-eks`
+If destroy fails:
 
-## See Also
+1. Delete any remaining `LoadBalancer` services.
+2. Delete stuck PVCs if they block storage cleanup.
+3. Retry `just eksauto/destroy-eks`.
 
-- [LEARNING_PATH.md](../LEARNING_PATH.md#21-create-an-eks-cluster) - Step-by-step walkthrough
-- [GLOSSARY.md](../GLOSSARY.md) - Definitions (EKS, Auto Mode, Terraform, Pod Identity)
-- [s3-pod-identity/](../s3-pod-identity/) - Pod Identity examples
-- [secrets/](../secrets/) - External Secrets examples
-- [terraform-aws-modules/eks](https://github.com/terraform-aws-modules/terraform-aws-eks) - EKS module docs
+## References
+
+- [EKS user guide](https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html)
+- [EKS Auto Mode](https://docs.aws.amazon.com/eks/latest/userguide/automode.html)
+- [EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html)
+- [AWS S3 Files on EKS](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files-mounting-eks.html)
+- [Terraform AWS provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+- [terraform-aws-modules/eks](https://github.com/terraform-aws-modules/terraform-aws-eks)

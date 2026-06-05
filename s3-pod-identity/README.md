@@ -1,143 +1,141 @@
 # s3-pod-identity/
 
-> Demo of EKS Pod Identity with MySQL backup/restore via rclone and an AWS S3 Files CSI debug mount. No credentials stored in the cluster.
+EKS lab for Pod Identity, MySQL backup/restore, rclone S3 copy, and AWS S3 Files debug mounts. No static AWS credentials are stored in the cluster.
+
+Run `just aws-preflight` before this lab.
 
 ## Why Pod Identity?
 
-[EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html) lets pods assume IAM roles without storing AWS credentials anywhere in the cluster. The Pod Identity Agent (built into EKS Auto Mode) injects temporary credentials based on the pod's ServiceAccount.
+[EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html) lets pods assume IAM roles through their Kubernetes ServiceAccount. The Pod Identity Agent injects temporary credentials for matching pods.
 
-**Benefits**:
-- No static credentials to rotate or leak
-- Fine-grained access control per ServiceAccount
-- Audit trail in CloudTrail
+Benefits:
+
+- No static AWS credentials in Kubernetes Secrets
+- IAM scope per ServiceAccount
+- CloudTrail audit trail
+- Cleaner rotation story than long-lived access keys
 
 ## Prerequisites
 
-- AWS account with SSO configured (copy `.env.example` to `.env` and set `AWS_PROFILE`; region defaults to `AWS_REGION`, `AWS_DEFAULT_REGION`, or the profile region)
-- EKS cluster created via `just eksauto/setup-eks`
+- AWS profile/SSO configured; copy `.env.example` to `.env` if useful.
+- EKS cluster created with `just eksauto/setup-eks`.
+- Terraform outputs/resources from `eksauto/terraform`.
 
 Terraform pre-creates:
-- S3 bucket: `test-<ACCOUNT_ID>`
-- IAM role: `eks-s3-test` scoped to the test bucket
-- AWS S3 Files file system backed by the test bucket
-- EFS CSI driver addon with Pod Identity associations in `kube-system`
-- Pod Identity association for the `s3-test` namespace
 
-## Quick Start
+| Resource | Purpose |
+|----------|---------|
+| S3 bucket `test-<ACCOUNT_ID>` | Backup and copy target |
+| IAM role `eks-s3-test` | Scoped access to the test bucket |
+| AWS S3 Files file system | S3-backed filesystem for debug pod mount |
+| EFS CSI driver add-on | Mount path for AWS S3 Files |
+| Pod Identity association | Binds `s3-test/s3-access` to the IAM role |
+
+## Quick start
 
 ```bash
-just s3-pod-identity/deploy       # Full demo: sysbench → backup → copy → debug pod
+just s3-pod-identity/deploy       # sysbench -> MySQL backup -> S3 copy -> debug mount
 just s3-pod-identity/smoke        # Check MySQL, debug pod, and S3 backup prefix
-just s3-pod-identity/s3-restore   # Optional: restore backup to sbtest_restored database
-just s3-pod-identity/clean        # Remove K8s resources (S3 bucket kept)
+just s3-pod-identity/s3-restore   # Optional restore into sbtest_restored
+just s3-pod-identity/clean        # Remove Kubernetes resources; S3 bucket remains
 ```
 
 ## Architecture
 
 ```mermaid
 flowchart TB
-    subgraph EKS["EKS Cluster"]
+    subgraph EKS["EKS cluster"]
         subgraph NS["s3-test namespace"]
-            MySQL["MySQL<br/>(Percona 8.0)"]
-            Sysbench["sysbench-prepare<br/>Job"]
-            Backup["backup-to-s3<br/>Job"]
-            Copy["rclone-copy<br/>Job"]
-            Restore["restore-from-s3<br/>Job"]
-            Debug["debug pod<br/>(AWS S3 Files CSI mount)"]
-            SA["ServiceAccount<br/>s3-access"]
+            MySQL["MySQL / Percona 8.0"]
+            Sysbench["sysbench-prepare Job"]
+            Backup["backup-to-s3 Job"]
+            Copy["rclone-copy Job"]
+            Restore["restore-from-s3 Job"]
+            Debug["debug pod with S3 Files mount"]
+            SA["ServiceAccount s3-access"]
         end
         PIA["Pod Identity Agent"]
     end
-    
+
     subgraph AWS["AWS"]
-        IAM["IAM Role<br/>eks-s3-test"]
-        S3B1["S3: backup1/"]
-        S3B2["S3: backup2/"]
-        S3Files["S3 Files file system"]
+        IAM["IAM role eks-s3-test"]
+        S3B1["S3 backup1/"]
+        S3B2["S3 backup2/"]
+        S3Files["AWS S3 Files filesystem"]
     end
-    
-    Sysbench -->|"prepare test data"| MySQL
+
+    Sysbench --> MySQL
     MySQL -->|"mysqlsh dump"| Backup
     Backup -->|"rclone upload"| S3B1
-    S3B1 -->|"rclone copy"| Copy
-    Copy -->|"server-side copy"| S3B2
+    S3B1 -->|"server-side copy"| Copy
+    Copy --> S3B2
     S3B2 -->|"mysqlsh load"| Restore
-    Restore -->|"restore to sbtest_restored"| MySQL
+    Restore --> MySQL
     S3B2 --- S3Files
-    Debug -->|"EFS CSI mount"| S3Files
-    
-    SA -.->|"binds to"| PIA
-    PIA -.->|"assumes"| IAM
-    IAM -.->|"scoped S3 access"| S3B1
-    IAM -.->|"scoped S3 access"| S3B2
+    Debug --> S3Files
+    SA -.-> PIA
+    PIA -.-> IAM
+    IAM -.-> S3B1
+    IAM -.-> S3B2
 ```
 
-## What's Here
+## What to study
 
-| File | Purpose |
+| Path | Purpose |
 |------|---------|
-| [../charts/s3-pod-identity/templates/base/namespace.yaml](../charts/s3-pod-identity/templates/base/namespace.yaml) | Namespace and ServiceAccount |
-| [../charts/s3-pod-identity/templates/base/s3files.yaml](../charts/s3-pod-identity/templates/base/s3files.yaml) | Shared rclone env vars and AWS S3 Files StorageClass |
-| [../charts/s3-pod-identity/templates/base/mysql.yaml](../charts/s3-pod-identity/templates/base/mysql.yaml) | MySQL deployment and sysbench data prep |
-| [../charts/s3-pod-identity/templates/base/debug.yaml](../charts/s3-pod-identity/templates/base/debug.yaml) | Debug pod with AWS S3 Files CSI mount |
-| [../charts/s3-pod-identity/templates/jobs/backup.yaml](../charts/s3-pod-identity/templates/jobs/backup.yaml) | mysqlsh dump → S3 backup1/ |
-| [../charts/s3-pod-identity/templates/jobs/copy.yaml](../charts/s3-pod-identity/templates/jobs/copy.yaml) | rclone server-side copy backup1/ → backup2/ |
-| [../charts/s3-pod-identity/templates/jobs/restore.yaml](../charts/s3-pod-identity/templates/jobs/restore.yaml) | S3 backup2/ → mysqlsh load |
-
-## Learning Goals
-
-- **EKS Pod Identity**: How pods assume IAM roles without static credentials
-- **mysqlsh for backups**: Using MySQL Shell's `util.dumpSchemas()` and `util.loadDump()`
-- **rclone server-side copy**: Copying between S3 prefixes without downloading locally
-- **AWS S3 Files CSI mounts**: Mounting S3-backed file systems into pods with the EFS CSI driver for debugging and inspection
+| `../charts/s3-pod-identity/templates/base/namespace.yaml` | Namespace and ServiceAccount |
+| `../charts/s3-pod-identity/templates/base/s3files.yaml` | rclone environment and AWS S3 Files StorageClass |
+| `../charts/s3-pod-identity/templates/base/mysql.yaml` | MySQL deployment and sysbench data prep |
+| `../charts/s3-pod-identity/templates/base/debug.yaml` | Debug pod with AWS S3 Files CSI mount |
+| `../charts/s3-pod-identity/templates/base/networkpolicy.yaml` | EKS-facing network boundary example |
+| `../charts/s3-pod-identity/templates/jobs/backup.yaml` | `mysqlsh` dump -> S3 `backup1/` |
+| `../charts/s3-pod-identity/templates/jobs/copy.yaml` | rclone server-side copy `backup1/` -> `backup2/` |
+| `../charts/s3-pod-identity/templates/jobs/restore.yaml` | S3 `backup2/` -> `mysqlsh` load |
+| `../eksauto/terraform/pod_identity.tf` | Pod Identity association |
 
 ## Debugging
 
-### Interactive Cluster UI
+Interactive cluster UI:
 
 ```bash
-just -c k9s  # Opens k9s with AWS credentials loaded
+just -c k9s
 ```
 
-### S3 Bucket Inspection
+S3 inspection:
 
 ```bash
-just -c 'aws s3 ls s3://test-$(just _account)/'         # List bucket root
-just -c 'aws s3 ls s3://test-$(just _account)/backup1/' # List backup contents
+just -c 'aws s3 ls s3://test-$(just _account)/'
+just -c 'aws s3 ls s3://test-$(just _account)/backup1/'
 ```
 
-### Debug Pod
+Debug pod:
 
 ```bash
 kubectl exec -it debug -n s3-test -- sh
-ls /mnt/s3  # S3 bucket contents via AWS S3 Files / EFS CSI
+ls /mnt/s3
 ```
 
-Uses [AWS S3 Files with the Amazon EFS CSI driver](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files-mounting-eks.html) for the filesystem mount. The `rclone/` directory still uses veloxpack rclone CSI for local kind clusters only.
-
-### CSI Driver Logs
-
-If S3 mounts fail, check the EFS CSI driver logs:
+CSI driver logs:
 
 ```bash
 kubectl logs -n kube-system -l app=efs-csi-controller --tail=50
 kubectl logs -n kube-system -l app=efs-csi-node --tail=50
 ```
 
-Common issue: pods stuck in `ContainerCreating` can indicate a missing S3 Files mount target or NFS/2049 security group rule for the node subnet.
+A pod stuck in `ContainerCreating` often means a missing S3 Files mount target or blocked NFS/2049 traffic from the node subnet.
 
-## Key Patterns
+## Key patterns
 
-- **initContainer + main container**: [backup.yaml](../charts/s3-pod-identity/templates/jobs/backup.yaml) uses an initContainer for mysqlsh dump, main container for rclone upload
-- **Server-side copy**: [copy.yaml](../charts/s3-pod-identity/templates/jobs/copy.yaml) copies between S3 prefixes without downloading locally
-- **Schema rename on restore**: [restore.yaml](../charts/s3-pod-identity/templates/jobs/restore.yaml) uses `util.loadDump()` with the `schema` option to restore to a different database name
-- **Pod Identity auth**: All jobs use `serviceAccountName: s3-access` bound to an IAM role via Terraform's `aws_eks_pod_identity_association`
+- `backup.yaml` uses an initContainer for `mysqlsh` dump and a main container for rclone upload.
+- `copy.yaml` performs server-side S3 prefix copy without downloading locally.
+- `restore.yaml` uses `util.loadDump()` with a schema override to restore into a different database name.
+- All jobs use `serviceAccountName: s3-access`, bound to IAM by Terraform's `aws_eks_pod_identity_association`.
 
-## See Also
+## References
 
-- [LEARNING_PATH.md](../LEARNING_PATH.md#22-s3-pod-identity) - Step-by-step walkthrough
-- [GLOSSARY.md](../GLOSSARY.md#pod-identity) - Pod Identity definition
-- [rclone/](../rclone/) - rclone CSI examples on local kind
-- [eksauto/](../eksauto/) - EKS cluster configuration and cost info
-- [Mounting S3 file systems on Amazon EKS](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files-mounting-eks.html) - Official AWS S3 Files pattern
-- [EKS Pod Identity docs](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html) - Official AWS documentation
+- [EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html)
+- [Mounting S3 file systems on Amazon EKS](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files-mounting-eks.html)
+- [MySQL Shell dump and load utilities](https://dev.mysql.com/doc/mysql-shell/8.0/en/mysql-shell-utilities.html)
+- [rclone S3 backend](https://rclone.org/s3/)
+- [LEARNING_PATH.md](../LEARNING_PATH.md#22-s3-pod-identity)
+- [GLOSSARY.md](../GLOSSARY.md#eks-pod-identity)

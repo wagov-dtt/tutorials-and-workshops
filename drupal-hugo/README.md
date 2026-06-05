@@ -1,54 +1,84 @@
-# Drupal CMS with Hugo static site generation
+# Drupal CMS with Hugo static-site experiments
 
-Testing out building a hugo site from drupal content
+Local Drupal CMS lab using [DDEV](https://ddev.com/) and Composer. The current focus is running Drupal locally and experimenting with Drupal-to-static-site workflows.
 
-## Setup
+## Quick start
 
-Install drupal CMS as per [CMS Quickstarts (ddev)](https://docs.ddev.com/en/stable/users/quickstart/#drupal-drupal-cms), default ddev docs below:
+From the repo root:
 
+```bash
+just drupal::deploy
+just drupal::smoke
+just drupal::urls
+```
 
-Drupal CMS is a fast-moving open source product that enables site builders to easily create new Drupal sites and extend them with smart defaults, all using their browser.
+Or from this directory:
 
-## Getting started
+```bash
+cd drupal-hugo
+ddev start
+ddev launch
+```
 
-If you want to use [DDEV](https://ddev.com) to run Drupal CMS locally, follow these instructions:
+`ddev start` runs this repo's bootstrap hook automatically.
 
-1. Install DDEV following the [documentation](https://ddev.com/get-started/)
-2. Open the command line and `cd` to the root directory of this project
-3. Run `ddev start`
-4. Run `ddev launch`
+## Bootstrap Drupal files
 
-`ddev start` runs this repo's bootstrap hook automatically. To recreate the Composer-managed Drupal CMS files manually at any time, run:
+To recreate Composer-managed Drupal CMS files manually:
 
-```sh
+```bash
 ddev composer bootstrap
 ```
 
-That bootstrap command is a shortcut for `composer install` plus `composer drupal:recipe-unpack`, so it restores `vendor/`, Drupal core and contrib code under `web/`, scaffolded web-root files, and unpacked recipes from `composer.lock`.
+That shortcut runs `composer install` and `composer drupal:recipe-unpack`. It restores:
 
-The repo setup path runs `composer install` before adding optional Drupal CMS recipe packages, so the broad dependency graph is not updated on every setup. Update dependencies intentionally with Composer and commit the resulting `composer.json`/lockfile changes together.
+- `vendor/`
+- Drupal core and contributed code under `web/`
+- scaffolded web-root files
+- unpacked recipes from `composer.lock`
 
-Drupal CMS has the same system requirements as Drupal core, so you can use your preferred setup to run it locally. [See the Drupal User Guide for more information](https://www.drupal.org/docs/user_guide/en/installation-chapter.html) on how to set up Drupal.
+Use `composer install` for normal setup. Update dependencies intentionally and commit `composer.json` and `composer.lock` together.
 
-### Installation options
+## Useful DDEV commands
 
-The Drupal CMS installer offers a list of features preconfigured with smart defaults. You will be able to customize whatever you choose, and add additional features, once you are logged in.
+```bash
+ddev start
+ddev launch
+ddev drush status
+ddev drush user:login
+ddev drush cache:rebuild
+ddev stop
+```
 
-After the installer is complete, you will land on the dashboard.
+## What to study
 
-## Documentation
+| Path | Purpose |
+|------|---------|
+| `.ddev/config.yaml` | DDEV project config |
+| `composer.json` | PHP/Drupal dependencies and scripts |
+| `composer.lock` | Reproducible dependency graph |
+| `justfile` | Repo wrapper recipes |
+| `AGENTS.md` | Local Drupal workflow notes for coding agents |
 
-* [Drupal CMS User Guide](https://project.pages.drupalcode.org/drupal_cms/)
-* Learn more about managing a Drupal-based application in the [Drupal User Guide](https://www.drupal.org/docs/user_guide/en/index.html).
+## Guardrails
 
-## Contributing & Support
+- Do not commit secrets, `.env`, `settings.local.php`, or `.ddev/config.local.yaml`.
+- Do not commit `vendor/` or uploaded files under `web/sites/*/files`.
+- Do not edit Drupal core or contributed modules in place.
+- Put custom code under `web/modules/custom` or `web/themes/custom`.
 
-[Report issues in the queue](https://drupal.org/node/add/project-issue/drupal_cms), providing as much detail as you can. You can also join the #drupal-cms-support channel in the [Drupal Slack community](https://www.drupal.org/slack).
+## References
 
-Drupal CMS is developed in [a separate repository on Drupal.org](https://www.drupal.org/project/drupal_cms). See [CONTRIBUTING.md](CONTRIBUTING.md) for more information.
+- [DDEV Drupal quickstart](https://docs.ddev.com/en/stable/users/quickstart/#drupal-drupal-cms)
+- [Drupal CMS user guide](https://project.pages.drupalcode.org/drupal_cms/)
+- [Drupal User Guide](https://www.drupal.org/docs/user_guide/en/index.html)
+- [Drush documentation](https://www.drush.org/)
+- [Composer documentation](https://getcomposer.org/doc/)
+
+## Support and upstream
+
+Drupal CMS is developed at <https://www.drupal.org/project/drupal_cms>. For upstream bugs, use the [Drupal CMS issue queue](https://drupal.org/node/add/project-issue/drupal_cms) or the Drupal Slack community.
 
 ## License
 
-Drupal CMS and all derivative works are licensed under the [GNU General Public License, version 2 or later](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
-
-Learn about the [Drupal trademark and logo policy here](https://www.drupal.com/trademark).
+Drupal CMS and derivative works are licensed under the [GNU General Public License, version 2 or later](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html). See the [Drupal trademark and logo policy](https://www.drupal.com/trademark) for brand usage.

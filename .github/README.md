@@ -4,8 +4,17 @@ Repository automation and maintenance settings.
 
 ## What is here
 
-- `dependabot.yml` - dependency update checks for GitHub Actions, Docker, Terraform, and package manifests.
+| File | Purpose |
+|------|---------|
+| `dependabot.yml` | Dependency update checks for GitHub Actions, Docker, Terraform, and package manifests |
 
-## Notes
+## Guidelines
 
-Keep this directory small. Add workflow files only when they make the examples easier to validate or maintain.
+- Keep automation small and directly useful for validating the examples.
+- Prefer checks that can run without cloud credentials.
+- Document any workflow that creates cloud resources, including cost and cleanup.
+
+## References
+
+- [Dependabot options reference](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file)
+- [GitHub Actions docs](https://docs.github.com/en/actions)

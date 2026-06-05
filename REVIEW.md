@@ -2,6 +2,8 @@
 
 > Generated with [oy-cli](https://github.com/wagov-dtt/oy-cli): `OY_MODEL=github-copilot/gpt-5.5 oy review` · 2026-06-05
 
+This is a generated point-in-time review. Treat line numbers and statuses as evidence to re-check against the current tree before acting on a finding. For the older audit backlog, see [ISSUES.md](ISSUES.md).
+
 ## Verdict
 
 Needs work

@@ -1,50 +1,20 @@
-# Local Observability
+# Observability
 
-Small local-first observability stack for the `tutorials` kind cluster:
+Local-first observability stack for the `tutorials` kind cluster.
 
-- **VictoriaMetrics Single** for metrics
-- **VictoriaLogs Single** for logs
-- **VictoriaTraces Single** for traces
-- **Grafana** for a combined metrics/logs/traces UI
-- **OpenTelemetry Collector Contrib** as one ingestion/fan-out point
-- **Linkerd telemetry collector** for Linkerd metrics and logs
-- **Traefik** as the local-only UI proxy
+It deploys:
 
-The stack uses upstream Helm charts, disables PVCs, and sets local retention to `30d` by default. That keeps all in-cluster storage ephemeral and bounded.
+- VictoriaMetrics Single for metrics
+- VictoriaLogs Single for logs
+- VictoriaTraces Single for traces
+- Grafana for a combined UI
+- OpenTelemetry Collector Contrib as the ingestion/fan-out point
+- Linkerd telemetry collector for Linkerd metrics and logs
+- Traefik as a local-only UI proxy
 
-## Storage and EKS Auto Mode
+The stack uses upstream Helm charts, disables PVCs, and defaults retention to `30d`. Treat in-cluster storage as ephemeral and bounded.
 
-| Environment | Recommended shape |
-|-------------|-------------------|
-| Local kind | Keep PVCs disabled. Treat Victoria* as a disposable hot cache; use `just observability/deploy-s3` only if you want a raw archive. |
-| EKS Auto Mode | Keep the `amazon-cloudwatch-observability` addon as the durable AWS diagnostics plane. If you also deploy Victoria*/Grafana, use it as the in-cluster day-to-day UI and fan out app OTLP to CloudWatch Metrics, CloudWatch Logs, and X-Ray/ServiceLens. |
-| Production self-hosted Victoria | Use upstream Victoria cluster/HA charts with explicit EBS-backed `StorageClass`, zone spread, PodDisruptionBudgets, and retention sized by both time and disk. |
-
-Do not rely on an implicit cluster default `StorageClass` for this local stack, and do not make HA Victoria the default for kind. HA adds pods, volumes, scheduling constraints, and operational failure modes; keep the default small until Victoria itself is the durable observability system.
-
-EKS Auto example:
-
-```bash
-just observability/deploy-eksauto-cloudwatch
-```
-
-This deploys the same ephemeral Victoria*/Grafana hot store, but overlays the app OTel collector with AWS exporters. It sends metrics to CloudWatch Metrics via EMF, logs to CloudWatch Logs, and traces to X-Ray while keeping the Victoria datasources available in cluster.
-
-## Deploy
-
-```bash
-just observability/deploy
-```
-
-Override retention:
-
-```bash
-OBSERVABILITY_RETENTION=7d just observability/deploy
-```
-
-Services are ClusterIP-only. No ingress is created or required. The namespace is Linkerd-injected with default-deny inbound policy, then `observability/linkerd-policy.yaml` opens only the intended mesh paths.
-
-For a local kind run with verification:
+## Quick start
 
 ```bash
 just observability/deploy
@@ -52,78 +22,88 @@ just observability/smoke
 just observability/ui
 ```
 
-## Access UIs
-
-The Victoria* frontends stay internal. Humans use one temporary port-forward to a tiny, meshed Traefik `observability-ui` proxy:
-
-```bash
-just observability/ui
-```
-
 Then open:
 
-- Home: `http://localhost:8080`
-- Grafana: `http://localhost:3000`
-- Metrics: `http://localhost:8428/vmui`
-- Logs: `http://localhost:9428/select/vmui`
-- Traces: `http://localhost:10428`
+| UI | URL |
+|----|-----|
+| Home | <http://localhost:8080> |
+| Grafana | <http://localhost:3000> |
+| Metrics | <http://localhost:8428/vmui> |
+| Logs | <http://localhost:9428/select/vmui> |
+| Traces | <http://localhost:10428> |
 
-This proxy is still a `ClusterIP` service. It does not create Ingress, LoadBalancer, DNS, or TLS certificates. Linkerd makes the proxy useful by giving Traefik the `observability-ui` mesh identity, and policy allows that identity to query the Victoria backends.
+Override local retention:
 
-Grafana is also internal-only. It has ephemeral storage, anonymous local admin access, and pre-provisioned datasources for VictoriaMetrics, VictoriaLogs, and VictoriaTraces. Use it as the combined UI; keep the Victoria-native UIs for direct debugging.
+```bash
+OBSERVABILITY_RETENTION=7d just observability/deploy
+```
 
-In-cluster services can use the same proxy URLs if they need UI/API access through the documented policy path:
-
-- Home: `http://observability-ui.observability.svc.cluster.local:8080`
-- Grafana: `http://observability-ui.observability.svc.cluster.local:3000`
-- Metrics: `http://observability-ui.observability.svc.cluster.local:8428/vmui`
-- Logs: `http://observability-ui.observability.svc.cluster.local:9428/select/vmui`
-- Traces: `http://observability-ui.observability.svc.cluster.local:10428`
-
-Direct backend service URLs still exist for the collector and debugging, but Linkerd policy restricts them to approved mesh identities:
-
-- Metrics backend: `http://victoria-metrics-single-server.observability.svc.cluster.local:8428`
-- Logs backend: `http://victoria-logs-single-server.observability.svc.cluster.local:9428`
-- Traces backend: `http://victoria-traces-single-server.observability.svc.cluster.local:10428`
-
-You can also print these commands at any time:
+Print access hints any time:
 
 ```bash
 just observability/urls
 ```
 
-Do not add Ingress just to view this local stack. Port-forwarding keeps the browser access explicit and avoids exposing telemetry frontends by default.
+## Storage and EKS Auto Mode
+
+| Environment | Recommended shape |
+|-------------|-------------------|
+| Local kind | Keep PVCs disabled. Use Victoria* as a disposable hot cache. Add S3 fan-out only when you need a raw archive. |
+| EKS Auto Mode | Keep the `amazon-cloudwatch-observability` add-on as the durable AWS diagnostics plane. Use Victoria*/Grafana only as an in-cluster hot UI. |
+| Production self-hosted Victoria | Use upstream cluster/HA charts, explicit EBS-backed `StorageClass`, zone spread, PodDisruptionBudgets, and retention sized by time and disk. |
+
+Do not rely on an implicit default `StorageClass` for this local stack. Do not make HA Victoria the kind default; it adds pods, volumes, scheduling constraints, and failure modes that distract from the lab.
+
+EKS Auto example:
+
+```bash
+just observability/deploy-eksauto-cloudwatch
+```
+
+That deploys ephemeral Victoria*/Grafana in cluster and configures the app OpenTelemetry collector to send metrics to CloudWatch Metrics, logs to CloudWatch Logs, and traces to X-Ray.
+
+## Access model
+
+Services are `ClusterIP` only. No Ingress, LoadBalancer, DNS, or TLS certificates are created.
+
+Humans use one temporary port-forward to a meshed Traefik proxy:
+
+```bash
+just observability/ui
+```
+
+The proxy gets the `observability-ui` Linkerd identity. Linkerd policy allows that identity to query Grafana and the Victoria backends. Direct backend service URLs still exist for collectors and debugging, but policy restricts them to approved mesh identities.
 
 ## Linkerd policy model
 
-Deploy creates the `observability` namespace with:
+Deploy annotates the `observability` namespace with:
 
 ```bash
 linkerd.io/inject=enabled
 config.linkerd.io/default-inbound-policy=deny
 ```
 
-That means all meshed pods get sidecars, and inbound traffic is denied unless a Linkerd `Server` plus `ServerAuthorization` allows it.
-
 Allowed paths:
 
-- **Apps -> OTel collector** on OTLP gRPC `4317` and OTLP HTTP `4318`: any authenticated meshed workload can send telemetry.
-- **OTel collector -> Victoria backends**: only the `otel-collector` service account can write application metrics, logs, and traces.
-- **Linkerd telemetry collector -> Victoria backends**: only the `linkerd-telemetry-collector` service account can write Linkerd metrics and logs.
-- **Browser -> observability-ui**: `kubectl port-forward` reaches the ClusterIP-only Traefik UI proxy.
-- **observability-ui -> Grafana and Victoria backends**: only the `observability-ui` service account can reach the UI/API ports exposed through the local proxy.
-- **Grafana -> Victoria backends**: Grafana uses its provisioned datasources to query metrics, logs, and traces from inside the meshed namespace.
+| Source | Destination | Purpose |
+|--------|-------------|---------|
+| Meshed apps | OTel collector ports `4317`/`4318` | Send OTLP telemetry |
+| OTel collector | Victoria backends | Write app metrics, logs, traces |
+| Linkerd telemetry collector | Victoria backends | Write Linkerd metrics and logs |
+| Local browser via `kubectl port-forward` | `observability-ui` | Temporary UI access |
+| `observability-ui` | Grafana and Victoria backends | UI/API access through the documented path |
+| Grafana | Victoria backends | Query provisioned datasources |
 
-This keeps browser access simple without making the Victoria services public. Linkerd supplies identity and policy; `kubectl port-forward` supplies the temporary local access path.
+For intentionally non-meshed senders, add a narrow `ServerAuthorization` instead of exposing the collector through ingress.
 
 ## Send data
 
-Send OTLP to the collector from workloads in the cluster:
+In-cluster workloads can send OTLP to:
 
-- gRPC: `otel-collector.observability.svc.cluster.local:4317`
-- HTTP: `http://otel-collector.observability.svc.cluster.local:4318`
-
-Because Linkerd policy requires authenticated mesh TLS on these ports, local sender workloads should be in Linkerd-injected namespaces. For an intentionally non-meshed sender, add a narrow `ServerAuthorization` instead of exposing the collector through ingress.
+| Protocol | Endpoint |
+|----------|----------|
+| OTLP gRPC | `otel-collector.observability.svc.cluster.local:4317` |
+| OTLP HTTP | `http://otel-collector.observability.svc.cluster.local:4318` |
 
 The collector forwards:
 
@@ -133,14 +113,14 @@ The collector forwards:
 
 ## Linkerd telemetry
 
-Deploy also installs a dedicated `linkerd-telemetry-collector` DaemonSet. It:
+The `linkerd-telemetry-collector` DaemonSet:
 
-- scrapes Linkerd proxy admin ports and Linkerd control-plane admin ports with the collector's Prometheus receiver
+- scrapes Linkerd proxy and control-plane admin ports with the collector's Prometheus receiver
 - tails Linkerd control-plane logs and injected `linkerd-proxy` sidecar logs from node container logs
 - writes Linkerd metrics to VictoriaMetrics
 - writes Linkerd logs to VictoriaLogs
 
-Local smoke verification checks that VictoriaMetrics has `up{job="linkerd-control-plane"}` samples:
+Smoke verification checks that VictoriaMetrics has `up{job="linkerd-control-plane"}` samples:
 
 ```bash
 just observability/smoke
@@ -148,7 +128,7 @@ just observability/smoke
 
 ## Optional S3 fan-out
 
-To make cluster storage disposable while keeping raw telemetry elsewhere, enable collector fan-out to S3:
+Enable collector fan-out to S3 when you want raw telemetry outside disposable cluster storage:
 
 ```bash
 OBSERVABILITY_S3_BUCKET=my-observability-archive \
@@ -157,24 +137,24 @@ OBSERVABILITY_S3_BASE_PREFIX=local-kind \
 just observability/deploy-s3
 ```
 
-This adds the OpenTelemetry `awss3` exporter to all pipelines. Objects are OTLP JSON, gzip-compressed, and partitioned like:
+Objects are OTLP JSON, gzip-compressed, and partitioned like:
 
 ```text
 s3://$OBSERVABILITY_S3_BUCKET/$OBSERVABILITY_S3_BASE_PREFIX/{metrics,logs,traces}/year=YYYY/month=MM/day=DD/hour=HH/...
 ```
 
-Credentials are intentionally not stored in Git. For local kind tests, export AWS environment variables or create a Kubernetes Secret and add `extraEnvs` in `charts/observability/opentelemetry-collector-values.yaml`. In cloud, prefer pod identity/IRSA.
+Credentials are not stored in Git. For local kind, export AWS environment variables or create a Kubernetes Secret and add `extraEnvs` in `charts/observability/opentelemetry-collector-values.yaml`. In cloud, prefer Pod Identity or IRSA.
 
 ## Iceberg / DuckLake shape
 
-Do not make Victoria* write Iceberg/DuckLake directly. Keep the hot path simple:
+Keep ingestion simple:
 
 ```text
 apps -> OpenTelemetry Collector -> Victoria* hot store (30d, ephemeral)
                               \-> S3 raw OTLP archive
 ```
 
-Then run a separate offline job to compact/convert S3 OTLP JSON into Apache Iceberg or DuckLake tables. That job can evolve independently and does not risk local observability ingestion.
+Run a separate offline job to compact/convert S3 OTLP JSON into Apache Iceberg or DuckLake tables. That job can evolve independently and does not risk telemetry ingestion.
 
 Suggested table layout:
 
@@ -183,8 +163,26 @@ Suggested table layout:
 - partitions: `signal`, `date`, `hour`, optionally `service.name`
 - source path: `s3://bucket/base/{metrics,logs,traces}/year=*/month=*/day=*/hour=*`
 
+## What to study
+
+| Path | Purpose |
+|------|---------|
+| `justfile` | Deploy, smoke, UI, and S3/EKS variants |
+| `ui-proxy.yaml` | Local Traefik UI proxy |
+| `linkerd-policy.yaml` | Mesh authorization policy |
+| `../charts/observability/*values.yaml` | Upstream Helm chart values and collector overlays |
+
 ## Cleanup
 
 ```bash
 just observability/clean
 ```
+
+## References
+
+- [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)
+- [Grafana documentation](https://grafana.com/docs/)
+- [VictoriaMetrics documentation](https://docs.victoriametrics.com/)
+- [VictoriaLogs documentation](https://docs.victoriametrics.com/victorialogs/)
+- [Linkerd policy](https://linkerd.io/2/features/policy/)
+- [Amazon CloudWatch Observability EKS add-on](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Container-Insights-EKS-addon.html)

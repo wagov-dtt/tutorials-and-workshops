@@ -1,4 +1,8 @@
-# Audit Header
+# Historical Audit Backlog
+
+This file is a point-in-time audit record. Some findings have since been fixed or partially fixed; keep statuses and locations current when related code changes. For the current generated code review, see [REVIEW.md](REVIEW.md).
+
+## Audit header
 
 - **Audit date:** 2026-03-18
 - **Latest commit:** `3bc7cd5` (`3bc7cd5143e273cb84535eb39d86f5ce4f748a34`) — `docs: switch AI guidance to oy`
@@ -6,7 +10,7 @@
 - **Codebase summary (`scc`):** 72 files, 3,968 lines, 3,075 lines of code, total complexity 16. The repo is now even more YAML-driven (42 files / 1,047 LOC). Remaining executable logic is small and concentrated in Terraform (7 files / 220 LOC / complexity 10) plus a few PHP support scripts (3 files / 150 LOC / complexity 5).
 - **Standards and heuristics used:** OWASP ASVS 5.0.0, especially V4 (API and web service), V8 (authorization), V13 (configuration and secrets), and V15 (secure coding and architecture); plus grugbrain.dev guidance on keeping complexity low, preferring locality of behavior, and choosing boring/reproducible defaults.
 
-## Prioritised Findings
+## Prioritised findings
 
 ## 1. Replace embedded and default credentials before they escape throwaway-local use
 - **Priority:** P1
