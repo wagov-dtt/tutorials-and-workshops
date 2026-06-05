@@ -100,6 +100,8 @@ The cluster includes the `amazon-cloudwatch-observability` addon which provides:
 
 View metrics in AWS Console → CloudWatch → Container Insights → Performance Monitoring.
 
+If you want a cluster-local day-to-day UI as well, keep CloudWatch enabled and deploy the optional Victoria*/Grafana stack as a short-retention hot cache. Fan out app OTLP to both in-cluster Victoria* and AWS-managed backends for durable investigations. See [../observability/README.md](../observability/README.md#storage-and-eks-auto-mode).
+
 ## Manual Terraform Commands
 
 To run Terraform directly:

@@ -12,6 +12,16 @@ Small local-first observability stack for the `tutorials` kind cluster:
 
 The stack uses upstream Helm charts, disables PVCs, and sets local retention to `30d` by default. That keeps all in-cluster storage ephemeral and bounded.
 
+## Storage and EKS Auto Mode
+
+| Environment | Recommended shape |
+|-------------|-------------------|
+| Local kind | Keep PVCs disabled. Treat Victoria* as a disposable hot cache; use `just observability/deploy-s3` only if you want a raw archive. |
+| EKS Auto Mode | Keep the `amazon-cloudwatch-observability` addon as the durable AWS diagnostics plane. If you also deploy Victoria*/Grafana, use it as the in-cluster day-to-day UI and fan out app OTLP to CloudWatch Metrics, CloudWatch Logs, and X-Ray/ServiceLens. |
+| Production self-hosted Victoria | Use upstream Victoria cluster/HA charts with explicit EBS-backed `StorageClass`, zone spread, PodDisruptionBudgets, and retention sized by both time and disk. |
+
+Do not rely on an implicit cluster default `StorageClass` for this local stack, and do not make HA Victoria the default for kind. HA adds pods, volumes, scheduling constraints, and operational failure modes; keep the default small until Victoria itself is the durable observability system.
+
 ## Deploy
 
 ```bash
